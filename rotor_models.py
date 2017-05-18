@@ -6,8 +6,8 @@ from gpkit import Variable, Model
 
 class Rotors(Model):
 
-	def dynamic(self):
-		return RotorsAero(self)
+	def dynamic(self,rotorsState):
+		return RotorsAero(self,rotorsState)
 
 	def setup(self,num_rotors=1,solidity=0.01):
 		R = Variable("R",20,"ft","Propeller radius")
@@ -19,8 +19,28 @@ class Rotors(Model):
 
 		return constraints
 
+class RotorsFlightState(Model):
+	def setup(self,rho_metric=1.225,a_metric=340.3,max_tip_Mach=0.9,max_mean_lift_coefficient=1.0,SPL_req=100):
+		ki = Variable("ki",1.1,"-","Induced power factor")
+		Cd0 = Variable("Cd0",0.01,"-","Blade two-dimensional zero-lift drag coefficient")
+
+		rho = Variable("\rho",rho_metric,"kg/m^3","Air density")
+		a = Variable("a",a_metric,"m/s","Speed of sound")
+
+		MT_max = Variable("MT_max",max_tip_Mach,"-","Maximum allowed tip Mach number")
+		CL_mean_max = Variable("CL_mean_max",max_mean_lift_coefficient,"-","Maximum allowed mean lift coefficient")
+
+		p_ratio_max = Variable("p_{ratio_max}",10**(SPL_req/20),"-","Max allowed sound pressure ratio")
+
+		constraints = []
+		constraints += [ki==ki,Cd0==Cd0,rho==rho,a==a,MT_max==MT_max,
+			CL_mean_max==CL_mean_max,p_ratio_max==p_ratio_max]
+
+		return constraints
+
+
 class RotorsAero(Model):
-	def setup(self,rotors,ki=1.1,Cd0=0.01,rho_metric=1.225,a_metric=340.3,MT_max=0.9,CL_mean_max=1.0,SPL_req="none"):
+	def setup(self,rotors,rotorsState):
 		T = Variable("T",2000,"lbf","Total thrust")
 		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
 		P = Variable("P","hp","Total power")
@@ -36,9 +56,6 @@ class RotorsAero(Model):
 		CL_mean = Variable("CL_mean","-","Mean lift coefficient")
 		FOM = Variable("FOM","-","Figure of merit")
 
-		rho = Variable("\rho",rho_metric,"kg/m^3","Air density")
-		a = Variable("a",a_metric,"m/s","Speed of sound")
-
 		p_ratio = Variable("p_{ratio}","-","Sound pressure ratio (p/p_{ref})")
 		x = Variable("x",500,"ft","Distance from source at which to calculate sound")
 		k3 = Variable("k3",6.804e-3,"s**3/ft**3","Sound-pressure constant")
@@ -47,6 +64,14 @@ class RotorsAero(Model):
 		A = rotors["A"]
 		N = rotors["N"]
 		s = rotors["s"]
+
+		ki = rotorsState["ki"]
+		Cd0 = rotorsState["Cd0"]
+		rho = rotorsState["\rho"]
+		a = rotorsState["a"]
+		MT_max = rotorsState["MT_max"]
+		CL_mean_max = rotorsState["CL_mean_max"]
+		p_ratio_max = rotorsState["p_{ratio_max}"]
 
 		constraints = []
 
@@ -72,11 +97,8 @@ class RotorsAero(Model):
 			CL_mean <= CL_mean_max]
 
 		#Noise model
-		constraints += [p_ratio == k3*((T*omega)/(rho*x))*(N*s)**-0.5]
-
-		if SPL_req != "none": #noise constraint required
-			p_ratio_max = Variable("p_{ratio_max}",10**(SPL_req/20),"-","Max allowed sound pressure ratio")
-			constraints += [p_ratio <= p_ratio_max]
+		constraints += [p_ratio == k3*((T*omega)/(rho*x))*(N*s)**-0.5,
+			p_ratio <= p_ratio_max]
 
 		return constraints
 
@@ -87,8 +109,8 @@ if __name__ == "__main__":
 	N = 2
 	s = 0.01
 	testRotor = Rotors(num_rotors=N,solidity=s)
-	#testRotor = Rotors()
-	testRotor_AeroAnalysis = testRotor.dynamic()
+	testState = RotorsFlightState()
+	testRotor_AeroAnalysis = testRotor.dynamic(testState)
 	testModel = Model(testRotor_AeroAnalysis["P"],[testRotor,testRotor_AeroAnalysis])
 	testSolution = testModel.solve(verbosity=0)
 	print testSolution.summary()
