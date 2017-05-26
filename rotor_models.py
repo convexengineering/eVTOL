@@ -3,6 +3,8 @@
 import math
 import numpy as np
 from gpkit import Variable, Model
+import pint
+ureg = pint.UnitRegistry()
 
 class Rotors(Model):
 
@@ -102,27 +104,64 @@ class RotorsAero(Model):
 
 		return constraints
 
-if __name__ == "__main__":
-	import pint
-	ureg = pint.UnitRegistry()
-
-	#Analysis representative of the Joby S2
-
-	N = 12
-	s = 0.1
-	SPL_requirement = 100 #constraint not really enforced
-	T = 2000 #lbf; Joby S2
-	R = 1.804 #ft; Joby S2
-	CL_mean_max = 1.
-
-	#fint the lowest tip speed that works
+def rotors_analysis_function(T=2000*ureg("lbf"),VT="unconstrained",N=12,
+	R=1.804*ureg("ft"),s=0.1,CL_mean_max=1.4,SPL_requirement=100.,
+	print_summary="No"):
+	
+	#Function uses GPKit models as the backend to analyze a rotor.
 	testRotor = Rotors(N=N,s=s)
-	testRotor.substitutions.update({"R":R})
+	testRotor.substitutions.update({"R":R.to(ureg.ft).magnitude})
 
 	testState = RotorsFlightState(CL_mean_max=CL_mean_max,SPL_req=SPL_requirement)
 	testRotor_AeroAnalysis = testRotor.dynamic(testState)
-	testRotor_AeroAnalysis.substitutions.update({"T":T})
+	testRotor_AeroAnalysis.substitutions.update({"T":T.to(ureg.lbf).magnitude})
+
+	if VT != "unconstrained":
+		testRotor_AeroAnalysis.substitutions.update({"VT":VT.to(ureg.ft/ureg.s).magnitude})
 
 	testModel = Model(testRotor_AeroAnalysis["P"],[testRotor,testRotor_AeroAnalysis])
 	testSolution = testModel.solve(verbosity=0)
-	print testSolution.summary()
+
+	if print_summary=="Yes":
+		print testSolution.summary()
+
+	VT = testSolution["variables"]["VT_RotorsAero"]
+	P = testSolution["variables"]["P_RotorsAero"]
+	FOM = testSolution["variables"]["FOM_RotorsAero"]
+	CL_mean = testSolution["variables"]["CL_mean_RotorsAero"]
+	SPL = 20*np.log10(testSolution["variables"]["p_{ratio}_RotorsAero"])
+	
+	return [VT,P,FOM,CL_mean,SPL]
+
+
+if __name__ == "__main__":
+
+	#Analysis representative of the Joby S2
+	T = 2000*ureg.lbf
+	VT = 700*ureg.ft/ureg.s
+	N = 12
+	R = 1.804*ureg.ft
+	s = 0.1
+	CL_mean_max = 1.
+	SPL_requirement = 100 #constraint not really enforced
+
+	[VT_computed,P,FOM,CL_mean,SPL] = rotors_analysis_function(T=T,VT=VT,N=N,R=R,s=s,
+		CL_mean_max=CL_mean_max,SPL_requirement=SPL_requirement)
+
+	print
+	print "Analysis representative of the Joby S2"
+	print 
+	print "T = %0.0f lbf" % T.to(ureg.lbf).magnitude
+	print "VT = %0.0f ft/s" % VT.to(ureg.ft/ureg.s).magnitude
+	print "N = %0.0f" % N
+	print "R = %0.3f ft" % R.to(ureg.ft).magnitude
+	print "s = %0.2f" % s
+	print
+	print "P = %0.0f hp" % P.to(ureg.hp).magnitude
+	print "FOM = %0.3f" % FOM
+	print "CL_mean = %0.3f" % CL_mean
+	print "SPL = %0.1f dB" % SPL
+
+
+
+	
