@@ -3,7 +3,7 @@
 import math
 import numpy as np
 from gpkit import Variable, VectorVariable, Model, Vectorize
-from rotor_models import Rotors, RotorsFlightState, RotorsAero
+from rotor_models import Rotors, RotorsFlightState, RotorsAero, rotors_analysis_function
 from matplotlib import pyplot as plt
 
 
