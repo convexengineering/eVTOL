@@ -9,14 +9,14 @@ import pint
 ureg = pint.UnitRegistry()
 
 
-def rotors_analysis_function(T=2000*ureg("lbf"),VT="unconstrained",N=12,
-	R=1.804*ureg("ft"),s=0.1,CL_mean_max=1.4,SPL_requirement=100.,
+def rotors_analysis_function(T=2000*ureg("lbf"),VT="unconstrained",h=0*ureg.ft,
+	N=12,R=1.804*ureg("ft"),s=0.1,CL_mean_max=1.4,SPL_requirement=100.,
 	print_summary="No"):
 	
 	#Function uses GPKit models as the backend to analyze a rotor.
 	testRotor = Rotors(N=N,s=s)
 	testRotor.substitutions.update({"R":R.to(ureg.ft).magnitude})
-	testState = FlightState(h=0*ureg.ft)
+	testState = FlightState(h=h)
 	testRotor_AeroAnalysis = testRotor.performance(testState,CL_mean_max=CL_mean_max,SPL_req=SPL_requirement)
 	testRotor_AeroAnalysis.substitutions.update({"T":T.to(ureg.lbf).magnitude})
 

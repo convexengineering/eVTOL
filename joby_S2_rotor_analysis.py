@@ -3,7 +3,8 @@
 import math
 import numpy as np
 from gpkit import Variable, VectorVariable, Model, Vectorize
-from rotor_models import Rotors, RotorsFlightState, RotorsAero, rotors_analysis_function
+from rotor_models import rotors_analysis_function
+from standard_atmosphere import stdatmo
 from matplotlib import pyplot as plt
 
 
@@ -15,52 +16,42 @@ ureg = pint.UnitRegistry()
 N = 12
 s = 0.1
 SPL_requirement = 100 #constraint not really enforced
-W_hover = 2000 #lbf; Joby S2
-R = 1.804 #ft; Joby S2
+W_hover = 2000*ureg.lbf 
+R = 1.804*ureg.ft 
+h=0*ureg.ft
 CL_mean_max = 1.4 #reasonable guess
 Mtip_max = 0.9 #maximum tip Mach number
 
-#generic models
-testRotor = Rotors(N=N,s=s)
-testRotor.substitutions.update({"R":R})
-testState = RotorsFlightState(CL_mean_max=CL_mean_max,SPL_req=SPL_requirement)
 
 #find the lowest tip speed that works (limited by CLmean constraint)
-lowRotor_AeroAnalysis = testRotor.dynamic(testState)
-lowRotor_AeroAnalysis.substitutions.update({"T":W_hover})
+low_data = rotors_analysis_function(T=W_hover,VT="unconstrained",h=h,N=N,
+	R=R,s=s,CL_mean_max=CL_mean_max,SPL_requirement=SPL_requirement,
+	print_summary="No")
+VT_min = low_data[0]
 
-lowModel = Model(lowRotor_AeroAnalysis["P"],[testRotor,lowRotor_AeroAnalysis])
-lowSolution = lowModel.solve(verbosity=0)
-low_VT = lowSolution["variables"]["VT_RotorsAero"] #lowest tip speed for the sweep
+#find the highest tip speed that works (limited by tip Mach number)
+atmospheric_data = stdatmo(h)
+VT_max = Mtip_max*atmospheric_data["a"].to(ureg.ft/ureg.s)
 
-#find the highest tip speed that works (limited by maximum tip Mach number)
-highRotor_AeroAnalysis = testRotor.dynamic(testState)
-highRotor_AeroAnalysis.substitutions.update({"T":W_hover})
-highRotor_AeroAnalysis.substitutions.update({"MT":Mtip_max})
-
-highModel = Model(highRotor_AeroAnalysis["P"],[testRotor,highRotor_AeroAnalysis])
-highSolution = highModel.solve(verbosity=0)
-high_VT = highSolution["variables"]["VT_RotorsAero"] #highest tip speed for the sweep
-
-#sweep from highest to lowest
-VT_array = np.linspace(low_VT.magnitude,high_VT.magnitude,10)
+#sweep from lowest to highest
+VT_array = np.linspace(VT_min.to(ureg.ft/ureg.s).magnitude,
+	VT_max.to(ureg.ft/ureg.s).magnitude,10)*ureg.ft/ureg.s
 FOM_array = np.zeros(np.size(VT_array))
 P_array = np.zeros(np.size(VT_array))
-CLmean_array = np.zeros(np.size(VT_array))
+CL_mean_array = np.zeros(np.size(VT_array))
 SPL_array = np.zeros(np.size(VT_array))
 
-
 for i, VT in enumerate(VT_array):
-	sweepRotor_AeroAnalysis = testRotor.dynamic(testState)
-	sweepRotor_AeroAnalysis.substitutions.update({"T":W_hover})
-	sweepRotor_AeroAnalysis.substitutions.update({"VT":VT})
-	sweepModel = Model(sweepRotor_AeroAnalysis["P"],[testRotor,sweepRotor_AeroAnalysis])
-	sweepSolution = sweepModel.solve(verbosity=0)
 
-	FOM_array[i] = sweepSolution["variables"]["FOM_RotorsAero"]
-	P_array[i] = sweepSolution["variables"]["P_RotorsAero"].magnitude
-	CLmean_array[i] = sweepSolution["variables"]["CL_mean_RotorsAero"]
-	SPL_array[i] = 20*np.log10(sweepSolution["variables"]["p_{ratio}_RotorsAero"])
+	[VTo,P,FOM,CL_mean,SPL] = rotors_analysis_function(T=W_hover,VT=VT,
+		h=h,N=N,R=R,s=s,CL_mean_max=CL_mean_max,SPL_requirement=SPL_requirement,
+		print_summary="No")
+	P_array[i] = P.to(ureg.hp).magnitude
+	FOM_array[i] = FOM
+	CL_mean_array[i] = CL_mean
+	SPL_array[i] = SPL
+
+VT_array = VT_array.to(ureg.ft/ureg.s).magnitude
 
 # Plotting commands
 plt.ion()
@@ -87,7 +78,7 @@ plt.ylim(ymin=0)
 
 #Mean Lift Coefficient vs. VT
 plt.subplot(2,2,3)
-plt.plot(VT_array,CLmean_array,color="black", linewidth=1.5, linestyle="-", marker='s', markersize=8)	 
+plt.plot(VT_array,CL_mean_array,color="black", linewidth=1.5, linestyle="-", marker='s', markersize=8)	 
 plt.grid()
 plt.xlabel('Propeller tip speed (ft/s)', fontsize = 16)
 plt.ylabel('Mean $C_L$ (dimensionless)', fontsize = 16)
@@ -103,9 +94,9 @@ plt.ylabel('Vortex noise (dB)', fontsize = 16)
 plt.title("Vortex Noise",fontsize = 20)
 
 title_str = "Propeller Tip-Speed Sweep for the Joby S2\n" \
-	+ "$W_{hover} = "+str(W_hover)+"\; lbf$; " \
-	+ "$R = "+str(R)+"\; ft$; " \
-	+ "$s = "+str(s)+"$"
+	+ "$W_{hover} = " + str(W_hover.to(ureg.lbf).magnitude) + "\; lbf$; " \
+	+ "$R = " + str(R.to(ureg.ft).magnitude) + "\; ft$; " \
+	+ "$s = " + str(s) + "$"
 
 plt.suptitle(title_str,fontsize = 20)
 
