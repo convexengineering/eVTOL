@@ -12,14 +12,14 @@ class SimpleOnDemandAircraft(Model):
 	def setup(self,R,N,L_D,eta,weight_fraction,C_m,N_passengers=1,N_crew=1):
 		
 		W_TO = Variable("W_{TO}","lbf","Takeoff weight")
-		C = Variable("C","kWh","Total battery capacity")
+		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
 
 		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
 		eta = Variable("\eta",eta,"-","Cruise propulsive efficiency")
 		
 		self.W_TO = W_TO
-		self.C = C
+		self.C_eff = C_eff
 		self.g = g
 		self.L_D = L_D
 		self.eta = eta
@@ -37,7 +37,7 @@ class SimpleOnDemandAircraft(Model):
 		constraints = []
 		constraints += [g == self.battery["g"]]
 		constraints += [self.components]#all constraints implemented at component level
-		constraints += [C == self.battery["C"]]#battery-capacity constraint
+		constraints += [C_eff == self.battery["C_{eff}"]]#battery-capacity constraint
 		constraints += [W_TO >= sum(c["W"] for c in self.components)]#top-level weight constraint
 		return constraints
 
@@ -132,16 +132,39 @@ class RotorsAero(Model):
 		return constraints
 
 class Battery(Model):
+
+	def performance(self):
+		return BatteryPerformance(self)
+
 	#Requires a substitution or constraint for g (gravitational acceleration)
-	def setup(self,C_m=350*ureg.Wh/ureg.kg):
+	def setup(self,C_m=350*ureg.Wh/ureg.kg,usable_energy_fraction=0.8,P_m=3000*ureg.W/ureg.kg):
 		g = Variable("g","m/s**2","Gravitational acceleration")
+		
 		C = Variable("C","kWh","Battery capacity")
+		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
+		usable_energy_fraction = Variable("usable_energy_fraction",usable_energy_fraction,
+			"-","Percentage of the battery energy that can be used (without damaging battery)")
+	
 		W = Variable("W","lbf","Battery weight")
 		m = Variable("m","kg","Battery mass")
 		C_m = Variable("C_m",C_m.to(ureg.Wh/ureg.kg).magnitude,
 			"Wh/kg","Battery energy density")
+		P_m = Variable("P_m",P_m.to(ureg.W/ureg.kg).magnitude,
+			"W/kg","Battery power density")
+		P_max = Variable("P_{max}","kW","Battery maximum power")
 
-		return [C == m*C_m, W == m*g]
+		self.P_max = P_max 
+
+		return [C==m*C_m, W==m*g, C_eff == usable_energy_fraction*C, P_max==P_m*m]
+
+class BatteryPerformance(Model):
+	def setup(self,battery):
+		E = Variable("E","kWh","Electrical energy used during segment")
+		P = Variable("P","kW","Power draw during segment")
+		t = Variable("t","s","Time in segment")
+
+		return [E==P*t, P<=battery.P_max]
+
 
 class Crew(Model):
 	def setup(self,W_oneCrew_lbf=200,N_crew=1):
@@ -179,11 +202,15 @@ class Hover(Model):
 		T = Variable("T","lbf","Total thrust (from rotors) during hover segment")
 		t = Variable("t",t.to(ureg.s).magnitude,"s","Time in hover segment")
 		W = aircraft.W_TO
+		self.E = E
 
 		rotorPerformance = aircraft.rotors.performance(state)
+		batteryPerformance = aircraft.battery.performance()
 
-		constraints = [rotorPerformance]
+		constraints = [rotorPerformance, batteryPerformance]
 		constraints += [P==rotorPerformance["P"],T==rotorPerformance["T"]]
+		constraints += [E==batteryPerformance["E"], P==batteryPerformance["P"], 
+			t==batteryPerformance["t"]]
 		constraints += [E==P*t,T==W]
 		return constraints
 
@@ -191,7 +218,7 @@ class LevelFlight(Model):
 	#Substitution required for either R (segment range) or t (loiter time).
 	def setup(self,aircraft,V=150*ureg.mph):
 		E = Variable("E","kWh","Electrical energy used during level-flight segment")
-		P = Variable("P","kW","Power draw during level-flight  segment")
+		P = Variable("P","kW","Power draw during level-flight segment")
 		T = Variable("T","lbf","Thrust during level-flight  segment")
 		D = Variable("D","lbf","Drag during level-flight segment")
 		t = Variable("t","s","Time in level-flight segment")
@@ -202,6 +229,8 @@ class LevelFlight(Model):
 		L_D = aircraft.L_D
 		eta = aircraft.eta
 
+		self.E = E
+
 		constraints = [E==P*t,R==V*t,eta*P==T*V,T==D,W==L_D*D]
 
 		return constraints
@@ -210,9 +239,10 @@ class SimpleOnDemandMission(Model):
     def setup(self,aircraft,R=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
     	V_loiter=100*ureg.mph,time_in_hover=120*ureg.s,reserve="Yes"):
 
+    	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         W_TO = aircraft.W_TO
         g = aircraft.g
-        C = aircraft.C
+        C_eff = aircraft.C_eff
 
         self.aircraft = aircraft
         self.g = g
@@ -234,8 +264,9 @@ class SimpleOnDemandMission(Model):
         fs4.substitutions.update({"t":loiter_time.to(loiter_time_units).magnitude})
        		
         constraints = []
-        constraints += [C >= fs0["E"]+fs1["E"]+fs2["E"]+fs3["E"]+fs4["E"]+fs5["E"]]
+        constraints += [C_eff >= fs0.E+fs1.E+fs2.E+fs3.E+fs4.E+fs5.E]
         constraints += [fs0, fs1, fs2, fs3, fs4, fs5]
+        constraints += [p_ratio == fs0["p_{ratio}"]]
         constraints += hoverState
         return constraints
 
@@ -247,8 +278,8 @@ if __name__=="__main__":
 	R=1.804*ureg("ft") #propeller radius
 	L_D = 14 #estimated L/D in cruise
 	eta = 0.8 #estimated propulsive efficiency in cruise
-	weight_fraction = 0.391#structural mass fraction
-	C_m = 350*ureg.Wh/ureg.kg #battery energy density
+	weight_fraction = 0.353#structural mass fraction
+	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	N_passengers = 1
 	N_crew = 1
 
@@ -262,6 +293,7 @@ if __name__=="__main__":
 		V_loiter=V_loiter)
 	problem = Model(testAircraft["W_{TO}"],[testAircraft,testMission])
 	solution = problem.solve(verbosity=0)
+	SPL = np.array(20*np.log10(solution["variables"]["p_{ratio}_SimpleOnDemandMission"]))
 
 	print
 	print "Joby S2 representative analysis"
@@ -275,7 +307,6 @@ if __name__=="__main__":
 		solution["variables"]["W_{TO}_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
 		solution["variables"]["W_SimpleOnDemandAircraft, Battery"].to(ureg.lbf).magnitude
+	print "SPL in hover: %0.1f dB" % SPL
 
 	#print solution.summary()
-	
-	
