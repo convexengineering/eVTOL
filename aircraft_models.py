@@ -30,11 +30,9 @@ class SimpleOnDemandAircraft(Model):
 		self.passengers = Passengers(N_passengers=N_passengers)
 		self.structure = SimpleOnDemandStructure(self,weight_fraction)
 
-		#This is the line of code that breaks
-		
-		#R_units = self.rotors["R"].units
-		#self.rotors.substitutions.update({"R":R.to(R_units).magnitude})
-		self.rotors.substitutions.update({"R":R})
+		R_units = self.rotors["R"].units
+		self.rotors.substitutions.update({"R":R.to(R_units).magnitude})
+		#self.rotors.substitutions.update({"R":R})
 
 		self.components = [self.rotors,self.battery,self.crew,self.passengers,self.structure]
 		constraints = []
