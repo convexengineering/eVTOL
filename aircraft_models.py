@@ -9,7 +9,7 @@ ureg = pint.UnitRegistry()
 
 
 class SimpleOnDemandAircraft(Model):
-	def setup(self,R,N,L_D,eta,weight_fraction,C_m,N_passengers=1,N_crew=1):
+	def setup(self,R,N,L_D,eta,weight_fraction,C_m,N_passengers=1,N_crew=1,n=1.):
 		
 		W_TO = Variable("W_{TO}","lbf","Takeoff weight")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
@@ -25,7 +25,7 @@ class SimpleOnDemandAircraft(Model):
 		self.eta = eta
 
 		self.rotors = Rotors(N=N)
-		self.battery = Battery(C_m=C_m)
+		self.battery = Battery(C_m=C_m,n=n)
 		self.crew = Crew(N_crew=N_crew)
 		self.passengers = Passengers(N_passengers=N_passengers)
 		self.structure = SimpleOnDemandStructure(self,weight_fraction)
@@ -35,18 +35,18 @@ class SimpleOnDemandAircraft(Model):
 
 		self.components = [self.rotors,self.battery,self.crew,self.passengers,self.structure]
 		constraints = []
-		constraints += [g == self.battery["g"]]
+		constraints += [g == self.battery.topvar("g")]
 		constraints += [self.components]#all constraints implemented at component level
-		constraints += [C_eff == self.battery["C_{eff}"]]#battery-capacity constraint
-		constraints += [W_TO >= sum(c["W"] for c in self.components)]#top-level weight constraint
+		constraints += [C_eff == self.battery.topvar("C_{eff}")]#battery-capacity constraint
+		constraints += [W_TO >= sum(c.topvar("W") for c in self.components)]#top-level weight constraint
 		return constraints
 
 class SimpleOnDemandStructure(Model):
-	def setup(self,Aircraft,weight_fraction):
-		W = Variable("W","lbf","Weight")
+	def setup(self,aircraft,weight_fraction):
+		W = Variable("W","lbf","Structural weight")
 		weight_fraction = Variable("weight_fraction",weight_fraction,"-","Structural weight fraction")
 
-		return [W==weight_fraction*Aircraft.W_TO]
+		return [W==weight_fraction*aircraft.W_TO]
 
 
 class Rotors(Model):
@@ -94,13 +94,13 @@ class RotorsAero(Model):
 		x = Variable("x",500,"ft","Distance from source at which to calculate sound")
 		k3 = Variable("k3",6.804e-3,"s**3/ft**3","Sound-pressure constant")
 
-		R = rotors["R"]
-		A = rotors["A"]
-		N = rotors["N"]
-		s = rotors["s"]
+		R = rotors.topvar("R")
+		A = rotors.topvar("A")
+		N = rotors.topvar("N")
+		s = rotors.topvar("s")
 
-		rho = flightState["\rho"]
-		a = flightState["a"]
+		rho = flightState.topvar("\rho")
+		a = flightState.topvar("a")
 
 		constraints = [flightState]
 
@@ -137,7 +137,7 @@ class Battery(Model):
 		return BatteryPerformance(self)
 
 	#Requires a substitution or constraint for g (gravitational acceleration)
-	def setup(self,C_m=350*ureg.Wh/ureg.kg,usable_energy_fraction=0.8,P_m=3000*ureg.W/ureg.kg):
+	def setup(self,C_m=350*ureg.Wh/ureg.kg,usable_energy_fraction=0.8,P_m=3000*ureg.W/ureg.kg,n=1.):
 		g = Variable("g","m/s**2","Gravitational acceleration")
 		
 		C = Variable("C","kWh","Battery capacity")
@@ -153,7 +153,8 @@ class Battery(Model):
 			"W/kg","Battery power density")
 		P_max = Variable("P_{max}","kW","Battery maximum power")
 
-		self.P_max = P_max 
+		self.P_max = P_max
+		self.n = n #battery discharge parameter (needed for Peukert effect)
 
 		return [C==m*C_m, W==m*g, C_eff == usable_energy_fraction*C, P_max==P_m*m]
 
@@ -161,22 +162,28 @@ class BatteryPerformance(Model):
 	def setup(self,battery):
 		E = Variable("E","kWh","Electrical energy used during segment")
 		P = Variable("P","kW","Power draw during segment")
-		t = Variable("t","s","Time in segment")
+		t = Variable("t","s","Time over which battery is providing power")
+		Rt = Variable("Rt",1.,"hr","Battery hour rating")
 
-		return [E==P*t, P<=battery.P_max]
+		self.t = t
+
+		constraints = [E==P*Rt*((t/Rt)**(1/battery.n)), P<=battery.P_max]
+		return constraints
 
 
 class Crew(Model):
-	def setup(self,W_oneCrew_lbf=200,N_crew=1):
-		W_oneCrew = Variable("W_{oneCrew}",W_oneCrew_lbf,"lbf","Weight of 1 crew member")
+	def setup(self,W_oneCrew=190*ureg.lbf,N_crew=1):
+		W_oneCrew = Variable("W_{oneCrew}",
+			W_oneCrew.to(ureg.lbf).magnitude,"lbf","Weight of 1 crew member")
 		N_crew = Variable("N_{crew}",N_crew,"-","Number of crew members")
 		W = Variable("W","lbf","Total weight")
 
 		return [W == N_crew*W_oneCrew]
 
 class Passengers(Model):
-	def setup(self,W_onePassenger_lbf=200,N_passengers=1):
-		W_onePassenger = Variable("W_{oneCrew}",W_onePassenger_lbf,"lbf","Weight of 1 passenger")
+	def setup(self,W_onePassenger=200*ureg.lbf,N_passengers=1):
+		W_onePassenger = Variable("W_{onePassenger}",
+			W_onePassenger.to(ureg.lbf).magnitude,"lbf","Weight of 1 passenger")
 		N_passengers = Variable("N_{crew}",N_passengers,"-","Number of passengers")
 		W = Variable("W","lbf","Total weight")
 
@@ -204,14 +211,14 @@ class Hover(Model):
 		W = aircraft.W_TO
 		self.E = E
 
-		rotorPerformance = aircraft.rotors.performance(state)
-		batteryPerformance = aircraft.battery.performance()
+		rotorPerf = aircraft.rotors.performance(state)
+		batteryPerf = aircraft.battery.performance()
 
-		constraints = [rotorPerformance, batteryPerformance]
-		constraints += [P==rotorPerformance["P"],T==rotorPerformance["T"]]
-		constraints += [E==batteryPerformance["E"], P==batteryPerformance["P"], 
-			t==batteryPerformance["t"]]
-		constraints += [E==P*t,T==W]
+		constraints = [rotorPerf, batteryPerf]
+		constraints += [P==rotorPerf.topvar("P"),T==rotorPerf.topvar("T")]
+		constraints += [E==batteryPerf.topvar("E"), P==batteryPerf.topvar("P"), 
+			t==batteryPerf.topvar("t")]
+		constraints += [T==W]
 		return constraints
 
 class LevelFlight(Model):
@@ -230,8 +237,14 @@ class LevelFlight(Model):
 		eta = aircraft.eta
 
 		self.E = E
+		
+		batteryPerf = aircraft.battery.performance()
 
-		constraints = [E==P*t,R==V*t,eta*P==T*V,T==D,W==L_D*D]
+		constraints = []
+		constraints += [R==V*t,eta*P==T*V,T==D,W==L_D*D]
+		constraints += [E==batteryPerf.topvar("E"), P==batteryPerf.topvar("P"),
+			t==batteryPerf.topvar("t")]
+		constraints += [batteryPerf]
 
 		return constraints
 
@@ -240,12 +253,9 @@ class SimpleOnDemandMission(Model):
     	V_loiter=100*ureg.mph,time_in_hover=120*ureg.s,reserve="Yes"):
 
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
-        W_TO = aircraft.W_TO
-        g = aircraft.g
         C_eff = aircraft.C_eff
 
         self.aircraft = aircraft
-        self.g = g
         
         hoverState = FlightState(h=0*ureg.ft)
 
@@ -256,12 +266,12 @@ class SimpleOnDemandMission(Model):
         fs4 = LevelFlight(aircraft,V=V_loiter)#loiter (reserve)
         fs5 = Hover(aircraft,hoverState,t=time_in_hover)#landing again
 
-        range_units = fs1["R"].units
+        range_units = fs1.topvar("R").units
         fs1.substitutions.update({"R":R.to(range_units).magnitude})
 
         loiter_time = 45*ureg("minute") #FAA requirement
-        loiter_time_units = fs4["t"].units
-        fs4.substitutions.update({"t":loiter_time.to(loiter_time_units).magnitude})
+        loiter_time_units = fs4.topvar("t").units
+        fs4.substitutions.update({"t_SimpleOnDemandMission/LevelFlight":loiter_time.to(loiter_time_units).magnitude})
        		
         constraints = []
         constraints += [C_eff >= fs0.E+fs1.E+fs2.E+fs3.E+fs4.E+fs5.E]
@@ -278,21 +288,23 @@ if __name__=="__main__":
 	R=1.804*ureg("ft") #propeller radius
 	L_D = 14 #estimated L/D in cruise
 	eta = 0.8 #estimated propulsive efficiency in cruise
-	weight_fraction = 0.353#structural mass fraction
+	weight_fraction = 0.358#structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	N_passengers = 1
 	N_crew = 1
+	n=1.#battery discharge parameter
 
 	mission_range = 200*ureg.nautical_mile
 	V_cruise = 200*ureg.mph
 	V_loiter=100*ureg.mph
 
 	testAircraft = SimpleOnDemandAircraft(R=R,N=N,L_D=L_D,eta=eta,C_m=C_m,
-		weight_fraction=weight_fraction)
+		weight_fraction=weight_fraction,n=n)
 	testMission = SimpleOnDemandMission(testAircraft,R=mission_range,V_cruise=V_cruise,
 		V_loiter=V_loiter)
 	problem = Model(testAircraft["W_{TO}"],[testAircraft,testMission])
 	solution = problem.solve(verbosity=0)
+
 	SPL = np.array(20*np.log10(solution["variables"]["p_{ratio}_SimpleOnDemandMission"]))
 
 	print
@@ -306,7 +318,7 @@ if __name__=="__main__":
 	print "Takeoff weight: %0.0f lbs" % \
 		solution["variables"]["W_{TO}_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
-		solution["variables"]["W_SimpleOnDemandAircraft, Battery"].to(ureg.lbf).magnitude
+		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
 	print "SPL in hover: %0.1f dB" % SPL
 
 	#print solution.summary()
