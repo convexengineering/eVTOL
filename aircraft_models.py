@@ -30,8 +30,11 @@ class SimpleOnDemandAircraft(Model):
 		self.passengers = Passengers(N_passengers=N_passengers)
 		self.structure = SimpleOnDemandStructure(self,weight_fraction)
 
-		R_units = self.rotors["R"].units
-		self.rotors.substitutions.update({"R":R.to(R_units).magnitude})
+		#This is the line of code that breaks
+		
+		#R_units = self.rotors["R"].units
+		#self.rotors.substitutions.update({"R":R.to(R_units).magnitude})
+		self.rotors.substitutions.update({"R":R})
 
 		self.components = [self.rotors,self.battery,self.crew,self.passengers,self.structure]
 		constraints = []
@@ -292,7 +295,7 @@ if __name__=="__main__":
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	N_passengers = 1
 	N_crew = 1
-	n=1.#battery discharge parameter
+	n=1.0#battery discharge parameter
 
 	mission_range = 200*ureg.nautical_mile
 	V_cruise = 200*ureg.mph
