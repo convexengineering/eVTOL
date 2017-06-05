@@ -2,12 +2,9 @@
 
 import math
 import numpy as np
-from gpkit import Variable, Model
+from gpkit import Variable, Model, ureg
 from standard_atmosphere import stdatmo
 from aircraft_models import Rotors, FlightState, RotorsAero
-import pint
-ureg = pint.UnitRegistry()
-
 
 def rotors_analysis_function(T=2000*ureg("lbf"),VT="unconstrained",h=0*ureg.ft,
 	N=12,R=1.804*ureg("ft"),s=0.1,CL_mean_max=1.4,SPL_requirement=100.,
@@ -15,13 +12,13 @@ def rotors_analysis_function(T=2000*ureg("lbf"),VT="unconstrained",h=0*ureg.ft,
 	
 	#Function uses GPKit models as the backend to analyze a rotor.
 	testRotor = Rotors(N=N,s=s)
-	testRotor.substitutions.update({"R":R.to(ureg.ft).magnitude})
+	testRotor.substitutions.update({"R":R})
 	testState = FlightState(h=h)
 	testRotor_AeroAnalysis = testRotor.performance(testState,CL_mean_max=CL_mean_max,SPL_req=SPL_requirement)
 	testRotor_AeroAnalysis.substitutions.update({"T":T.to(ureg.lbf).magnitude})
 
 	if VT != "unconstrained":
-		testRotor_AeroAnalysis.substitutions.update({"VT":VT.to(ureg.ft/ureg.s).magnitude})
+		testRotor_AeroAnalysis.substitutions.update({"VT":VT})
 
 	testModel = Model(testRotor_AeroAnalysis["P"],[testRotor,testRotor_AeroAnalysis])
 	testSolution = testModel.solve(verbosity=0)
@@ -41,6 +38,7 @@ def rotors_analysis_function(T=2000*ureg("lbf"),VT="unconstrained",h=0*ureg.ft,
 if __name__ == "__main__":
 
 	#Analysis representative of the Joby S2
+
 	T = 2000*ureg.lbf
 	VT = 700*ureg.ft/ureg.s
 	N = 12

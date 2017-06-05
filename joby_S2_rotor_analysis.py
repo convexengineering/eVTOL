@@ -7,10 +7,6 @@ from rotor_models import rotors_analysis_function
 from standard_atmosphere import stdatmo
 from matplotlib import pyplot as plt
 
-
-import pint
-ureg = pint.UnitRegistry()
-
 #Analysis representative of the Joby S2
 
 N = 12
