@@ -220,14 +220,15 @@ class Hover(Model):
 		return constraints
 
 class LevelFlight(Model):
-	#Substitution required for either R (segment range) or t (loiter time).
+	#Substitution required for either segment_range  or t (loiter time).
 	def setup(self,aircraft,V=150*ureg.mph):
 		E = Variable("E","kWh","Electrical energy used during level-flight segment")
 		P = Variable("P","kW","Power draw during level-flight segment")
 		T = Variable("T","lbf","Thrust during level-flight  segment")
 		D = Variable("D","lbf","Drag during level-flight segment")
 		t = Variable("t","s","Time in level-flight segment")
-		R = Variable("R","nautical_mile","Distance travelled during segment")
+		segment_range = Variable("segment_range","nautical_mile",
+			"Distance travelled during segment")
 		V = Variable("V",V,"mph","Velocity during segment")
 		
 		W = aircraft.W_TO
@@ -239,7 +240,7 @@ class LevelFlight(Model):
 		batteryPerf = aircraft.battery.performance()
 
 		constraints = []
-		constraints += [R==V*t,eta*P==T*V,T==D,W==L_D*D]
+		constraints += [segment_range==V*t,eta*P==T*V,T==D,W==L_D*D]
 		constraints += [E==batteryPerf.topvar("E"), P==batteryPerf.topvar("P"),
 			t==batteryPerf.topvar("t")]
 		constraints += [batteryPerf]
@@ -247,7 +248,7 @@ class LevelFlight(Model):
 		return constraints
 
 class SimpleOnDemandMission(Model):
-    def setup(self,aircraft,range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
+    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
     	V_loiter=100*ureg.mph,time_in_hover=120*ureg.s,reserve="Yes"):
 
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
@@ -264,10 +265,11 @@ class SimpleOnDemandMission(Model):
         self.fs4 = LevelFlight(aircraft,V=V_loiter)#loiter (reserve)
         self.fs5 = Hover(aircraft,hoverState,t=time_in_hover)#landing again
 
-        self.fs1.substitutions.update({"R":range})
+        self.fs1.substitutions.update({"segment_range":mission_range})
 
         loiter_time = 45*ureg("minute") #FAA requirement
-        self.fs4.substitutions.update({"t_SimpleOnDemandMission/LevelFlight":loiter_time})
+        #self.fs4.substitutions.update({"t_SimpleOnDemandMission/LevelFlight":loiter_time})
+        self.fs4.substitutions.update({self.fs4.topvar("t"):loiter_time})
        		
         constraints = []
         constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E + self.fs3.E
@@ -302,7 +304,7 @@ if __name__=="__main__":
 		weight_fraction=weight_fraction,n=n)
 	#testAircraft.substitutions.update({testAircraft.rotors.topvar("R"):R})
 
-	testMission = SimpleOnDemandMission(testAircraft,range=mission_range,V_cruise=V_cruise,
+	testMission = SimpleOnDemandMission(testAircraft,mission_range=mission_range,V_cruise=V_cruise,
 		V_loiter=V_loiter)
 	testMission.substitutions.update({testMission.fs0.topvar("T/A"):T_A,
 		testMission.fs2.topvar("T/A"):T_A,testMission.fs3.topvar("T/A"):T_A,
