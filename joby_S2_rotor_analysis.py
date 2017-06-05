@@ -2,7 +2,7 @@
 
 import math
 import numpy as np
-from gpkit import Variable, VectorVariable, Model, Vectorize
+from gpkit import Variable, VectorVariable, Model, Vectorize, ureg
 from rotor_models import rotors_analysis_function
 from standard_atmosphere import stdatmo
 from matplotlib import pyplot as plt

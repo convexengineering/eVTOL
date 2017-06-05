@@ -2,14 +2,12 @@
 
 import math
 import numpy as np
-from gpkit import Variable, Model, Vectorize
+from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
-import pint 
-ureg = pint.UnitRegistry()
 
 
 class SimpleOnDemandAircraft(Model):
-	def setup(self,R,N,L_D,eta,weight_fraction,C_m,N_passengers=1,N_crew=1,n=1.):
+	def setup(self,N,L_D,eta,weight_fraction,C_m,N_passengers=1,N_crew=1,n=1.):
 		
 		W_TO = Variable("W_{TO}","lbf","Takeoff weight")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
@@ -29,10 +27,6 @@ class SimpleOnDemandAircraft(Model):
 		self.crew = Crew(N_crew=N_crew)
 		self.passengers = Passengers(N_passengers=N_passengers)
 		self.structure = SimpleOnDemandStructure(self,weight_fraction)
-
-		R_units = self.rotors["R"].units
-		self.rotors.substitutions.update({"R":R.to(R_units).magnitude})
-		#self.rotors.substitutions.update({"R":R})
 
 		self.components = [self.rotors,self.battery,self.crew,self.passengers,self.structure]
 		constraints = []
@@ -58,13 +52,14 @@ class Rotors(Model):
 	def setup(self,N=1,s=0.1):
 		R = Variable("R","ft","Propeller radius")
 		D = Variable("D","ft","Propeller diameter")
-		A = Variable("A","ft^2","Rotor disk area")
+		A = Variable("A","ft^2","Area of 1 rotor disk")
+		A_total = Variable("A_{total}","ft^2","Combined area of all rotor disks")
 		N = Variable("N",N,"-","Number of rotors")
 		s = Variable("s",s,"-","Propeller solidity")
 
 		W = Variable("W",0,"lbf","Rotor weight") #weight model not implemented yet
 
-		constraints = [A == math.pi*R**2, D==2*R, N==N, s==s]
+		constraints = [A == math.pi*R**2, D==2*R, N==N, s==s, A_total==N*A]
 
 		return constraints
 
@@ -72,6 +67,7 @@ class RotorsAero(Model):
 	def setup(self,rotors,flightState,MT_max=0.9,CL_mean_max=1.0,SPL_req=100):
 		T = Variable("T","lbf","Total thrust")
 		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
+		T_A = Variable("T/A","lbf/ft**2","Disk loading")
 		P = Variable("P","hp","Total power")
 		P_perRotor = Variable("P_perRotor","hp","Power per rotor")
 		VT = Variable("VT","ft/s","Propeller tip speed")
@@ -97,6 +93,7 @@ class RotorsAero(Model):
 
 		R = rotors.topvar("R")
 		A = rotors.topvar("A")
+		A_total = rotors.topvar("A_{total}")
 		N = rotors.topvar("N")
 		s = rotors.topvar("s")
 
@@ -110,6 +107,7 @@ class RotorsAero(Model):
 			P == N * P_perRotor]
 		constraints += [T_perRotor == 0.5*rho*(VT**2)*A*CT,
 			P_perRotor == 0.5*rho*(VT**3)*A*CP]
+		constraints += [T_A == T/A_total]
 
 		#Performance model
 		constraints += [CPi == 0.5*CT**1.5,
@@ -148,10 +146,8 @@ class Battery(Model):
 	
 		W = Variable("W","lbf","Battery weight")
 		m = Variable("m","kg","Battery mass")
-		C_m = Variable("C_m",C_m.to(ureg.Wh/ureg.kg).magnitude,
-			"Wh/kg","Battery energy density")
-		P_m = Variable("P_m",P_m.to(ureg.W/ureg.kg).magnitude,
-			"W/kg","Battery power density")
+		C_m = Variable("C_m",C_m,"Wh/kg","Battery energy density")
+		P_m = Variable("P_m",P_m,"W/kg","Battery power density")
 		P_max = Variable("P_{max}","kW","Battery maximum power")
 
 		self.P_max = P_max
@@ -174,8 +170,7 @@ class BatteryPerformance(Model):
 
 class Crew(Model):
 	def setup(self,W_oneCrew=190*ureg.lbf,N_crew=1):
-		W_oneCrew = Variable("W_{oneCrew}",
-			W_oneCrew.to(ureg.lbf).magnitude,"lbf","Weight of 1 crew member")
+		W_oneCrew = Variable("W_{oneCrew}",W_oneCrew,"lbf","Weight of 1 crew member")
 		N_crew = Variable("N_{crew}",N_crew,"-","Number of crew members")
 		W = Variable("W","lbf","Total weight")
 
@@ -183,8 +178,8 @@ class Crew(Model):
 
 class Passengers(Model):
 	def setup(self,W_onePassenger=200*ureg.lbf,N_passengers=1):
-		W_onePassenger = Variable("W_{onePassenger}",
-			W_onePassenger.to(ureg.lbf).magnitude,"lbf","Weight of 1 passenger")
+		W_onePassenger = Variable("W_{onePassenger}",W_onePassenger,
+			"lbf","Weight of 1 passenger")
 		N_passengers = Variable("N_{crew}",N_passengers,"-","Number of passengers")
 		W = Variable("W","lbf","Total weight")
 
@@ -194,10 +189,10 @@ class FlightState(Model):
 	def setup(self,h):
 		
 		atmospheric_data = stdatmo(h)
-		rho = atmospheric_data["\rho"]
-		a = atmospheric_data["a"]
-		rho = Variable("\rho",rho.to(ureg.kg/ureg.m**3).magnitude,"kg/m^3","Air density")
-		a = Variable("a",a.to(ureg.ft/ureg.s).magnitude,"ft/s","Speed of sound")
+		rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
+		a = atmospheric_data["a"].to(ureg.ft/ureg.s)
+		rho = Variable("\rho",rho,"kg/m^3","Air density")
+		a = Variable("a",a,"ft/s","Speed of sound")
 
 		constraints = []
 		constraints += [a == a, rho == rho]
@@ -208,7 +203,8 @@ class Hover(Model):
 		E = Variable("E","kWh","Electrical energy used during hover segment")
 		P = Variable("P","kW","Power draw (input to rotor) during hover segment")
 		T = Variable("T","lbf","Total thrust (from rotors) during hover segment")
-		t = Variable("t",t.to(ureg.s).magnitude,"s","Time in hover segment")
+		T_A = Variable("T/A","lbf/ft**2","Disk loading during hover segment")
+		t = Variable("t",t,"s","Time in hover segment")
 		W = aircraft.W_TO
 		self.E = E
 
@@ -216,7 +212,8 @@ class Hover(Model):
 		batteryPerf = aircraft.battery.performance()
 
 		constraints = [rotorPerf, batteryPerf]
-		constraints += [P==rotorPerf.topvar("P"),T==rotorPerf.topvar("T")]
+		constraints += [P==rotorPerf.topvar("P"),T==rotorPerf.topvar("T"),
+			T_A==rotorPerf.topvar("T/A")]
 		constraints += [E==batteryPerf.topvar("E"), P==batteryPerf.topvar("P"), 
 			t==batteryPerf.topvar("t")]
 		constraints += [T==W]
@@ -231,7 +228,7 @@ class LevelFlight(Model):
 		D = Variable("D","lbf","Drag during level-flight segment")
 		t = Variable("t","s","Time in level-flight segment")
 		R = Variable("R","nautical_mile","Distance travelled during segment")
-		V = Variable("V",V.to(ureg.knot).magnitude,"mph","Velocity during segment")
+		V = Variable("V",V,"mph","Velocity during segment")
 		
 		W = aircraft.W_TO
 		L_D = aircraft.L_D
@@ -250,7 +247,7 @@ class LevelFlight(Model):
 		return constraints
 
 class SimpleOnDemandMission(Model):
-    def setup(self,aircraft,R=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
+    def setup(self,aircraft,range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
     	V_loiter=100*ureg.mph,time_in_hover=120*ureg.s,reserve="Yes"):
 
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
@@ -260,24 +257,23 @@ class SimpleOnDemandMission(Model):
         
         hoverState = FlightState(h=0*ureg.ft)
 
-        fs0 = Hover(aircraft,hoverState,t=time_in_hover)#takeoff
-        fs1 = LevelFlight(aircraft,V=V_cruise)#fly to destination
-        fs2 = Hover(aircraft,hoverState,t=time_in_hover)#landing
-        fs3 = Hover(aircraft,hoverState,t=time_in_hover)#take off again
-        fs4 = LevelFlight(aircraft,V=V_loiter)#loiter (reserve)
-        fs5 = Hover(aircraft,hoverState,t=time_in_hover)#landing again
+        self.fs0 = Hover(aircraft,hoverState,t=time_in_hover)#takeoff
+        self.fs1 = LevelFlight(aircraft,V=V_cruise)#fly to destination
+        self.fs2 = Hover(aircraft,hoverState,t=time_in_hover)#landing
+        self.fs3 = Hover(aircraft,hoverState,t=time_in_hover)#take off again
+        self.fs4 = LevelFlight(aircraft,V=V_loiter)#loiter (reserve)
+        self.fs5 = Hover(aircraft,hoverState,t=time_in_hover)#landing again
 
-        range_units = fs1.topvar("R").units
-        fs1.substitutions.update({"R":R.to(range_units).magnitude})
+        self.fs1.substitutions.update({"R":range})
 
         loiter_time = 45*ureg("minute") #FAA requirement
-        loiter_time_units = fs4.topvar("t").units
-        fs4.substitutions.update({"t_SimpleOnDemandMission/LevelFlight":loiter_time.to(loiter_time_units).magnitude})
+        self.fs4.substitutions.update({"t_SimpleOnDemandMission/LevelFlight":loiter_time})
        		
         constraints = []
-        constraints += [C_eff >= fs0.E+fs1.E+fs2.E+fs3.E+fs4.E+fs5.E]
-        constraints += [fs0, fs1, fs2, fs3, fs4, fs5]
-        constraints += [p_ratio == fs0["p_{ratio}"]]
+        constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E + self.fs3.E
+        	+ self.fs4.E + self.fs5.E]
+        constraints += [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
+        constraints += [p_ratio == self.fs0["p_{ratio}"]]
         constraints += hoverState
         return constraints
 
@@ -287,9 +283,12 @@ if __name__=="__main__":
 	
 	N = 12 #number of propellers
 	R=1.804*ureg("ft") #propeller radius
+
+	T_A = 16.3*ureg("lbf")/ureg("ft")**2
+
 	L_D = 14 #estimated L/D in cruise
 	eta = 0.8 #estimated propulsive efficiency in cruise
-	weight_fraction = 0.358#structural mass fraction
+	weight_fraction = 0.346#structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	N_passengers = 1
 	N_crew = 1
@@ -299,10 +298,16 @@ if __name__=="__main__":
 	V_cruise = 200*ureg.mph
 	V_loiter=100*ureg.mph
 
-	testAircraft = SimpleOnDemandAircraft(R=R,N=N,L_D=L_D,eta=eta,C_m=C_m,
+	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta=eta,C_m=C_m,
 		weight_fraction=weight_fraction,n=n)
-	testMission = SimpleOnDemandMission(testAircraft,R=mission_range,V_cruise=V_cruise,
+	#testAircraft.substitutions.update({testAircraft.rotors.topvar("R"):R})
+
+	testMission = SimpleOnDemandMission(testAircraft,range=mission_range,V_cruise=V_cruise,
 		V_loiter=V_loiter)
+	testMission.substitutions.update({testMission.fs0.topvar("T/A"):T_A,
+		testMission.fs2.topvar("T/A"):T_A,testMission.fs3.topvar("T/A"):T_A,
+		testMission.fs5.topvar("T/A"):T_A})
+
 	problem = Model(testAircraft["W_{TO}"],[testAircraft,testMission])
 	solution = problem.solve(verbosity=0)
 

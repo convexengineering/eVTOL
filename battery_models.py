@@ -3,8 +3,7 @@
 import numpy as np
 from gpkit import Variable, Model
 from aircraft_models import Battery
-import pint
-ureg = pint.UnitRegistry()
+from gpkit import ureg
 
 if __name__=="__main__":
 
@@ -16,8 +15,7 @@ if __name__=="__main__":
 	
 	W_units = testBattery["W"].units
 	g_units = testBattery["g"].units
-	testBattery.substitutions.update({"W":W.to(W_units).magnitude,
-		"g":g.to(g_units).magnitude})
+	testBattery.substitutions.update({"W":W,"g":g})
 	testBatteryModel = Model(1/testBattery["C"],testBattery)
 	testBatterySolution = testBatteryModel.solve(verbosity=0)
 	print testBatterySolution.summary()
