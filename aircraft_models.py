@@ -12,10 +12,9 @@ class SimpleOnDemandAircraft(Model):
 		W_TO = Variable("W_{TO}","lbf","Takeoff weight")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
-
 		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
 		eta = Variable("\eta",eta,"-","Cruise propulsive efficiency")
-		
+
 		self.W_TO = W_TO
 		self.C_eff = C_eff
 		self.g = g
@@ -27,8 +26,8 @@ class SimpleOnDemandAircraft(Model):
 		self.crew = Crew(N_crew=N_crew)
 		self.passengers = Passengers(N_passengers=N_passengers)
 		self.structure = SimpleOnDemandStructure(self,weight_fraction)
-
 		self.components = [self.rotors,self.battery,self.crew,self.passengers,self.structure]
+		
 		constraints = []
 		constraints += [g == self.battery.topvar("g")]
 		constraints += [self.components]#all constraints implemented at component level
@@ -252,6 +251,7 @@ class OnDemandSizingMission(Model):
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
     	V_loiter=100*ureg.mph,time_in_hover=120*ureg.s):
 
+    	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         C_eff = aircraft.C_eff
 
@@ -266,13 +266,12 @@ class OnDemandSizingMission(Model):
         self.fs4 = LevelFlight(aircraft,V=V_loiter)#loiter (reserve)
         self.fs5 = Hover(aircraft,hoverState,t=time_in_hover)#landing again
 
-        self.fs1.substitutions.update({"segment_range":mission_range})
-
         loiter_time = 45*ureg("minute") #FAA requirement
         #self.fs4.substitutions.update({"t_SimpleOnDemandMission/LevelFlight":loiter_time})
         self.fs4.substitutions.update({self.fs4.topvar("t"):loiter_time})
        		
         constraints = []
+        constraints += [mission_range == self.fs1.topvar("segment_range")]
         constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E + self.fs3.E
         	+ self.fs4.E + self.fs5.E]
         constraints += [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
@@ -285,6 +284,8 @@ class OnDemandTypicalMission(Model):
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
     	time_in_hover=120*ureg.s,cost_per_weight=112*ureg.lbf**-1,pilot_salary=40*ureg.hr**-1):
 
+    	mission_range = Variable("mission_range",mission_range,"nautical_mile",
+    		"Mission range (not including reserves)")
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         C_eff = aircraft.C_eff #effective battery capacity
 
@@ -307,7 +308,7 @@ class OnDemandTypicalMission(Model):
         c_pilot = Variable("c_{pilot}","-","Pilot cost (per mission)")
         pilot_salary = Variable("pilot_salary",pilot_salary,"hr**-1","Pilot salary")
 
-        c_maintenance = Variable("c_maintenance",0,"-","Maintenance cost per mission")
+        c_maintenance = Variable("c_{maintenance}","-","Maintenance cost per mission")
 
         self.aircraft = aircraft
         
@@ -316,10 +317,9 @@ class OnDemandTypicalMission(Model):
         self.fs0 = Hover(aircraft,hoverState,t=time_in_hover)#takeoff
         self.fs1 = LevelFlight(aircraft,V=V_cruise)#fly to destination
         self.fs2 = Hover(aircraft,hoverState,t=time_in_hover)#landing
-
-        self.fs1.substitutions.update({"segment_range":mission_range})
        		
         constraints = []
+        constraints += [mission_range == self.fs1.topvar("segment_range")]
         constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E]
         constraints += [self.fs0, self.fs1, self.fs2]
         constraints += [p_ratio == self.fs0["p_{ratio}"]]
@@ -337,18 +337,17 @@ class OnDemandTypicalMission(Model):
 
         constraints += [c_pilot == pilot_salary*t_mission]
 
+        constraints += [c_maintenance == 0.01]#deliberately negligible
+
         return constraints
 
 if __name__=="__main__":
 	
-	#Joby S2 representative analysis
+	#Joby S2 representative analysis (applies to tilt-rotors in general)
 	
 	N = 12 #number of propellers
-	R=1.804*ureg("ft") #propeller radius
-
 	T_A = 16.3*ureg("lbf")/ureg("ft")**2
-
-	L_D = 14 #estimated L/D in cruise
+	L_D = 14. #estimated L/D in cruise
 	eta = 0.8 #estimated propulsive efficiency in cruise
 	weight_fraction = 0.346#structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
@@ -362,7 +361,6 @@ if __name__=="__main__":
 
 	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta=eta,C_m=C_m,
 		weight_fraction=weight_fraction,n=n)
-	#testAircraft.substitutions.update({testAircraft.rotors.topvar("R"):R})
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=mission_range,V_cruise=V_cruise,
 		V_loiter=V_loiter)
@@ -370,23 +368,52 @@ if __name__=="__main__":
 		testSizingMission.fs2.topvar("T/A"):T_A,testSizingMission.fs3.topvar("T/A"):T_A,
 		testSizingMission.fs5.topvar("T/A"):T_A})
 
-	problem = Model(testAircraft["W_{TO}"],[testAircraft,testSizingMission])
+	testTypicalMission = OnDemandTypicalMission(testAircraft)
+	
+	problem = Model(testTypicalMission["cost_per_trip"],
+		[testAircraft, testSizingMission, testTypicalMission])
 	solution = problem.solve(verbosity=0)
 
 	SPL = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
 
 	print
-	print "Joby S2 representative analysis"
+	print "Concept representative analysis"
 	print
+	
+
+
 	print "Battery energy density: %0.0f Wh/kg" % C_m.to(ureg.Wh/ureg.kg).magnitude
 	print "Structural mass fraction: %0.3f" % weight_fraction
 	print "Cruise lift-to-drag ratio: %0.1f" % L_D
+	print "Hover disk loading: %0.1f lbf/ft^2" % T_A.to(ureg("lbf/ft**2")).magnitude
 	print "Cruise propulsive efficiency: %0.2f" % eta
+	print
+	print "Sizing mission range: %0.0f nm" % \
+		solution["variables"]["mission_range_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
+	print "Typical mission range: %0.0f nm" % \
+		solution["variables"]["mission_range_OnDemandTypicalMission"].to(ureg.nautical_mile).magnitude
+	print "Number of passengers: %0.0f" % \
+		solution["constants"]["N_{passengers}_SimpleOnDemandAircraft/Passengers"]
 	print
 	print "Takeoff weight: %0.0f lbs" % \
 		solution["variables"]["W_{TO}_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
 		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
 	print "SPL in hover: %0.1f dB" % SPL
-
+	print
+	print "Cost per trip: $%0.2f" % \
+		solution["variables"]["cost_per_trip_OnDemandTypicalMission"]
+	print "Cost per trip, per passenger: $%0.2f" % \
+		solution["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
+	print "Vehicle purchase price: $%0.0f " % \
+		solution["variables"]["purchase_price_OnDemandTypicalMission"]
+	print
+	print "Vehicle amortized cost, per trip: $%0.2f " % \
+		solution["variables"]["c_{vehicle}_OnDemandTypicalMission"]
+	print "Energy cost, per trip: $%0.2f " % \
+		solution["variables"]["c_{energy}_OnDemandTypicalMission"]
+	print "Pilot cost, per trip: $%0.2f " % \
+		solution["variables"]["c_{pilot}_OnDemandTypicalMission"]
+	print "Maintenance cost, per trip: $%0.2f " % \
+		solution["variables"]["c_{maintenance}_OnDemandTypicalMission"]
 	#print solution.summary()
