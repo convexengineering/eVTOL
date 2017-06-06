@@ -282,7 +282,8 @@ class OnDemandSizingMission(Model):
 class OnDemandTypicalMission(Model):
 	#Typical mission. Economic analysis included.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	time_in_hover=60*ureg.s,cost_per_weight=112*ureg.lbf**-1,pilot_salary=40*ureg.hr**-1):
+    	time_in_hover=60*ureg.s,cost_per_weight=112*ureg.lbf**-1,pilot_salary=40*ureg.hr**-1,
+    	mechanic_salary=30*ureg.hr**-1):
 
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
     		"Mission range (not including reserves)")
@@ -309,6 +310,14 @@ class OnDemandTypicalMission(Model):
         pilot_salary = Variable("pilot_salary",pilot_salary,"hr**-1","Pilot salary")
 
         c_maintenance = Variable("c_{maintenance}","-","Maintenance cost per mission")
+        overhaul_cost = Variable("overhaul_cost","-","Cost of 1 overhaul")
+        overhaul_time = Variable("overhaul_time",2,"hours","Time to complete 1 overhaul")
+        N_mechanics = Variable("N_{mechanics}",2,"-",
+        	"Number of mechanics required for an overhaul")
+        time_between_overhauls = Variable("time_between_overhauls",50,"hours",
+        	"Time between overhauls")
+        mechanic_salary = Variable("mechanic_salary",mechanic_salary,"hr**-1",
+        	"Mechanic salary")
 
         self.aircraft = aircraft
         
@@ -337,7 +346,8 @@ class OnDemandTypicalMission(Model):
 
         constraints += [c_pilot == pilot_salary*t_mission]
 
-        constraints += [c_maintenance == 0.01]#deliberately negligible
+        constraints += [c_maintenance == overhaul_cost*t_mission/time_between_overhauls]
+        constraints += [overhaul_cost == N_mechanics*overhaul_time*mechanic_salary]
 
         return constraints
 
@@ -349,7 +359,8 @@ if __name__=="__main__":
 	T_A = 16.3*ureg("lbf")/ureg("ft")**2
 	L_D = 14. #estimated L/D in cruise
 	eta = 0.8 #estimated propulsive efficiency in cruise
-	weight_fraction = 0.346#structural mass fraction
+	weight_fraction = 0.3455#structural mass fraction
+	#C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	N_passengers = 1
 	N_crew = 1
@@ -362,13 +373,15 @@ if __name__=="__main__":
 	typical_mission_range = 100*ureg.nautical_mile
 
 	sizing_time_in_hover=120*ureg.s
-	typical_time_in_hover=120*ureg.s
+	typical_time_in_hover=60*ureg.s
 
 	cost_per_weight=112*ureg.lbf**-1
 	pilot_salary = 40*ureg.hr**-1
+	mechanic_salary=30*ureg.hr**-1
 
 	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta=eta,C_m=C_m,
-		weight_fraction=weight_fraction,n=n)
+		weight_fraction=weight_fraction,N_passengers=N_passengers,
+		N_crew=N_crew,n=n)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,time_in_hover=sizing_time_in_hover)
@@ -377,8 +390,8 @@ if __name__=="__main__":
 		testSizingMission.fs5.topvar("T/A"):T_A})
 
 	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,time_in_hover=sizing_time_in_hover,cost_per_weight=cost_per_weight,
-		pilot_salary=pilot_salary)
+		V_cruise=V_cruise,time_in_hover=typical_time_in_hover,cost_per_weight=cost_per_weight,
+		pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
 	problem = Model(testTypicalMission["cost_per_trip"],
 		[testAircraft, testSizingMission, testTypicalMission])
@@ -389,11 +402,8 @@ if __name__=="__main__":
 	print
 	print "Concept representative analysis"
 	print
-	
-
-
 	print "Battery energy density: %0.0f Wh/kg" % C_m.to(ureg.Wh/ureg.kg).magnitude
-	print "Structural mass fraction: %0.3f" % weight_fraction
+	print "Structural mass fraction: %0.4f" % weight_fraction
 	print "Cruise lift-to-drag ratio: %0.1f" % L_D
 	print "Hover disk loading: %0.1f lbf/ft^2" % T_A.to(ureg("lbf/ft**2")).magnitude
 	print "Cruise propulsive efficiency: %0.2f" % eta
@@ -411,12 +421,16 @@ if __name__=="__main__":
 		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
 	print "SPL in hover: %0.1f dB" % SPL
 	print
+	print "Typical mission time: %0.1f minutes" % \
+		solution["variables"]["t_{mission}_OnDemandTypicalMission"].to(ureg.minute).magnitude
 	print "Cost per trip: $%0.2f" % \
 		solution["variables"]["cost_per_trip_OnDemandTypicalMission"]
 	print "Cost per trip, per passenger: $%0.2f" % \
 		solution["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
 	print "Vehicle purchase price: $%0.0f " % \
 		solution["variables"]["purchase_price_OnDemandTypicalMission"]
+	print "Overhaul cost: $%0.2f " % \
+		solution["variables"]["overhaul_cost_OnDemandTypicalMission"]
 	print
 	print "Vehicle amortized cost, per trip: $%0.2f " % \
 		solution["variables"]["c_{vehicle}_OnDemandTypicalMission"]
@@ -426,4 +440,5 @@ if __name__=="__main__":
 		solution["variables"]["c_{pilot}_OnDemandTypicalMission"]
 	print "Maintenance cost, per trip: $%0.2f " % \
 		solution["variables"]["c_{maintenance}_OnDemandTypicalMission"]
+
 	#print solution.summary()
