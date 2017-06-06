@@ -282,7 +282,7 @@ class OnDemandSizingMission(Model):
 class OnDemandTypicalMission(Model):
 	#Typical mission. Economic analysis included.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	time_in_hover=120*ureg.s,cost_per_weight=112*ureg.lbf**-1,pilot_salary=40*ureg.hr**-1):
+    	time_in_hover=60*ureg.s,cost_per_weight=112*ureg.lbf**-1,pilot_salary=40*ureg.hr**-1):
 
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
     		"Mission range (not including reserves)")
@@ -355,20 +355,30 @@ if __name__=="__main__":
 	N_crew = 1
 	n=1.0#battery discharge parameter
 
-	mission_range = 200*ureg.nautical_mile
 	V_cruise = 200*ureg.mph
 	V_loiter=100*ureg.mph
+
+	sizing_mission_range = 200*ureg.nautical_mile
+	typical_mission_range = 100*ureg.nautical_mile
+
+	sizing_time_in_hover=120*ureg.s
+	typical_time_in_hover=120*ureg.s
+
+	cost_per_weight=112*ureg.lbf**-1
+	pilot_salary = 40*ureg.hr**-1
 
 	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta=eta,C_m=C_m,
 		weight_fraction=weight_fraction,n=n)
 
-	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=mission_range,V_cruise=V_cruise,
-		V_loiter=V_loiter)
+	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
+		V_cruise=V_cruise,V_loiter=V_loiter,time_in_hover=sizing_time_in_hover)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A,
 		testSizingMission.fs2.topvar("T/A"):T_A,testSizingMission.fs3.topvar("T/A"):T_A,
 		testSizingMission.fs5.topvar("T/A"):T_A})
 
-	testTypicalMission = OnDemandTypicalMission(testAircraft)
+	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
+		V_cruise=V_cruise,time_in_hover=sizing_time_in_hover,cost_per_weight=cost_per_weight,
+		pilot_salary=pilot_salary)
 	
 	problem = Model(testTypicalMission["cost_per_trip"],
 		[testAircraft, testSizingMission, testTypicalMission])
