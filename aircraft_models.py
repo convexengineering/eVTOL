@@ -180,7 +180,7 @@ class Passengers(Model):
 	def setup(self,W_onePassenger=200*ureg.lbf,N_passengers=1):
 		W_onePassenger = Variable("W_{onePassenger}",W_onePassenger,
 			"lbf","Weight of 1 passenger")
-		N_passengers = Variable("N_{crew}",N_passengers,"-","Number of passengers")
+		N_passengers = Variable("N_{passengers}",N_passengers,"-","Number of passengers")
 		W = Variable("W","lbf","Total weight")
 
 		return [W == N_passengers*W_onePassenger]
@@ -247,9 +247,10 @@ class LevelFlight(Model):
 
 		return constraints
 
-class SimpleOnDemandMission(Model):
+class OnDemandSizingMission(Model):
+	#Mission the aircraft must be able to fly. No economic analysis.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	V_loiter=100*ureg.mph,time_in_hover=120*ureg.s,reserve="Yes"):
+    	V_loiter=100*ureg.mph,time_in_hover=120*ureg.s):
 
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         C_eff = aircraft.C_eff
@@ -279,6 +280,65 @@ class SimpleOnDemandMission(Model):
         constraints += hoverState
         return constraints
 
+class OnDemandTypicalMission(Model):
+	#Typical mission. Economic analysis included.
+    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
+    	time_in_hover=120*ureg.s,cost_per_weight=112*ureg.lbf**-1,pilot_salary=40*ureg.hr**-1):
+
+    	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
+        C_eff = aircraft.C_eff #effective battery capacity
+
+        cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
+        cptpp = Variable("cost_per_trip_per_passenger","-",
+        	"Cost (in dollars) for one trip, per passenger")
+        
+        c_vehicle = Variable("c_{vehicle}","-","Vehicle amortized cost (per mission)")
+        t_mission = Variable("t_{mission}","minutes","Time to complete mission")
+        vehicle_life = Variable("vehicle_life",10,"years","Vehicle lifetime")
+        cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
+        	"Cost per unit weight of the aircraft")
+        purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
+
+        c_energy = Variable("c_{energy}","-","Energy cost (per mission)")
+        cost_per_energy = Variable("cost_per_energy",0.12,"kWh**-1",
+        	"Price of electricity (dollars per kWh)")
+        E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
+
+        c_pilot = Variable("c_{pilot}","-","Pilot cost (per mission)")
+        pilot_salary = Variable("pilot_salary",pilot_salary,"hr**-1","Pilot salary")
+
+        c_maintenance = Variable("c_maintenance",0,"-","Maintenance cost per mission")
+
+        self.aircraft = aircraft
+        
+        hoverState = FlightState(h=0*ureg.ft)
+
+        self.fs0 = Hover(aircraft,hoverState,t=time_in_hover)#takeoff
+        self.fs1 = LevelFlight(aircraft,V=V_cruise)#fly to destination
+        self.fs2 = Hover(aircraft,hoverState,t=time_in_hover)#landing
+
+        self.fs1.substitutions.update({"segment_range":mission_range})
+       		
+        constraints = []
+        constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E]
+        constraints += [self.fs0, self.fs1, self.fs2]
+        constraints += [p_ratio == self.fs0["p_{ratio}"]]
+        constraints += hoverState
+
+        constraints += [cpt == cptpp*aircraft.passengers.topvar("N_{passengers}")]
+        constraints += [cpt >= c_vehicle + c_energy + c_pilot + c_maintenance]
+        
+        constraints += [c_vehicle == purchase_price*t_mission/vehicle_life]
+        constraints += [t_mission >= self.fs0.topvar("t") + self.fs1.topvar("t")+ self.fs2.topvar("t")]
+        constraints += [purchase_price == cost_per_weight*aircraft.W_TO]
+
+        constraints += [c_energy == E_mission*cost_per_energy]
+        constraints += [E_mission >= self.fs0.E + self.fs1.E + self.fs2.E]
+
+        constraints += [c_pilot == pilot_salary*t_mission]
+
+        return constraints
+
 if __name__=="__main__":
 	
 	#Joby S2 representative analysis
@@ -304,16 +364,16 @@ if __name__=="__main__":
 		weight_fraction=weight_fraction,n=n)
 	#testAircraft.substitutions.update({testAircraft.rotors.topvar("R"):R})
 
-	testMission = SimpleOnDemandMission(testAircraft,mission_range=mission_range,V_cruise=V_cruise,
+	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=mission_range,V_cruise=V_cruise,
 		V_loiter=V_loiter)
-	testMission.substitutions.update({testMission.fs0.topvar("T/A"):T_A,
-		testMission.fs2.topvar("T/A"):T_A,testMission.fs3.topvar("T/A"):T_A,
-		testMission.fs5.topvar("T/A"):T_A})
+	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A,
+		testSizingMission.fs2.topvar("T/A"):T_A,testSizingMission.fs3.topvar("T/A"):T_A,
+		testSizingMission.fs5.topvar("T/A"):T_A})
 
-	problem = Model(testAircraft["W_{TO}"],[testAircraft,testMission])
+	problem = Model(testAircraft["W_{TO}"],[testAircraft,testSizingMission])
 	solution = problem.solve(verbosity=0)
 
-	SPL = np.array(20*np.log10(solution["variables"]["p_{ratio}_SimpleOnDemandMission"]))
+	SPL = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
 
 	print
 	print "Joby S2 representative analysis"
