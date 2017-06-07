@@ -9,13 +9,13 @@ from standard_atmosphere import stdatmo
 class SimpleOnDemandAircraft(Model):
 	def setup(self,N,L_D,eta,weight_fraction,C_m,N_passengers=1,N_crew=1,n=1.):
 		
-		W_TO = Variable("W_{TO}","lbf","Takeoff weight")
+		MTOW = Variable("MTOW","lbf","Takeoff weight")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
 		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
 		eta = Variable("\eta",eta,"-","Cruise propulsive efficiency")
 
-		self.W_TO = W_TO
+		self.MTOW = MTOW
 		self.C_eff = C_eff
 		self.g = g
 		self.L_D = L_D
@@ -32,7 +32,7 @@ class SimpleOnDemandAircraft(Model):
 		constraints += [g == self.battery.topvar("g")]
 		constraints += [self.components]#all constraints implemented at component level
 		constraints += [C_eff == self.battery.topvar("C_{eff}")]#battery-capacity constraint
-		constraints += [W_TO >= sum(c.topvar("W") for c in self.components)]#top-level weight constraint
+		constraints += [MTOW >= sum(c.topvar("W") for c in self.components)]#top-level weight constraint
 		return constraints
 
 class SimpleOnDemandStructure(Model):
@@ -40,7 +40,7 @@ class SimpleOnDemandStructure(Model):
 		W = Variable("W","lbf","Structural weight")
 		weight_fraction = Variable("weight_fraction",weight_fraction,"-","Structural weight fraction")
 
-		return [W==weight_fraction*aircraft.W_TO]
+		return [W==weight_fraction*aircraft.MTOW]
 
 
 class Rotors(Model):
@@ -204,7 +204,7 @@ class Hover(Model):
 		T = Variable("T","lbf","Total thrust (from rotors) during hover segment")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading during hover segment")
 		t = Variable("t",t,"s","Time in hover segment")
-		W = aircraft.W_TO
+		W = aircraft.MTOW
 		self.E = E
 
 		rotorPerf = aircraft.rotors.performance(state)
@@ -230,7 +230,7 @@ class LevelFlight(Model):
 			"Distance travelled during segment")
 		V = Variable("V",V,"mph","Velocity during segment")
 		
-		W = aircraft.W_TO
+		W = aircraft.MTOW
 		L_D = aircraft.L_D
 		eta = aircraft.eta
 
@@ -339,7 +339,7 @@ class OnDemandTypicalMission(Model):
         
         constraints += [c_vehicle == purchase_price*t_mission/vehicle_life]
         constraints += [t_mission >= self.fs0.topvar("t") + self.fs1.topvar("t")+ self.fs2.topvar("t")]
-        constraints += [purchase_price == cost_per_weight*aircraft.W_TO]
+        constraints += [purchase_price == cost_per_weight*aircraft.MTOW]
 
         constraints += [c_energy == E_mission*cost_per_energy]
         constraints += [E_mission >= self.fs0.E + self.fs1.E + self.fs2.E]
@@ -416,7 +416,7 @@ if __name__=="__main__":
 		solution["constants"]["N_{passengers}_SimpleOnDemandAircraft/Passengers"]
 	print
 	print "Takeoff weight: %0.0f lbs" % \
-		solution["variables"]["W_{TO}_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
+		solution["variables"]["MTOW_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
 		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
 	print "SPL in hover: %0.1f dB" % SPL
