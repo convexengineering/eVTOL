@@ -376,7 +376,6 @@ if __name__=="__main__":
 	weight_fraction = 0.3455#structural mass fraction
 	#C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
-	N_passengers = 1
 	N_crew = 1
 	n=1.0#battery discharge parameter
 
@@ -389,6 +388,9 @@ if __name__=="__main__":
 	sizing_time_in_hover=120*ureg.s
 	typical_time_in_hover=60*ureg.s
 
+	sizing_N_passengers = 2
+	typical_N_passengers = 1
+
 	cost_per_weight=112*ureg.lbf**-1
 	pilot_salary = 40*ureg.hr**-1
 	mechanic_salary=30*ureg.hr**-1
@@ -397,21 +399,22 @@ if __name__=="__main__":
 		weight_fraction=weight_fraction,N_crew=N_crew,n=n)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=N_passengers,
+		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
 		time_in_hover=sizing_time_in_hover)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A,
 		testSizingMission.fs2.topvar("T/A"):T_A,testSizingMission.fs3.topvar("T/A"):T_A,
 		testSizingMission.fs5.topvar("T/A"):T_A})
 
 	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=N_passengers,time_in_hover=typical_time_in_hover,
+		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
 		cost_per_weight=cost_per_weight,pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
 	problem = Model(testTypicalMission["cost_per_trip"],
 		[testAircraft, testSizingMission, testTypicalMission])
 	solution = problem.solve(verbosity=0)
 
-	SPL = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
+	SPL_sizing  = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
+	SPL_typical = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]))
 
 	print
 	print "Concept representative analysis"
@@ -425,24 +428,25 @@ if __name__=="__main__":
 	print "Sizing Mission"
 	print "Mission range: %0.0f nm" % \
 		solution["variables"]["mission_range_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
-	print "Number of passengers: %0.0f" % \
+	print "Number of passengers: %0.1f" % \
 		solution["constants"]["N_{passengers}_OnDemandSizingMission/Passengers"]
 	print "Vehicle weight during mission: %0.0f lbf" % \
 		solution["variables"]["W_{mission}_OnDemandSizingMission"].to(ureg.lbf).magnitude
+	print "SPL in hover: %0.1f dB" % SPL_sizing
 	print
 	print "Typical Mission"
 	print "Mission range: %0.0f nm" % \
 		solution["variables"]["mission_range_OnDemandTypicalMission"].to(ureg.nautical_mile).magnitude
-	print "Number of passengers: %0.0f" % \
+	print "Number of passengers: %0.1f" % \
 		solution["constants"]["N_{passengers}_OnDemandTypicalMission/Passengers"]
 	print "Vehicle weight during mission: %0.0f lbf" % \
 		solution["variables"]["W_{mission}_OnDemandTypicalMission"].to(ureg.lbf).magnitude
+	print "SPL in hover: %0.1f dB" % SPL_typical
 	print
-	print "Takeoff weight: %0.0f lbs" % \
+	print "Maximum takeoff weight: %0.0f lbs" % \
 		solution["variables"]["MTOW_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
 		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
-	print "SPL in hover: %0.1f dB" % SPL
 	print
 	print "Typical mission time: %0.1f minutes" % \
 		solution["variables"]["t_{mission}_OnDemandTypicalMission"].to(ureg.minute).magnitude
