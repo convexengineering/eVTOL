@@ -7,26 +7,27 @@ from standard_atmosphere import stdatmo
 
 
 class SimpleOnDemandAircraft(Model):
-	def setup(self,N,L_D,eta,weight_fraction,C_m,N_crew=1,n=1.):
+	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,N_crew=1,n=1.,eta_electric=0.9):
 		
 		MTOW = Variable("MTOW","lbf","Takeoff weight")
 		W_noPassengers = Variable("W_{noPassengers}","lbf","Weight without passengers")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
 		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
-		eta = Variable("\eta",eta,"-","Cruise propulsive efficiency")
+		eta_cruise = Variable("\eta",eta_cruise,"-","Cruise propulsive efficiency")
 
 		self.MTOW = MTOW
 		self.C_eff = C_eff
 		self.g = g
 		self.L_D = L_D
-		self.eta = eta
+		self.eta_cruise = eta_cruise
 
 		self.rotors = Rotors(N=N)
 		self.battery = Battery(C_m=C_m,n=n)
 		self.crew = Crew(N_crew=N_crew)
 		self.structure = SimpleOnDemandStructure(self,weight_fraction)
-		self.components = [self.rotors,self.battery,self.crew,self.structure]
+		self.powerSystem = PowerSystem(eta=eta_electric)
+		self.components = [self.rotors,self.battery,self.crew,self.structure,self.powerSystem]
 		
 		constraints = []
 		constraints += [g == self.battery.topvar("g")]
@@ -67,8 +68,8 @@ class RotorsAero(Model):
 		T = Variable("T","lbf","Total thrust")
 		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading")
-		P = Variable("P","hp","Total power")
-		P_perRotor = Variable("P_perRotor","hp","Power per rotor")
+		P = Variable("P","kW","Total power")
+		P_perRotor = Variable("P_perRotor","kW","Power per rotor")
 		VT = Variable("VT","ft/s","Propeller tip speed")
 		omega = Variable("\omega","rpm","Propeller angular velocity")
 		MT = Variable("MT","-","Propeller tip Mach number")
@@ -183,6 +184,29 @@ class Passengers(Model):
 
 		return [W == N_passengers*W_onePassenger]
 
+class PowerSystem(Model):
+	def performance(self):
+		return PowerSystemPerformance(self)
+
+	def setup(self,eta=0.9):
+		W = Variable("W",0,"lbf","Electrical power system weight")
+		eta = Variable("eta",eta,"-","Electrical power system efficiency")
+
+		self.eta = eta
+
+		constraints = []
+		constraints += [W==W, eta==eta]
+		return constraints
+
+class PowerSystemPerformance(Model):
+	def setup(self,powerSystem):
+		P_in = Variable("P_{in}","kW","Input power (from the battery)")
+		P_out = Variable("P_{out}","kW","Output power (to the motor or motors)")
+
+		constraints = []
+		constraints += [P_out == powerSystem.eta*P_in]
+		return constraints
+
 class FlightState(Model):
 	def setup(self,h):
 		
@@ -199,7 +223,8 @@ class FlightState(Model):
 class Hover(Model):
 	def setup(self,mission,aircraft,state,t=120*ureg.s):
 		E = Variable("E","kWh","Electrical energy used during hover segment")
-		P = Variable("P","kW","Power draw (input to rotor) during hover segment")
+		P_battery = Variable("P_{battery}","kW","Power drawn (from batteries) during hover segment")
+		P_rotors  = Variable("P_{rotors}","kW","Power used (by rotors) during hover segment")
 		T = Variable("T","lbf","Total thrust (from rotors) during hover segment")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading during hover segment")
 		t = Variable("t",t,"s","Time in hover segment")
@@ -208,11 +233,14 @@ class Hover(Model):
 
 		rotorPerf = aircraft.rotors.performance(state)
 		batteryPerf = aircraft.battery.performance()
+		powerSystemPerf = aircraft.powerSystem.performance()
 
-		constraints = [rotorPerf, batteryPerf]
-		constraints += [P==rotorPerf.topvar("P"),T==rotorPerf.topvar("T"),
+		constraints = [rotorPerf, batteryPerf, powerSystemPerf]
+		constraints += [P_rotors==rotorPerf.topvar("P"),T==rotorPerf.topvar("T"),
 			T_A==rotorPerf.topvar("T/A")]
-		constraints += [E==batteryPerf.topvar("E"), P==batteryPerf.topvar("P"), 
+		constraints += [P_battery == powerSystemPerf.topvar("P_{in}"),
+			P_rotors == powerSystemPerf.topvar("P_{out}")]
+		constraints += [E==batteryPerf.topvar("E"), P_battery==batteryPerf.topvar("P"), 
 			t==batteryPerf.topvar("t")]
 		constraints += [T==W]
 		return constraints
@@ -221,7 +249,8 @@ class LevelFlight(Model):
 	#Substitution required for either segment_range  or t (loiter time).
 	def setup(self,mission,aircraft,V=150*ureg.mph):
 		E = Variable("E","kWh","Electrical energy used during level-flight segment")
-		P = Variable("P","kW","Power draw during level-flight segment")
+		P_battery = Variable("P_{battery}","kW","Power drawn (from batteries) during segment")
+		P_cruise  = Variable("P_{cruise}","kW","Power used (by propulsion system) during cruise segment")
 		T = Variable("T","lbf","Thrust during level-flight  segment")
 		D = Variable("D","lbf","Drag during level-flight segment")
 		t = Variable("t","s","Time in level-flight segment")
@@ -231,17 +260,21 @@ class LevelFlight(Model):
 		
 		W = mission.W
 		L_D = aircraft.L_D
-		eta = aircraft.eta
+		eta_cruise = aircraft.eta_cruise
 
 		self.E = E
 		
 		batteryPerf = aircraft.battery.performance()
+		powerSystemPerf = aircraft.powerSystem.performance()
 
 		constraints = []
-		constraints += [segment_range==V*t,eta*P==T*V,T==D,W==L_D*D]
-		constraints += [E==batteryPerf.topvar("E"), P==batteryPerf.topvar("P"),
+		constraints += [E==batteryPerf.topvar("E"), P_battery==batteryPerf.topvar("P"),
 			t==batteryPerf.topvar("t")]
-		constraints += [batteryPerf]
+		constraints += [P_battery == powerSystemPerf.topvar("P_{in}"),
+			P_cruise == powerSystemPerf.topvar("P_{out}")]
+		constraints += [segment_range==V*t,eta_cruise*P_cruise==T*V,T==D,W==L_D*D]
+		
+		constraints += [batteryPerf, powerSystemPerf]
 
 		return constraints
 
@@ -372,9 +405,9 @@ if __name__=="__main__":
 	N = 12 #number of propellers
 	T_A = 16.3*ureg("lbf")/ureg("ft")**2
 	L_D = 14. #estimated L/D in cruise
-	eta = 0.8 #estimated propulsive efficiency in cruise
-	weight_fraction = 0.3455#structural mass fraction
-	#C_m = 400*ureg.Wh/ureg.kg #battery energy density
+	eta_cruise = 0.85 #propulsive efficiency in cruise
+	eta_electric = 0.95 #electrical system efficiency
+	weight_fraction = 0.3444 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	N_crew = 1
 	n=1.0#battery discharge parameter
@@ -395,8 +428,8 @@ if __name__=="__main__":
 	pilot_salary = 40*ureg.hr**-1
 	mechanic_salary=30*ureg.hr**-1
 
-	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta=eta,C_m=C_m,
-		weight_fraction=weight_fraction,N_crew=N_crew,n=n)
+	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
+		weight_fraction=weight_fraction,N_crew=N_crew,n=n,eta_electric=eta_electric)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
@@ -423,7 +456,8 @@ if __name__=="__main__":
 	print "Structural mass fraction: %0.4f" % weight_fraction
 	print "Cruise lift-to-drag ratio: %0.1f" % L_D
 	print "Hover disk loading: %0.1f lbf/ft^2" % T_A.to(ureg("lbf/ft**2")).magnitude
-	print "Cruise propulsive efficiency: %0.2f" % eta
+	print "Cruise propulsive efficiency: %0.2f" % eta_cruise
+	print "Electrical system efficiency: %0.2f" % eta_electric
 	print
 	print "Sizing Mission"
 	print "Mission range: %0.0f nm" % \
