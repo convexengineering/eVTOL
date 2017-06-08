@@ -43,13 +43,13 @@ configurations["Lift + cruise"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
 configurations["Tilt wing"] = {}
 configurations["Tilt wing"]["V_{cruise}"] = 150*ureg("mph")
 configurations["Tilt wing"]["L/D"] = 12
-configurations["Tilt wing"]["T/A"] = 4.5*ureg("lbf")/ureg("ft")**2
+configurations["Tilt wing"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
 
 
 configurations["Compound heli"] = {}
 configurations["Compound heli"]["V_{cruise}"] = 150*ureg("mph")
 configurations["Compound heli"]["L/D"] = 9
-configurations["Compound heli"]["T/A"] = 7*ureg("lbf")/ureg("ft")**2
+configurations["Compound heli"]["T/A"] = 4.5*ureg("lbf")/ureg("ft")**2
 
 
 configurations["Tilt rotor"] = {}

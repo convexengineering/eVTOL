@@ -1,12 +1,8 @@
-import math
 import numpy as np
-from gpkit import Variable, Model, Vectorize, ureg
-from standard_atmosphere import stdatmo
+from gpkit import Model, ureg
 from matplotlib import pyplot as plt
-
 from aircraft_models import SimpleOnDemandAircraft 
 from aircraft_models import OnDemandSizingMission, OnDemandTypicalMission
-
 from configuration_data import configurations
 
 #General data
