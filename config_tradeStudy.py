@@ -172,14 +172,36 @@ plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 
 '''
-title_str = "Propeller Tip-Speed Sweep for the Joby S2\n" \
-	+ "$W_{hover} = " + str(W_hover.to(ureg.lbf).magnitude) + "\; lbf$; " \
-	+ "$R = " + str(R.to(ureg.ft).magnitude) + "\; ft$; " \
-	+ "$s = " + str(s) + "$"
+sizing_mission_range = 50*ureg.nautical_mile
+typical_mission_range = 30*ureg.nautical_mile
+
+sizing_time_in_hover=120*ureg.s
+typical_time_in_hover=30*ureg.s
+
+sizing_N_passengers = 3
+typical_N_passengers = 2
+
+cost_per_weight=112*ureg.lbf**-1
+pilot_salary = 40*ureg.hr**-1
+mechanic_salary=30*ureg.hr**-1
 '''
 
-title_str = "Configurational Trade Study"
-plt.suptitle(title_str,fontsize = 20)
+if reserve_type == "FAA":
+	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
+	reserve_type_string = " (%0.0f-minute loiter time)" % num
+if reserve_type == "Uber":
+	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
+	reserve_type_string = " (%0.1f-nm diversion distance)" % num
+
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg\n" \
+	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude) \
+	+ "Sizing-mission parameters: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
+	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_time_in_hover.to(ureg.s).magnitude) \
+	+ reserve_type + reserve_type_string + "\n"\
+	+ "Typical-mission parameters: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; no reserve" \
+	% (typical_mission_range.to(ureg.nautical_mile).magnitude, typical_N_passengers, typical_time_in_hover.to(ureg.s).magnitude)
+
+plt.suptitle(title_str,fontsize = 16)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.85)#adds space at the top for the title
+plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.86)#adds space at the top for the title
