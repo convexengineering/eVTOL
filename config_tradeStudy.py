@@ -18,8 +18,8 @@ N_crew = 1
 n=1.0#battery discharge parameter
 reserve_type = "Uber"
 
-sizing_mission_range = 100*ureg.nautical_mile
-typical_mission_range = 40*ureg.nautical_mile
+sizing_mission_range = 50*ureg.nautical_mile
+typical_mission_range = 30*ureg.nautical_mile
 
 sizing_time_in_hover=120*ureg.s
 typical_time_in_hover=30*ureg.s
@@ -41,18 +41,18 @@ configs["Multirotor"]["V_{cruise}"] = 50*ureg("mph")
 configs["Multirotor"]["L/D"] = 1.5
 configs["Multirotor"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
 '''
-'''
+
 configs["Autogyro"] = {}
 configs["Autogyro"]["V_{cruise}"] = 100*ureg("mph")
 configs["Autogyro"]["L/D"] = 3.5
 configs["Autogyro"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
-'''
-'''
+
+
 configs["Helicopter"] = {}
 configs["Helicopter"]["V_{cruise}"] = 100*ureg("mph")
 configs["Helicopter"]["L/D"] = 4.25
 configs["Helicopter"]["T/A"] = 4.5*ureg("lbf")/ureg("ft")**2
-'''
+
 '''
 configs["Tilt duct"] = {}
 configs["Tilt duct"]["V_{cruise}"] = 150*ureg("mph")
@@ -60,12 +60,10 @@ configs["Tilt duct"]["L/D"] = 10.
 configs["Tilt duct"]["T/A"] = 40*ureg("lbf")/ureg("ft")**2
 '''
 
-'''
 configs["Coaxial heli"] = {}
 configs["Coaxial heli"]["V_{cruise}"] = 150*ureg("mph")
 configs["Coaxial heli"]["L/D"] = 5.5
 configs["Coaxial heli"]["T/A"] = 7*ureg("lbf")/ureg("ft")**2
-'''
 
 
 configs["Lift + cruise"] = {}
@@ -124,19 +122,64 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(11,8), dpi=80)
+fig1 = plt.figure(figsize=(17,11), dpi=80)
 plt.show()
 
-#FOM vs. VT
-plt.subplot(2,2,1)
 y_pos = np.arange(len(configs))
 labels = [""]*len(configs)
-
 for i, config in enumerate(configs):
-	MTOW = configs[config]["solution"]["variables"]["MTOW_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
-	plt.bar(i,MTOW,align='center',alpha=0.5)
 	labels[i] = config
 
-plt.xticks(y_pos, labels, rotation=-45)
-plt.ylabel('MTOW (lbf)', fontsize = 16)
+
+#Maximum takeoff weight
+plt.subplot(2,2,1)
+for i, config in enumerate(configs):
+	MTOW = configs[config]["solution"]["variables"]["MTOW_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
+	plt.bar(i,MTOW,align='center',alpha=1)
+
+plt.xticks(y_pos, labels, rotation=-60)
+plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 20)
+
+#Battery weight
+plt.subplot(2,2,2)
+for i, config in enumerate(configs):
+	W_battery = configs[config]["solution"]["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
+	plt.bar(i,W_battery,align='center',alpha=1)
+
+plt.xticks(y_pos, labels, rotation=-60)
+plt.ylabel('Weight (lbf)', fontsize = 16)
+plt.title("Battery Weight",fontsize = 20)
+
+#Trip cost per passenger 
+plt.subplot(2,2,3)
+for i, config in enumerate(configs):
+	cptpp = configs[config]["solution"]["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
+	plt.bar(i,cptpp,align='center',alpha=1)
+
+plt.xticks(y_pos, labels, rotation=-60)
+plt.ylabel('Cost ($US)', fontsize = 16)
+plt.title("Cost per Trip, per Passenger",fontsize = 20)
+
+#Sound pressure level (in hover) 
+plt.subplot(2,2,4)
+for i, config in enumerate(configs):
+	SPL_sizing  = np.array(20*np.log10(configs[config]["solution"]["variables"]["p_{ratio}_OnDemandSizingMission"]))
+	plt.bar(i,SPL_sizing,align='center',alpha=1)
+
+plt.xticks(y_pos, labels, rotation=-60)
+plt.ylabel('SPL (dB)', fontsize = 16)
+plt.title("Sound Pressure Level in Hover",fontsize = 20)
+
+'''
+title_str = "Propeller Tip-Speed Sweep for the Joby S2\n" \
+	+ "$W_{hover} = " + str(W_hover.to(ureg.lbf).magnitude) + "\; lbf$; " \
+	+ "$R = " + str(R.to(ureg.ft).magnitude) + "\; ft$; " \
+	+ "$s = " + str(s) + "$"
+'''
+
+title_str = "Configurational Trade Study"
+plt.suptitle(title_str,fontsize = 20)
+
+plt.tight_layout()#makes sure subplots are spaced neatly
+plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.85)#adds space at the top for the title

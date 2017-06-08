@@ -63,7 +63,7 @@ class Rotors(Model):
 		return constraints
 
 class RotorsAero(Model):
-	def setup(self,rotors,flightState,MT_max=0.9,CL_mean_max=1.0,SPL_req=100):
+	def setup(self,rotors,flightState,MT_max=0.9,CL_mean_max=1.0,SPL_req=150):
 		T = Variable("T","lbf","Total thrust")
 		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading")
