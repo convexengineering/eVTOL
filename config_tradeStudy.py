@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from aircraft_models import SimpleOnDemandAircraft 
 from aircraft_models import OnDemandSizingMission, OnDemandTypicalMission
 
+from configuration_data import configurations
 
 #General data
 N = 12 #number of propellers. Required, but has no effect since T/A is constrained
@@ -32,63 +33,12 @@ pilot_salary = 40*ureg.hr**-1
 mechanic_salary=30*ureg.hr**-1
 
 
-# Configuration-specific data
-configs = {}
+# Delete configurations that won't solve
+configs = configurations.copy()
+del configs["Tilt duct"]
+del configs["Multirotor"]
 
-'''
-configs["Multirotor"] = {}
-configs["Multirotor"]["V_{cruise}"] = 50*ureg("mph")
-configs["Multirotor"]["L/D"] = 1.5
-configs["Multirotor"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
-'''
-
-configs["Autogyro"] = {}
-configs["Autogyro"]["V_{cruise}"] = 100*ureg("mph")
-configs["Autogyro"]["L/D"] = 3.5
-configs["Autogyro"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
-
-
-configs["Helicopter"] = {}
-configs["Helicopter"]["V_{cruise}"] = 100*ureg("mph")
-configs["Helicopter"]["L/D"] = 4.25
-configs["Helicopter"]["T/A"] = 4.5*ureg("lbf")/ureg("ft")**2
-
-'''
-configs["Tilt duct"] = {}
-configs["Tilt duct"]["V_{cruise}"] = 150*ureg("mph")
-configs["Tilt duct"]["L/D"] = 10.
-configs["Tilt duct"]["T/A"] = 40*ureg("lbf")/ureg("ft")**2
-'''
-
-configs["Coaxial heli"] = {}
-configs["Coaxial heli"]["V_{cruise}"] = 150*ureg("mph")
-configs["Coaxial heli"]["L/D"] = 5.5
-configs["Coaxial heli"]["T/A"] = 7*ureg("lbf")/ureg("ft")**2
-
-
-configs["Lift + cruise"] = {}
-configs["Lift + cruise"]["V_{cruise}"] = 150*ureg("mph")
-configs["Lift + cruise"]["L/D"] = 10
-configs["Lift + cruise"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
-
-
-configs["Tilt wing"] = {}
-configs["Tilt wing"]["V_{cruise}"] = 150*ureg("mph")
-configs["Tilt wing"]["L/D"] = 12
-configs["Tilt wing"]["T/A"] = 4.5*ureg("lbf")/ureg("ft")**2
-
-
-configs["Compound heli"] = {}
-configs["Compound heli"]["V_{cruise}"] = 150*ureg("mph")
-configs["Compound heli"]["L/D"] = 9
-configs["Compound heli"]["T/A"] = 7*ureg("lbf")/ureg("ft")**2
-
-
-configs["Tilt rotor"] = {}
-configs["Tilt rotor"]["V_{cruise}"] = 150*ureg("mph")
-configs["Tilt rotor"]["L/D"] = 14
-configs["Tilt rotor"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
-
+#Optimize remaining configurations
 for config in configs:
 	
 	print "Solving configuration: " + config
