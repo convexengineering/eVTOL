@@ -5,7 +5,6 @@ import numpy as np
 from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
 
-
 class SimpleOnDemandAircraft(Model):
 	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,N_crew=1,n=1.,eta_electric=0.9):
 		
@@ -281,7 +280,7 @@ class LevelFlight(Model):
 class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	V_loiter=100*ureg.mph,N_passengers=1,time_in_hover=120*ureg.s):
+    	V_loiter=100*ureg.mph,N_passengers=1,time_in_hover=120*ureg.s,reserve_type="Uber"):
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
@@ -301,14 +300,18 @@ class OnDemandSizingMission(Model):
         self.fs4 = LevelFlight(self,aircraft,V=V_loiter)#loiter (reserve)
         self.fs5 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing again
 
-        loiter_time = 45*ureg("minute") #FAA requirement
-        self.fs4.substitutions.update({self.fs4.topvar("t"):loiter_time})
-       		
         constraints = []
        
         constraints += [W >= self.aircraft.topvar("W_{noPassengers}") + self.passengers.topvar("W")]
         constraints += [self.aircraft.topvar("MTOW") >= W]
         constraints += [self.passengers]
+
+        if reserve_type == "FAA":#45-minute loiter time, as per night VFR rules
+        	t_loiter = Variable("t_{loiter}",45,"minutes","Loiter time")
+        	constraints += [t_loiter == self.fs4.topvar("t")]
+        if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
+        	R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
+        	constraints += [R_divert == self.fs4.topvar("segment_range")]
 
         constraints += [mission_range == self.fs1.topvar("segment_range")]
         constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E + self.fs3.E
@@ -411,6 +414,7 @@ if __name__=="__main__":
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	N_crew = 1
 	n=1.0#battery discharge parameter
+	reserve_type = "FAA"
 
 	V_cruise = 200*ureg.mph
 	V_loiter=100*ureg.mph
@@ -419,9 +423,9 @@ if __name__=="__main__":
 	typical_mission_range = 100*ureg.nautical_mile
 
 	sizing_time_in_hover=120*ureg.s
-	typical_time_in_hover=60*ureg.s
+	typical_time_in_hover=30*ureg.s
 
-	sizing_N_passengers = 2
+	sizing_N_passengers = 1
 	typical_N_passengers = 1
 
 	cost_per_weight=112*ureg.lbf**-1
@@ -433,7 +437,7 @@ if __name__=="__main__":
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
-		time_in_hover=sizing_time_in_hover)
+		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A,
 		testSizingMission.fs2.topvar("T/A"):T_A,testSizingMission.fs3.topvar("T/A"):T_A,
 		testSizingMission.fs5.topvar("T/A"):T_A})
@@ -448,6 +452,14 @@ if __name__=="__main__":
 
 	SPL_sizing  = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
 	SPL_typical = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]))
+
+	
+	if reserve_type == "FAA":
+		num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
+		reserve_type_string = " (%0.0f-minute loiter time)" % num
+	if reserve_type == "Uber":
+		num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
+		reserve_type_string = " (%0.1f-nm diversion distance)" % num
 
 	print
 	print "Concept representative analysis"
@@ -464,6 +476,7 @@ if __name__=="__main__":
 		solution["variables"]["mission_range_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
 		solution["constants"]["N_{passengers}_OnDemandSizingMission/Passengers"]
+	print "Reserve type: " + reserve_type + reserve_type_string
 	print "Vehicle weight during mission: %0.0f lbf" % \
 		solution["variables"]["W_{mission}_OnDemandSizingMission"].to(ureg.lbf).magnitude
 	print "SPL in hover: %0.1f dB" % SPL_sizing

@@ -16,6 +16,7 @@ weight_fraction = 0.5 #structural mass fraction
 C_m = 400*ureg.Wh/ureg.kg #battery energy density
 N_crew = 1
 n=1.0#battery discharge parameter
+reserve_type = "Uber"
 
 sizing_mission_range = 100*ureg.nautical_mile
 typical_mission_range = 40*ureg.nautical_mile
@@ -106,7 +107,7 @@ for config in configs:
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
-		time_in_hover=sizing_time_in_hover)
+		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
 	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A,
 		SizingMission.fs2.topvar("T/A"):T_A,SizingMission.fs3.topvar("T/A"):T_A,
 		SizingMission.fs5.topvar("T/A"):T_A})
