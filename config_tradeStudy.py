@@ -167,31 +167,21 @@ for i, config in enumerate(configs):
 	SPL_sizing  = np.array(20*np.log10(configs[config]["solution"]["variables"]["p_{ratio}_OnDemandSizingMission"]))
 	plt.bar(i,SPL_sizing,align='center',alpha=1)
 
+SPL_req = 62
+plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
+	color="black", linewidth=3, linestyle="-")
+
 plt.xticks(y_pos, labels, rotation=-60)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 
-'''
-sizing_mission_range = 50*ureg.nautical_mile
-typical_mission_range = 30*ureg.nautical_mile
-
-sizing_time_in_hover=120*ureg.s
-typical_time_in_hover=30*ureg.s
-
-sizing_N_passengers = 3
-typical_N_passengers = 2
-
-cost_per_weight=112*ureg.lbf**-1
-pilot_salary = 40*ureg.hr**-1
-mechanic_salary=30*ureg.hr**-1
-'''
 
 if reserve_type == "FAA":
 	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
 	reserve_type_string = " (%0.0f-minute loiter time)" % num
 if reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
-	reserve_type_string = " (%0.1f-nm diversion distance)" % num
+	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
 title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg\n" \
 	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude) \
