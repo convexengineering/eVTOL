@@ -45,9 +45,11 @@ for config in configs:
 	V_loiter = V_cruise #approximation
 	L_D = c["L/D"]
 	T_A = c["T/A"]
+	Cl_mean_max = c["Cl_{mean_{max}}"]
 
 	Aircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
-		weight_fraction=weight_fraction,N_crew=N_crew,n=n,eta_electric=eta_electric)
+		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
+		eta_electric=eta_electric)
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
