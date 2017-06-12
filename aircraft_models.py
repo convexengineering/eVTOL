@@ -6,7 +6,8 @@ from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
 
 class SimpleOnDemandAircraft(Model):
-	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,N_crew=1,n=1.,eta_electric=0.9):
+	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,N_crew=1,n=1.,
+		eta_electric=0.9):
 		
 		MTOW = Variable("MTOW","lbf","Takeoff weight")
 		W_noPassengers = Variable("W_{noPassengers}","lbf","Weight without passengers")
@@ -21,7 +22,7 @@ class SimpleOnDemandAircraft(Model):
 		self.L_D = L_D
 		self.eta_cruise = eta_cruise
 
-		self.rotors = Rotors(N=N)
+		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
 		self.battery = Battery(C_m=C_m,n=n)
 		self.crew = Crew(N_crew=N_crew)
 		self.structure = SimpleOnDemandStructure(self,weight_fraction)
@@ -45,25 +46,28 @@ class SimpleOnDemandStructure(Model):
 
 class Rotors(Model):
 
-	def performance(self,flightState,MT_max=0.9,CL_mean_max=1.0,SPL_req=100):
-		return RotorsAero(self,flightState,MT_max,CL_mean_max,SPL_req)
+	def performance(self,flightState,MT_max=0.9,SPL_req=100):
+		return RotorsAero(self,flightState,MT_max,SPL_req)
 
-	def setup(self,N=1,s=0.1):
+	def setup(self,N=1,s=0.1,Cl_mean_max=1.0):
 		R = Variable("R","ft","Propeller radius")
 		D = Variable("D","ft","Propeller diameter")
 		A = Variable("A","ft^2","Area of 1 rotor disk")
 		A_total = Variable("A_{total}","ft^2","Combined area of all rotor disks")
 		N = Variable("N",N,"-","Number of rotors")
 		s = Variable("s",s,"-","Propeller solidity")
+		Cl_mean_max = Variable("Cl_{mean_{max}}",Cl_mean_max,"-",
+			"Maximum allowed mean lift coefficient")
 
 		W = Variable("W",0,"lbf","Rotor weight") #weight model not implemented yet
 
-		constraints = [A == math.pi*R**2, D==2*R, N==N, s==s, A_total==N*A]
+		constraints = [A == math.pi*R**2, D==2*R, N==N, s==s, A_total==N*A, 
+			Cl_mean_max == Cl_mean_max]
 
 		return constraints
 
 class RotorsAero(Model):
-	def setup(self,rotors,flightState,MT_max=0.9,CL_mean_max=1.0,SPL_req=150):
+	def setup(self,rotors,flightState,MT_max=0.9,SPL_req=150):
 		T = Variable("T","lbf","Total thrust")
 		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading")
@@ -78,8 +82,7 @@ class RotorsAero(Model):
 		CP = Variable("CP","-","Power coefficient")
 		CPi = Variable("CPi","-","Induced (ideal) power coefficient")
 		CPp = Variable("CP","-","Profile power coefficient")
-		CL_mean = Variable("CL_mean","-","Mean lift coefficient")
-		CL_mean_max = Variable("CL_mean_max",CL_mean_max,"-","Maximum allowed mean lift coefficient")
+		Cl_mean = Variable("Cl_mean","-","Mean lift coefficient")
 		FOM = Variable("FOM","-","Figure of merit")
 
 		ki = Variable("ki",1.1,"-","Induced power factor")
@@ -95,6 +98,7 @@ class RotorsAero(Model):
 		A_total = rotors.topvar("A_{total}")
 		N = rotors.topvar("N")
 		s = rotors.topvar("s")
+		Cl_mean_max = rotors.topvar("Cl_{mean_{max}}")
 
 		rho = flightState.topvar("\rho")
 		a = flightState.topvar("a")
@@ -120,8 +124,8 @@ class RotorsAero(Model):
 			MT <= MT_max]
 
 		#Mean lift coefficient constraints (lower limit on VT)
-		constraints += [CL_mean == 3*CT/s,
-			CL_mean <= CL_mean_max]
+		constraints += [Cl_mean == 3*CT/s,
+			Cl_mean <= Cl_mean_max]
 
 		#Noise model
 		constraints += [p_ratio == k3*((T*omega)/(rho*x))*(N*s)**-0.5,
@@ -412,6 +416,7 @@ if __name__=="__main__":
 	eta_electric = 0.95 #electrical system efficiency
 	weight_fraction = 0.3444 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
+	Cl_mean_max = 1.1
 	N_crew = 1
 	n=1.0#battery discharge parameter
 	reserve_type = "FAA"
@@ -433,7 +438,8 @@ if __name__=="__main__":
 	mechanic_salary=30*ureg.hr**-1
 
 	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
-		weight_fraction=weight_fraction,N_crew=N_crew,n=n,eta_electric=eta_electric)
+		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
+		eta_electric=eta_electric)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
@@ -468,6 +474,7 @@ if __name__=="__main__":
 	print "Structural mass fraction: %0.4f" % weight_fraction
 	print "Cruise lift-to-drag ratio: %0.1f" % L_D
 	print "Hover disk loading: %0.1f lbf/ft^2" % T_A.to(ureg("lbf/ft**2")).magnitude
+	print "Rotor maximum mean lift coefficient: %0.2f" % Cl_mean_max
 	print "Cruise propulsive efficiency: %0.2f" % eta_cruise
 	print "Electrical system efficiency: %0.2f" % eta_electric
 	print
