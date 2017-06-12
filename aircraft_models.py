@@ -25,7 +25,7 @@ class SimpleOnDemandAircraft(Model):
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
 		self.battery = Battery(C_m=C_m,n=n)
 		self.crew = Crew(N_crew=N_crew)
-		self.structure = SimpleOnDemandStructure(self,weight_fraction)
+		self.structure = Structure(self,weight_fraction)
 		self.powerSystem = PowerSystem(eta=eta_electric)
 		self.components = [self.rotors,self.battery,self.crew,self.structure,self.powerSystem]
 		
@@ -36,7 +36,7 @@ class SimpleOnDemandAircraft(Model):
 		constraints += [W_noPassengers >= sum(c.topvar("W") for c in self.components)]#weight constraint
 		return constraints
 
-class SimpleOnDemandStructure(Model):
+class Structure(Model):
 	def setup(self,aircraft,weight_fraction):
 		W = Variable("W","lbf","Structural weight")
 		weight_fraction = Variable("weight_fraction",weight_fraction,"-","Structural weight fraction")
@@ -416,7 +416,7 @@ if __name__=="__main__":
 	eta_electric = 0.95 #electrical system efficiency
 	weight_fraction = 0.3444 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
-	Cl_mean_max = 1.1
+	Cl_mean_max = 1.0
 	N_crew = 1
 	n=1.0#battery discharge parameter
 	reserve_type = "FAA"
