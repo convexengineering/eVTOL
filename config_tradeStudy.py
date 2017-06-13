@@ -118,7 +118,7 @@ for i, config in enumerate(configs):
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 	color="black", linewidth=3, linestyle="-")
-
+plt.ylim(ymin = 57, ymax = 75)
 plt.xticks(y_pos, labels, rotation=-60)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
