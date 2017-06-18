@@ -143,3 +143,29 @@ plt.suptitle(title_str,fontsize = 16)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
 plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.86)#adds space at the top for the title
+
+#Cost breakdown plot
+
+fig2 = plt.figure(figsize=(17,11), dpi=80)
+plt.show()
+
+for i, config in enumerate(configs):
+	c_vehicle = configs[config]["solution"]["variables"]["c_{vehicle}_OnDemandTypicalMission"]/typical_N_passengers
+	c_energy = configs[config]["solution"]["variables"]["c_{energy}_OnDemandTypicalMission"]/typical_N_passengers
+	c_pilot = configs[config]["solution"]["variables"]["c_{pilot}_OnDemandTypicalMission"]/typical_N_passengers
+	c_maintenance = configs[config]["solution"]["variables"]["c_{maintenance}_OnDemandTypicalMission"]/typical_N_passengers
+	
+	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
+	p2 = plt.bar(i,c_energy,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
+	p3 = plt.bar(i,c_pilot,bottom=c_vehicle+c_energy, align='center',alpha=1,color="k",hatch="-")
+	p4 = plt.bar(i,c_maintenance,bottom=c_vehicle+c_energy+c_pilot,align='center',alpha=1,color="g",hatch="|")
+
+plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
+plt.ylabel('Cost ($US)', fontsize = 16)
+plt.legend((p1[0],p2[0],p3[0],p4[0]), \
+	("Vehicle amortized cost","Energy cost","Pilot cost","Maintenance cost"),\
+	loc='upper left', fontsize = 16)
+
+plt.title(title_str,fontsize = 16)
+plt.tight_layout()
+#plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.86)#adds space at the top for the title
