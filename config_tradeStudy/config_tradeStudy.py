@@ -1,3 +1,9 @@
+#Vehicle configuration top-level trade study
+
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
+
 import numpy as np
 from gpkit import Model, ureg
 from matplotlib import pyplot as plt

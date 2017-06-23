@@ -1,4 +1,8 @@
-# Sweep to evaluate the sensitivity of each design to structural mass fraction
+# Sweep to evaluate the sensitivity of each design to battery energy density
+
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
 
 import numpy as np
 from gpkit import Model, ureg
@@ -11,8 +15,7 @@ from configuration_data import configurations
 N = 6 #number of propellers. Required, but has no effect since T/A is constrained
 eta_cruise = 0.85 #propulsive efficiency in cruise
 eta_electric = 0.95 #electrical system efficiency
-C_m = 400*ureg.Wh/ureg.kg #Battery energy density
-weight_fraction = np.linspace(0.4,0.6,10) #structural mass fraction (sweep)
+weight_fraction = 0.5 #structural mass fraction
 N_crew = 1
 n=1.0#battery discharge parameter
 reserve_type = "Uber"
@@ -37,6 +40,9 @@ del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
 
+#set up C_m array
+C_m_array = np.linspace(300,600,10)*ureg.Wh/ureg.kg #battery energy density
+
 
 #Optimize remaining configurations
 for config in configs:
@@ -51,35 +57,37 @@ for config in configs:
 	T_A = c["T/A"]
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 
-	Aircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
-		eta_electric=eta_electric)
+	configs[config]["MTOW"] = np.zeros(np.size(C_m_array))*ureg.lbf
+	configs[config]["W_{battery}"] = np.zeros(np.size(C_m_array))*ureg.lbf
+	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(C_m_array))
+	configs[config]["SPL"] = np.zeros(np.size(C_m_array))
 
-	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
-		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
-	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A,
-		SizingMission.fs2.topvar("T/A"):T_A,SizingMission.fs3.topvar("T/A"):T_A,
-		SizingMission.fs5.topvar("T/A"):T_A})
+	for i, C_m in enumerate(C_m_array):
 
-	TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
-		cost_per_weight=cost_per_weight,pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
+		Aircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
+			Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
+			eta_electric=eta_electric)
+
+		SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
+			V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
+			time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
+		SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A,
+			SizingMission.fs2.topvar("T/A"):T_A,SizingMission.fs3.topvar("T/A"):T_A,
+			SizingMission.fs5.topvar("T/A"):T_A})
+
+		TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
+			V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
+			cost_per_weight=cost_per_weight,pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
-	problem = Model(TypicalMission["cost_per_trip"],
-		[Aircraft, SizingMission, TypicalMission])
-	solution = problem.solve(verbosity=0)
+		problem = Model(TypicalMission["cost_per_trip"],
+			[Aircraft, SizingMission, TypicalMission])
+		solution = problem.solve(verbosity=0)
 
-	configs[config]["solution"] = solution
-
-	configs[config]["weight_fraction"] = solution["variables"]["weight_fraction_SimpleOnDemandAircraft/Structure"]
-
-	configs[config]["MTOW"] = solution["variables"]["MTOW_SimpleOnDemandAircraft"]
-	configs[config]["W_{battery}"] = solution["variables"]["W_SimpleOnDemandAircraft/Battery"]
-	configs[config]["cost_per_trip_per_passenger"] = solution["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
-	configs[config]["SPL"] = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
-
-
+		configs[config]["MTOW"][i] = solution["variables"]["MTOW_SimpleOnDemandAircraft"]
+		configs[config]["W_{battery}"][i] = solution["variables"]["W_SimpleOnDemandAircraft/Battery"]
+		configs[config]["cost_per_trip_per_passenger"][i] = solution["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
+		configs[config]["SPL"][i] = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
+		
 
 # Plotting commands
 plt.ion()
@@ -96,58 +104,56 @@ style["markersize"] = 10
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["weight_fraction"],c["MTOW"].to(ureg.lbf).magnitude,
+	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["MTOW"].to(ureg.lbf).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymin=0)
-plt.xlabel('Structural mass fraction', fontsize = 16)
+plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
+plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 #Battery weight
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["weight_fraction"],c["W_{battery}"].to(ureg.lbf).magnitude,
+	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["W_{battery}"].to(ureg.lbf).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymin=0)
-plt.xlabel('Structural mass fraction', fontsize = 16)
+plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
-
+plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 #Trip cost per passenger
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["weight_fraction"],c["cost_per_trip_per_passenger"],
+	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["cost_per_trip_per_passenger"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymin=0)
-plt.xlabel('Structural mass fraction', fontsize = 16)
+plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
-
+plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["weight_fraction"],c["SPL"],
+	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["SPL"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.xlabel('Structural mass fraction', fontsize = 16)
+plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
+plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 
 if reserve_type == "FAA":
@@ -157,7 +163,7 @@ if reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
-title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg\n" % C_m.to(ureg.Wh/ureg.kg).magnitude \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_fraction \
 	+ "Sizing-mission parameters: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_time_in_hover.to(ureg.s).magnitude) \
 	+ reserve_type + reserve_type_string + "\n"\

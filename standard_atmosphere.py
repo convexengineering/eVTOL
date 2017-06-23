@@ -5,10 +5,13 @@ import numpy as np
 import scipy.interpolate as interp
 import pint 
 ureg = pint.UnitRegistry()
+import os
+import sys
 
 def stdatmo(h):
 	
-	data_from_file = np.loadtxt("stdatmo_table.txt",skiprows=2)
+	data_file_path = os.path.abspath(os.path.dirname(__file__)) + "/stdatmo_table.txt"
+	data_from_file = np.loadtxt(data_file_path,skiprows=2)
 
 	#units set manually to those in the lookup table
 	data_from_file = {"h":data_from_file[:,0]*ureg.m,#altitude
@@ -31,7 +34,7 @@ def stdatmo(h):
 		"a":interp_fcns["a"](h_correctUnits)*data_from_file["a"].units,
 		"T":interp_fcns["T"](h_correctUnits)*data_from_file["T"].units,
 		"P":interp_fcns["P"](h_correctUnits)*data_from_file["P"].units,
-		"kvisc":interp_fcns["kvisc"](h_correctUnits)*data_from_file["kvisc"].units,}
+		"kvisc":interp_fcns["kvisc"](h_correctUnits)*data_from_file["kvisc"].units}
 
 	return output
 
