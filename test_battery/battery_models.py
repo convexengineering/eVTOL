@@ -1,5 +1,9 @@
 #Code for testing the battery model. No Peukert effect as yet.
 
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
+
 import numpy as np
 from gpkit import Variable, Model
 from aircraft_models import Battery
