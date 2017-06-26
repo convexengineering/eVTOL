@@ -336,35 +336,9 @@ class OnDemandTypicalMission(Model):
     		"Mission range (not including reserves)")
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         C_eff = aircraft.C_eff #effective battery capacity
-
-        cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
-        cptpp = Variable("cost_per_trip_per_passenger","-",
-        	"Cost (in dollars) for one trip, per passenger")
         
-        c_vehicle = Variable("c_{vehicle}","-","Vehicle amortized cost (per mission)")
         t_mission = Variable("t_{mission}","minutes","Time to complete mission")
-        vehicle_life = Variable("vehicle_life",10,"years","Vehicle lifetime")
-        cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
-        	"Cost per unit weight of the aircraft")
-        purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
-
-        c_energy = Variable("c_{energy}","-","Energy cost (per mission)")
-        cost_per_energy = Variable("cost_per_energy",0.12,"kWh**-1",
-        	"Price of electricity (dollars per kWh)")
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
-
-        c_pilot = Variable("c_{pilot}","-","Pilot cost (per mission)")
-        pilot_salary = Variable("pilot_salary",pilot_salary,"hr**-1","Pilot salary")
-
-        c_maintenance = Variable("c_{maintenance}","-","Maintenance cost per mission")
-        overhaul_cost = Variable("overhaul_cost","-","Cost of 1 overhaul")
-        overhaul_time = Variable("overhaul_time",2,"hours","Time to complete 1 overhaul")
-        N_mechanics = Variable("N_{mechanics}",2,"-",
-        	"Number of mechanics required for an overhaul")
-        time_between_overhauls = Variable("time_between_overhauls",50,"hours",
-        	"Time between overhauls")
-        mechanic_salary = Variable("mechanic_salary",mechanic_salary,"hr**-1",
-        	"Mechanic salary")
 
         self.aircraft = aircraft
         self.W = W
@@ -388,22 +362,64 @@ class OnDemandTypicalMission(Model):
         constraints += [p_ratio == self.fs0["p_{ratio}"]]
         constraints += hoverState
 
-        constraints += [cpt == cptpp*self.passengers.topvar("N_{passengers}")]
-        constraints += [cpt >= c_vehicle + c_energy + c_pilot + c_maintenance]
-        
-        constraints += [c_vehicle == purchase_price*t_mission/vehicle_life]
-        constraints += [t_mission >= self.fs0.topvar("t") + self.fs1.topvar("t")+ self.fs2.topvar("t")]
-        constraints += [purchase_price == cost_per_weight*aircraft.MTOW]
-
-        constraints += [c_energy == E_mission*cost_per_energy]
+        constraints += [t_mission >= self.fs0.topvar("t") + self.fs1.topvar("t") \
+        	+ self.fs2.topvar("t")]
         constraints += [E_mission >= self.fs0.E + self.fs1.E + self.fs2.E]
-
-        constraints += [c_pilot == pilot_salary*t_mission]
-
-        constraints += [c_maintenance == overhaul_cost*t_mission/time_between_overhauls]
-        constraints += [overhaul_cost == N_mechanics*overhaul_time*mechanic_salary]
-
+        
         return constraints
+
+class OnDemandMissionCost(Model):
+	def setup(self,aircraft,mission,cost_per_weight=112*ureg.lbf**-1,
+    	pilot_salary=40*ureg.hr**-1,mechanic_salary=30*ureg.hr**-1):
+
+		cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
+		cptpp = Variable("cost_per_trip_per_passenger","-",
+			"Cost (in dollars) for one trip, per passenger")
+
+		c_vehicle = Variable("c_{vehicle}","-","Vehicle amortized cost (per mission)")
+		vehicle_life = Variable("vehicle_life",10,"years","Vehicle lifetime")
+		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
+			"Cost per unit weight of the aircraft")
+		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
+
+		c_energy = Variable("c_{energy}","-","Energy cost (per mission)")
+		cost_per_energy = Variable("cost_per_energy",0.12,"kWh**-1",
+			"Price of electricity (dollars per kWh)")
+
+		c_pilot = Variable("c_{pilot}","-","Pilot cost (per mission)")
+		pilot_salary = Variable("pilot_salary",pilot_salary,"hr**-1","Pilot salary")
+
+		c_maintenance = Variable("c_{maintenance}","-","Maintenance cost per mission")
+		overhaul_cost = Variable("overhaul_cost","-","Cost of 1 overhaul")
+		overhaul_time = Variable("overhaul_time",2,"hours","Time to complete 1 overhaul")
+		N_mechanics = Variable("N_{mechanics}",2,"-",
+			"Number of mechanics required for an overhaul")
+		time_between_overhauls = Variable("time_between_overhauls",50,"hours",
+			"Time between overhauls")
+		mechanic_salary = Variable("mechanic_salary",mechanic_salary,"hr**-1",
+			"Mechanic salary")
+
+		self.aircraft = aircraft
+		self.mission  = mission
+
+		t_mission = self.mission.topvar("t_{mission}")
+
+		constraints = []
+
+		constraints += [cpt == cptpp*self.mission.passengers.topvar("N_{passengers}")]
+		constraints += [cpt >= c_vehicle + c_energy + c_pilot + c_maintenance]
+
+		constraints += [c_vehicle == purchase_price*t_mission/vehicle_life]
+		constraints += [purchase_price == cost_per_weight*self.aircraft.MTOW]
+
+		constraints += [c_energy == self.mission.topvar("E_{mission}")*cost_per_energy]
+
+		constraints += [c_pilot == pilot_salary*t_mission]
+
+		constraints += [c_maintenance == overhaul_cost*t_mission/time_between_overhauls]
+		constraints += [overhaul_cost == N_mechanics*overhaul_time*mechanic_salary]
+
+		return constraints
 
 if __name__=="__main__":
 	
@@ -444,16 +460,16 @@ if __name__=="__main__":
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
 		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
-	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A,
-		testSizingMission.fs2.topvar("T/A"):T_A,testSizingMission.fs3.topvar("T/A"):T_A,
-		testSizingMission.fs5.topvar("T/A"):T_A})
+	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
 
 	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
-		cost_per_weight=cost_per_weight,pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
+		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover)
+
+	testMissionCost = OnDemandMissionCost(testAircraft,testTypicalMission,cost_per_weight=cost_per_weight,
+		pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
-	problem = Model(testTypicalMission["cost_per_trip"],
-		[testAircraft, testSizingMission, testTypicalMission])
+	problem = Model(testMissionCost["cost_per_trip"],
+		[testAircraft, testSizingMission, testTypicalMission, testMissionCost])
 	solution = problem.solve(verbosity=0)
 
 	SPL_sizing  = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
@@ -505,21 +521,21 @@ if __name__=="__main__":
 	print "Typical mission time: %0.1f minutes" % \
 		solution["variables"]["t_{mission}_OnDemandTypicalMission"].to(ureg.minute).magnitude
 	print "Cost per trip: $%0.2f" % \
-		solution["variables"]["cost_per_trip_OnDemandTypicalMission"]
+		solution["variables"]["cost_per_trip_OnDemandMissionCost"]
 	print "Cost per trip, per passenger: $%0.2f" % \
-		solution["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
+		solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
 	print "Vehicle purchase price: $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandTypicalMission"]
+		solution["variables"]["purchase_price_OnDemandMissionCost"]
 	print "Overhaul cost: $%0.2f " % \
-		solution["variables"]["overhaul_cost_OnDemandTypicalMission"]
+		solution["variables"]["overhaul_cost_OnDemandMissionCost"]
 	print
 	print "Vehicle amortized cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{vehicle}_OnDemandTypicalMission"]
+		solution["variables"]["c_{vehicle}_OnDemandMissionCost"]
 	print "Energy cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{energy}_OnDemandTypicalMission"]
+		solution["variables"]["c_{energy}_OnDemandMissionCost"]
 	print "Pilot cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{pilot}_OnDemandTypicalMission"]
+		solution["variables"]["c_{pilot}_OnDemandMissionCost"]
 	print "Maintenance cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{maintenance}_OnDemandTypicalMission"]
+		solution["variables"]["c_{maintenance}_OnDemandMissionCost"]
 
 	#print solution.summary()

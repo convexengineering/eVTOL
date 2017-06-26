@@ -9,6 +9,7 @@ from gpkit import Model, ureg
 from matplotlib import pyplot as plt
 from aircraft_models import SimpleOnDemandAircraft 
 from aircraft_models import OnDemandSizingMission, OnDemandTypicalMission
+from aircraft_models import OnDemandMissionCost
 from configuration_data import configurations
 
 #General data
@@ -69,9 +70,13 @@ for config in configs:
 	TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
 		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
 		cost_per_weight=cost_per_weight,pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
+
+	MissionCost = OnDemandMissionCost(Aircraft,TypicalMission,cost_per_weight=cost_per_weight,
+		pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
-	problem = Model(TypicalMission["cost_per_trip"],
-		[Aircraft, SizingMission, TypicalMission])
+	problem = Model(MissionCost["cost_per_trip"],
+		[Aircraft, SizingMission, TypicalMission, MissionCost])
+
 	solution = problem.solve(verbosity=0)
 
 	configs[config]["solution"] = solution
@@ -80,9 +85,8 @@ for config in configs:
 
 	configs[config]["MTOW"] = solution["variables"]["MTOW_SimpleOnDemandAircraft"]
 	configs[config]["W_{battery}"] = solution["variables"]["W_SimpleOnDemandAircraft/Battery"]
-	configs[config]["cost_per_trip_per_passenger"] = solution["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
+	configs[config]["cost_per_trip_per_passenger"] = solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
 	configs[config]["SPL"] = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
-
 
 
 # Plotting commands

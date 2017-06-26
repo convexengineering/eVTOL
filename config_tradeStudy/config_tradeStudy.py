@@ -9,6 +9,7 @@ from gpkit import Model, ureg
 from matplotlib import pyplot as plt
 from aircraft_models import SimpleOnDemandAircraft 
 from aircraft_models import OnDemandSizingMission, OnDemandTypicalMission
+from aircraft_models import OnDemandMissionCost
 from configuration_data import configurations
 
 #General data
@@ -65,11 +66,13 @@ for config in configs:
 		SizingMission.fs5.topvar("T/A"):T_A})
 
 	TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
-		cost_per_weight=cost_per_weight,pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
+		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover)
+
+	MissionCost = OnDemandMissionCost(Aircraft,TypicalMission,cost_per_weight=cost_per_weight,
+		pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
-	problem = Model(TypicalMission["cost_per_trip"],
-		[Aircraft, SizingMission, TypicalMission])
+	problem = Model(MissionCost["cost_per_trip"],
+		[Aircraft, SizingMission, TypicalMission, MissionCost])
 	solution = problem.solve(verbosity=0)
 
 	configs[config]["solution"] = solution
@@ -108,7 +111,7 @@ plt.title("Battery Weight",fontsize = 20)
 #Trip cost per passenger 
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
-	cptpp = configs[config]["solution"]["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
+	cptpp = configs[config]["solution"]["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
 	plt.bar(i,cptpp,align='center',alpha=1)
 
 plt.xticks(y_pos, labels, rotation=-60)
@@ -156,10 +159,10 @@ fig2 = plt.figure(figsize=(17,11), dpi=80)
 plt.show()
 
 for i, config in enumerate(configs):
-	c_vehicle = configs[config]["solution"]["variables"]["c_{vehicle}_OnDemandTypicalMission"]/typical_N_passengers
-	c_energy = configs[config]["solution"]["variables"]["c_{energy}_OnDemandTypicalMission"]/typical_N_passengers
-	c_pilot = configs[config]["solution"]["variables"]["c_{pilot}_OnDemandTypicalMission"]/typical_N_passengers
-	c_maintenance = configs[config]["solution"]["variables"]["c_{maintenance}_OnDemandTypicalMission"]/typical_N_passengers
+	c_vehicle = configs[config]["solution"]["variables"]["c_{vehicle}_OnDemandMissionCost"]/typical_N_passengers
+	c_energy = configs[config]["solution"]["variables"]["c_{energy}_OnDemandMissionCost"]/typical_N_passengers
+	c_pilot = configs[config]["solution"]["variables"]["c_{pilot}_OnDemandMissionCost"]/typical_N_passengers
+	c_maintenance = configs[config]["solution"]["variables"]["c_{maintenance}_OnDemandMissionCost"]/typical_N_passengers
 	
 	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
 	p2 = plt.bar(i,c_energy,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")

@@ -9,6 +9,7 @@ from gpkit import Model, ureg
 from matplotlib import pyplot as plt
 from aircraft_models import SimpleOnDemandAircraft 
 from aircraft_models import OnDemandSizingMission, OnDemandTypicalMission
+from aircraft_models import OnDemandMissionCost
 from configuration_data import configurations
 
 #General data
@@ -32,7 +33,6 @@ typical_N_passengers = 2
 cost_per_weight=112*ureg.lbf**-1
 pilot_salary = 40*ureg.hr**-1
 mechanic_salary=30*ureg.hr**-1
-
 
 # Delete configurations that won't solve
 configs = configurations.copy()
@@ -76,16 +76,18 @@ for config in configs:
 			SizingMission.fs5.topvar("T/A"):T_A})
 
 		TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
-			V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
-			cost_per_weight=cost_per_weight,pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
+			V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover)
+
+		MissionCost = OnDemandMissionCost(Aircraft,TypicalMission,cost_per_weight=cost_per_weight,
+			pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
-		problem = Model(TypicalMission["cost_per_trip"],
-			[Aircraft, SizingMission, TypicalMission])
+		problem = Model(MissionCost["cost_per_trip"],
+			[Aircraft, SizingMission, TypicalMission, MissionCost])
 		solution = problem.solve(verbosity=0)
 
 		configs[config]["MTOW"][i] = solution["variables"]["MTOW_SimpleOnDemandAircraft"]
 		configs[config]["W_{battery}"][i] = solution["variables"]["W_SimpleOnDemandAircraft/Battery"]
-		configs[config]["cost_per_trip_per_passenger"][i] = solution["variables"]["cost_per_trip_per_passenger_OnDemandTypicalMission"]
+		configs[config]["cost_per_trip_per_passenger"][i] = solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
 		configs[config]["SPL"][i] = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
 		
 
