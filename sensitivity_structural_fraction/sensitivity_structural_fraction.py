@@ -63,9 +63,7 @@ for config in configs:
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
 		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
-	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A,
-		SizingMission.fs2.topvar("T/A"):T_A,SizingMission.fs3.topvar("T/A"):T_A,
-		SizingMission.fs5.topvar("T/A"):T_A})
+	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 
 	TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
 		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,

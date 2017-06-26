@@ -41,7 +41,8 @@ del configs["Multirotor"]
 del configs["Autogyro"]
 
 #set up C_m array
-C_m_array = np.linspace(300,600,10)*ureg.Wh/ureg.kg #battery energy density
+C_m = np.linspace(300,600,10)*ureg.Wh/ureg.kg #battery energy density
+C_m = ("sweep",C_m)
 
 
 #Optimize remaining configurations
@@ -57,38 +58,29 @@ for config in configs:
 	T_A = c["T/A"]
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 
-	configs[config]["MTOW"] = np.zeros(np.size(C_m_array))*ureg.lbf
-	configs[config]["W_{battery}"] = np.zeros(np.size(C_m_array))*ureg.lbf
-	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(C_m_array))
-	configs[config]["SPL"] = np.zeros(np.size(C_m_array))
+	Aircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
+		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
+		eta_electric=eta_electric)
 
-	for i, C_m in enumerate(C_m_array):
+	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
+		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
+		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
+	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 
-		Aircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
-			Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
-			eta_electric=eta_electric)
+	TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
+		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover)
 
-		SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
-			V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
-			time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
-		SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A,
-			SizingMission.fs2.topvar("T/A"):T_A,SizingMission.fs3.topvar("T/A"):T_A,
-			SizingMission.fs5.topvar("T/A"):T_A})
-
-		TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
-			V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover)
-
-		MissionCost = OnDemandMissionCost(Aircraft,TypicalMission,cost_per_weight=cost_per_weight,
-			pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
+	MissionCost = OnDemandMissionCost(Aircraft,TypicalMission,cost_per_weight=cost_per_weight,
+		pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
 	
-		problem = Model(MissionCost["cost_per_trip"],
-			[Aircraft, SizingMission, TypicalMission, MissionCost])
-		solution = problem.solve(verbosity=0)
+	problem = Model(MissionCost["cost_per_trip"],
+		[Aircraft, SizingMission, TypicalMission, MissionCost])
+	solution = problem.solve(verbosity=0)
 
-		configs[config]["MTOW"][i] = solution["variables"]["MTOW_SimpleOnDemandAircraft"]
-		configs[config]["W_{battery}"][i] = solution["variables"]["W_SimpleOnDemandAircraft/Battery"]
-		configs[config]["cost_per_trip_per_passenger"][i] = solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
-		configs[config]["SPL"][i] = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
+	configs[config]["MTOW"] = solution["variables"]["MTOW_SimpleOnDemandAircraft"]
+	configs[config]["W_{battery}"] = solution["variables"]["W_SimpleOnDemandAircraft/Battery"]
+	configs[config]["cost_per_trip_per_passenger"] = solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
+	configs[config]["SPL"] = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
 		
 
 # Plotting commands
@@ -102,11 +94,13 @@ style["marker"] = ["s","o","^","v","s","o","^","v"]
 style["fillstyle"] = ["full","full","full","full","none","none","none","none"]
 style["markersize"] = 10
 
+C_m = C_m[1] #convert back to array from tuple
+
 #Maximum takeoff weight
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["MTOW"].to(ureg.lbf).magnitude,
+	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["MTOW"].to(ureg.lbf).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
@@ -120,7 +114,7 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["W_{battery}"].to(ureg.lbf).magnitude,
+	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["W_{battery}"].to(ureg.lbf).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
@@ -134,7 +128,7 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["cost_per_trip_per_passenger"],
+	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["cost_per_trip_per_passenger"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
@@ -148,7 +142,7 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m_array.to(ureg.Wh/ureg.kg).magnitude,c["SPL"],
+	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["SPL"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
