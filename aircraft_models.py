@@ -421,6 +421,192 @@ class OnDemandMissionCost(Model):
 
 		return constraints
 
+class VehicleAcquisitionCost(Model):
+	def setup(self,aircraft,cost_per_weight=112*ureg.lbf**-1,
+		vehicle_life=10*ureg.year):
+		
+		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
+			"Cost per unit empty weight of the aircraft")
+		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
+		vehicle_life = Variable("vehicle_life",vehicle_life,"years","Vehicle lifetime")
+		cost_per_time = Variable("cost_per_time","hr**-1",
+			"Vehicle purchase price per unit mission time")
+
+		self.aircraft = aircraft
+
+		constraints = []
+
+		constraints += [purchase_price == cost_per_weight*self.aircraft.topvar("MTOW")]
+		constraints += [cost_per_time == purchase_price/vehicle_life]
+
+class InfrastructureCost(Model):
+	def setup(self):
+		cost_per_time = Variable("cost_per_time",86000,"year**-1",
+			"Infrastructure cost per unit mission time")
+
+		constraints = []
+		constraints += [cost_per_time]
+		return constraints
+
+class BatteryAcquisitionCost(Model):
+	def setup(self,battery,cost_per_C=400*ureg.kWh**-1):
+
+		cost_per_C = Variable("cost_per_C",cost_per_C,"kWh**-1",
+			"Battery cost per unit energy stored")
+		purchase_price = Variable("purchase_price","-","Purchase price of the battery")
+		cycle_life = Variable("cycle_life","-","Number of cycles before battery needs replacement")
+		cost_per_mission = Variable("cost_per_mission","-","Battery cost, amortized over number of missions")
+
+		self.battery = battery
+
+		constraints = []
+
+		constraints += [purchase_price == cost_per_C*self.battery.topvar("C")]
+		constraints += [cost_per_mission == purchase_price/cycle_life]
+
+		return constraints
+
+class CapitalExpenses(Model):
+	def setup(self,aircraft,mission,vehicle_cost_per_weight=112*ureg.lbf**-1,
+		battery_cost_per_C=400*ureg.kWh**-1):
+
+		cost_per_time = Variable("cost_per_time","hr**-1","Capital expenses per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-","Capital expenses per mission")
+
+		self.aircraft = aircraft
+		self.mission = mission
+
+		t_mission = self.mission.topvar("t_{mission}")
+
+		vehicle_cost = VehicleAcquisitionCost(self.aircraft,cost_per_weight=vehicle_cost_per_weight)
+		infrastructure_cost = InfrastructureCost()
+		battery_cost = BatteryAcquisitionCost(self.aircraft.battery,cost_per_C=battery_cost_per_C)
+
+		constraints = []
+
+		constraints += [vehicle_cost, infrastructure_cost, battery_cost]
+		constraints += [cost_per_mission >= t_mission*vehicle_cost.topvar("cost_per_time")
+			+ t_mission*infrastructure_cost.topvar("cost_per_time") + battery_cost.topvar("cost_per_mission")]
+
+		return constraints
+
+
+class PilotCost(Model):
+	def setup(self,mission,wrap_rate=70*ureg.hr**-1,pilots_per_aircraft=1.5):
+
+		self.mission = mission
+		t_mission = self.mission.topvar("t_{mission}")
+
+		wrap_rate = Variable("wrap_rate",wrap_rate,"hr**-1",
+			"Cost per pilot, per unit mission time (including benefits and overhead)")
+		pilots_per_aircraft = Variable("pilots_per_aircraft",pilots_per_aircraft,
+			"Pilots per aircraft")
+		cost_per_time = Variable("cost_per_time","hr**-1","Pilot cost per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-","Pilot cost per mission")
+
+		constraints = []
+		
+		constraints += [cost_per_time == wrap_rate*pilots_per_aircraft]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+		
+		return constraints
+
+class MaintenanceCost(Model):
+	def setup(self,mission,wrap_rate=60*ureg.hr**-1,MMH_FH=0.4):
+
+		self.mission = mission
+		t_mission = self.mission.topvar("t_{mission}")
+
+		MMH_FH = Variable("MMH_FH",MMH_FH,"-","Maintenance man-hours per flight hour")
+		wrap_rate = Variable("wrap_rate",wrap_rate,"hr**-1",
+			"Cost per mechanic, per unit maintenance time (including benefits and overhead)")
+
+		cost_per_time = Variable("cost_per_time","hr**-1","Maintenance cost per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-","Maintenance cost per mission")
+
+		constraints = []
+
+		constraints += [cost_per_time == MMH_FH*wrap_rate]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+
+		return constraints
+
+class EnergyCost(Model):
+	def setup(self,mission,cost_per_energy=0.12*ureg.kWh**-1):
+
+		self.mission = mission
+		t_mission = self.mission.topvar("t_{mission}")
+
+		cost_per_energy = Variable("cost_per_energy",cost_per_energy,"kWh**-1",
+			"Price of electricity")
+		eta_charger = Variable("\eta_{charger}",0.9,"-","Charging efficiency")
+
+		cost_per_time = Variable("cost_per_time","hr**-1","Energy cost per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-","Energy cost per mission")
+
+		constraints = []
+
+		constraints += [cost_per_mission == self.mission.topvar("E_{mission}")*cost_per_energy/eta_charger]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+
+		return constraints
+
+class IndirectOperatingCost(Model):
+	def setup(self,operating_expenses,IOC_fraction=0.12):
+
+		self.operating_expenses = operating_expenses
+
+		cost_per_time = Variable("cost_per_time","hr**-1","IOC per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-","IOC per mission")
+
+		IOC_fraction = Variable("IOC_fraction",IOC_fraction,"-","IOC as a fraction of DOC")
+
+		constraints = []
+
+		constraints += [cost_per_time == IOC_fraction*self.operating_expenses.topvar("DOC_per_time")]
+		constraints += [cost_per_mission == IOC_fraction*self.operating_expenses.topvar("DOC")]
+
+		return constraints
+
+class OperatingExpenses(Model):
+	def setup(self,aircraft,mission):
+
+		cost_per_mission = Variable("cost_per_mission","-","Operating expenses per mission")
+		
+		self.aircraft = aircraft
+		self.mission = mission
+
+		t_mission = self.mission.topvar("t_{mission}")
+
+		cost_per_time = Variable("cost_per_time","hr**-1","Operating expenses per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-","Operating expenses per mission")
+
+		DOC = Variable("DOC","-","Direct operating cost per mission")
+		DOC_per_time = Variable("DOC_per_time","-","Direct operating cost per unit mission time")
+		IOC = Variable("IOC","-","Indirect operating cost per mission")
+		IOC_per_time = Variable("IOC_per_time","-","Indirect operating cost per unit mission time")
+
+		pilot_cost = PilotCost(self.mission)
+		maintenance_cost = MaintenanceCost(self.mission)
+		energy_cost = EnergyCost(self.mission)
+		indirect_operating_cost = IndirectOperatingCost(self)
+
+		constraints = []
+		constraints += [pilot_cost, maintenance_cost, energy_cost, indirect_operating_cost]
+
+		constraints += [DOC >= pilot_cost.topvar("cost_per_mission") 
+			+ maintenance_cost.topvar("cost_per_mission") + energy_cost.topvar("cost_per_mission")]
+		constraints += [DOC_per_time == DOC/t_mission]
+
+		constraints += [IOC == indirect_operating_cost.topvar("cost_per_mission")]
+		constraints += [IOC_per_time == indirect_operating_cost.topvar("cost_per_time")]
+
+		constraints += [cost_per_mission >= DOC + IOC]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+
+		return constraints
+
+
 if __name__=="__main__":
 	
 	#Joby S2 representative analysis (applies to tilt-rotors in general)
