@@ -277,6 +277,25 @@ class LevelFlight(Model):
 
 		return constraints
 
+class TimeOnGround(Model):
+	#Mission segment for charging and passenger drop-off/pick-up
+	def setup(self,mission,charger_power=200*ureg.kW):
+
+		E_mission = mission.E_mission
+
+		t = Variable("t","s","Time spent on ground")
+		t_passenger = Variable("t_{passenger}",2,"minute",
+			"Time required to load/unload passengers and conduct safety checks")
+		t_charge = Variable("t_{charge}","s","Time required to fully charge the battery")
+		charger_power = Variable("charger_power",charger_power,"kW","Charger power")
+
+		constraints = []
+		
+		constraints += [t >= t_passenger, t >= t_charge]
+		constraints += [E_mission == charger_power*t_charge]
+
+		return constraints
+
 class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
@@ -342,6 +361,7 @@ class OnDemandTypicalMission(Model):
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.W = W
+        self.E_mission = E_mission
         self.passengers = Passengers(N_passengers=N_passengers)
         
         hoverState = FlightState(h=0*ureg.ft)
@@ -421,27 +441,6 @@ class VehicleAcquisitionCost(Model):
 		
 		return constraints
 
-class InfrastructureCost(Model):
-	def setup(self,capital_expenses,mission):
-		
-		t_mission = mission.topvar("t_{mission}")
-		annual_utilization = capital_expenses.annual_utilization
-
-		cost_per_year = Variable("cost_per_year",86000,"year**-1",
-			"Infrastructure cost per vehicle, per year")
-		
-		cost_per_time = Variable("cost_per_time","hour**-1",
-			"Amortized infrastructure cost per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-",
-			"Amortized infrastructure cost per mission")
-
-		constraints = []
-		
-		constraints += [cost_per_time == cost_per_year/annual_utilization]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
-
-		return constraints
-
 class BatteryAcquisitionCost(Model):
 	def setup(self,battery,mission,cost_per_C=400*ureg.kWh**-1):
 		
@@ -475,21 +474,16 @@ class CapitalExpenses(Model):
 		cost_per_time = Variable("cost_per_time","hr**-1","Capital expenses per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","Capital expenses per mission")
 
-		annual_utilization = Variable("annual_utilization",2080,"hour/year",
-			"Number of hours per year the vehicle is in use")
-		self.annual_utilization = annual_utilization
-
 		vehicle_cost = VehicleAcquisitionCost(aircraft,mission,
 			cost_per_weight=vehicle_cost_per_weight)
-		infrastructure_cost = InfrastructureCost(self,mission)
 		battery_cost = BatteryAcquisitionCost(aircraft.battery,mission,
 			cost_per_C=battery_cost_per_C)
 
 		constraints = []
 
-		constraints += [vehicle_cost, infrastructure_cost, battery_cost]
+		constraints += [vehicle_cost, battery_cost]
 		constraints += [cost_per_mission >= t_mission*vehicle_cost.topvar("cost_per_time")
-			+ t_mission*infrastructure_cost.topvar("cost_per_time") + battery_cost.topvar("cost_per_mission")]
+			+ battery_cost.topvar("cost_per_mission")]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
@@ -636,7 +630,7 @@ if __name__=="__main__":
 	typical_N_passengers = 1
 
 	vehicle_cost_per_weight=112*ureg.lbf**-1
-	battery_cost_per_C = 70*ureg.kWh**-1
+	battery_cost_per_C = 400*ureg.kWh**-1
 	pilot_wrap_rate = 70*ureg.hr**-1
 	mechanic_wrap_rate = 60*ureg.hr**-1
 	MMH_FH = 0.6
@@ -722,8 +716,6 @@ if __name__=="__main__":
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses"]
 	print "Amortized vehicle acquisition cost, per trip: $%0.2f" % \
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
-	print "Amortized infrastructure cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/InfrastructureCost"]
 	print "Amortized battery acquisition cost, per trip: $%0.2f" % \
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
 	print	
