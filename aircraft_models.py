@@ -6,11 +6,10 @@ from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
 
 class SimpleOnDemandAircraft(Model):
-	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,N_crew=1,n=1.,
-		eta_electric=0.9):
+	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9):
 		
 		MTOW = Variable("MTOW","lbf","Takeoff weight")
-		W_noPassengers = Variable("W_{noPassengers}","lbf","Weight without passengers")
+		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
 		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
@@ -20,16 +19,16 @@ class SimpleOnDemandAircraft(Model):
 
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
 		self.battery = Battery(C_m=C_m,n=n)
-		self.crew = Crew(N_crew=N_crew)
 		self.structure = Structure(self,weight_fraction)
 		self.powerSystem = PowerSystem(eta=eta_electric)
-		self.components = [self.rotors,self.battery,self.crew,self.structure,self.powerSystem]
+		
+		self.components = [self.rotors,self.battery,self.structure,self.powerSystem]
 		
 		constraints = []
 		constraints += [g == self.battery.topvar("g")]
 		constraints += [self.components]#all constraints implemented at component level
 		constraints += [C_eff == self.battery.topvar("C_{eff}")]#battery-capacity constraint
-		constraints += [W_noPassengers >= sum(c.topvar("W") for c in self.components)]#weight constraint
+		constraints += [W_empty >= sum(c.topvar("W") for c in self.components)]#weight constraint
 		return constraints
 
 class Structure(Model):
@@ -299,7 +298,8 @@ class TimeOnGround(Model):
 class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	V_loiter=100*ureg.mph,N_passengers=1,time_in_hover=120*ureg.s,reserve_type="Uber"):
+    	V_loiter=100*ureg.mph,N_crew=1,N_passengers=1,time_in_hover=120*ureg.s,
+    	reserve_type="Uber"):
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
@@ -309,6 +309,7 @@ class OnDemandSizingMission(Model):
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.W = W
+        self.crew = Crew(N_crew=N_crew)
         self.passengers = Passengers(N_passengers=N_passengers)
         
         hoverState = FlightState(h=0*ureg.ft)
@@ -320,12 +321,16 @@ class OnDemandSizingMission(Model):
         self.fs4 = LevelFlight(self,aircraft,V=V_loiter)#loiter (reserve)
         self.fs5 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing again
 
-        constraints = []
-       
-        constraints += [W >= aircraft.topvar("W_{noPassengers}") + self.passengers.topvar("W")]
-        constraints += [aircraft.topvar("MTOW") >= W]
-        constraints += [self.passengers]
+        self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
 
+        constraints = []
+        constraints += [self.flight_segments]
+        constraints += [self.crew, self.passengers]
+       
+        constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
+        	+ self.crew.topvar("W")]
+        constraints += [aircraft.topvar("MTOW") >= W]
+        
         if reserve_type == "FAA":#45-minute loiter time, as per night VFR rules
         	t_loiter = Variable("t_{loiter}",45,"minutes","Loiter time")
         	constraints += [t_loiter == self.fs4.topvar("t")]
@@ -334,14 +339,10 @@ class OnDemandSizingMission(Model):
         	constraints += [R_divert == self.fs4.topvar("segment_range")]
 
         constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [E_mission >= self.fs0.topvar("E") + self.fs1.topvar("E") 
-        	+ self.fs2.topvar("E") + self.fs3.topvar("E") + self.fs4.topvar("E") 
-        	+ self.fs5.topvar("E")]
-        
-        constraints += [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
         constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
         constraints += hoverState
 
+        constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
         constraints += [C_eff >= E_mission]
         
         return constraints
@@ -349,7 +350,7 @@ class OnDemandSizingMission(Model):
 class OnDemandTypicalMission(Model):
 	#Typical mission. Economic analysis included.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW):
+    	N_crew=1,N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW):
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
@@ -363,6 +364,7 @@ class OnDemandTypicalMission(Model):
 
         self.W = W
         self.E_mission = E_mission
+        self.crew = Crew(N_crew=N_crew)
         self.passengers = Passengers(N_passengers=N_passengers)
         
         hoverState = FlightState(h=0*ureg.ft)
@@ -372,23 +374,26 @@ class OnDemandTypicalMission(Model):
         self.fs2 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing
         self.time_on_ground = TimeOnGround(self,charger_power=charger_power)
 
+        self.segments = [self.fs0, self.fs1, self.fs2, self.time_on_ground]
+        self.flight_segments = [self.fs0, self.fs1, self.fs2]
+
         constraints = []
-        constraints += [self.fs0, self.fs1, self.fs2, self.time_on_ground]
+        constraints += [self.segments]
+        constraints += [self.crew,self.passengers]
 
-        constraints += [W >= aircraft.topvar("W_{noPassengers}") + self.passengers.topvar("W")]
+        constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
+        	+ self.crew.topvar("W")]
         constraints += [aircraft.topvar("MTOW") >= W]
-        constraints += [self.passengers]
-
+        
         constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [E_mission >= self.fs0.topvar("E") + self.fs1.topvar("E") 
-        	+ self.fs2.topvar("E")]
         constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
         constraints += hoverState
 
-        constraints += [t_flight >= self.fs0.topvar("t") + self.fs1.topvar("t") \
-        	+ self.fs2.topvar("t")]
-        constraints += [t_mission >= t_flight + self.time_on_ground.topvar("t")]
+        constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
         constraints += [C_eff >= E_mission]
+
+        constraints += [t_flight >= sum(c.topvar("t") for c in self.flight_segments)]
+        constraints += [t_mission >= t_flight + self.time_on_ground.topvar("t")]
         
         return constraints
 
@@ -616,7 +621,6 @@ if __name__=="__main__":
 	weight_fraction = 0.3444 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	Cl_mean_max = 1.0
-	N_crew = 1
 	n=1.0#battery discharge parameter
 	reserve_type = "FAA"
 
@@ -629,6 +633,7 @@ if __name__=="__main__":
 	sizing_time_in_hover=120*ureg.s
 	typical_time_in_hover=30*ureg.s
 
+	N_crew = 1
 	sizing_N_passengers = 1
 	typical_N_passengers = 1
 
@@ -641,17 +646,16 @@ if __name__=="__main__":
 	MMH_FH = 0.6
 
 	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
-		eta_electric=eta_electric)
+		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
+		V_cruise=V_cruise,V_loiter=V_loiter,N_crew=N_crew,N_passengers=sizing_N_passengers,
 		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
 
 	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
-		charger_power=charger_power)
+		V_cruise=V_cruise,N_crew=N_crew,N_passengers=typical_N_passengers,
+		time_in_hover=typical_time_in_hover,charger_power=charger_power)
 
 	testMissionCost = OnDemandMissionCost(testAircraft,testTypicalMission,
 		vehicle_cost_per_weight=vehicle_cost_per_weight,battery_cost_per_C=battery_cost_per_C,
