@@ -195,7 +195,7 @@ class Crew(Model):
 	def setup(self,mission_type="piloted",W_oneCrew=190*ureg.lbf):
 		
 		W_oneCrew = Variable("W_{oneCrew}",W_oneCrew,"lbf","Weight of 1 crew member")
-		N_crew = Variable("N_{crew}",1,"-","Number of crew members (assuming present)")
+		N_crew = Variable("N_{crew}",1,"-","Number of crew members (if present)")
 
 		constraints = []
 
@@ -243,15 +243,15 @@ class Avionics(Model):
 	def setup(self,autonomousEnabled="No"):
 
 		W = Variable("W",0,"lbf","Weight of the avionics")
-		purchase_price = Variable("purchase_price","-","Purchase price of the avionics")
-
-		constraints = []
 
 		if autonomousEnabled == "Yes":
-			constraints += [purchase_price == 60000] #Uber estimate
+			purchase_price = Variable("purchase_price",60000,"-",
+				"Purchase price of the avionics (Uber estimate)")
 		if autonomousEnabled == "No":
-			constraints += [purchase_price == 1] #Negligible. Setting to 0 causes a crash
+			purchase_price = Variable("purchase_price",1,"-",
+				"Purchase price of the avionics (negligibly small)")
 
+		constraints = []
 		return constraints
 
 
@@ -265,7 +265,6 @@ class FlightState(Model):
 		a = Variable("a",a,"ft/s","Speed of sound")
 
 		constraints = []
-		constraints += [a == a, rho == rho]
 		return constraints
 
 class Hover(Model):
@@ -333,7 +332,7 @@ class TimeOnGround(Model):
 		E_mission = mission.E_mission
 
 		t = Variable("t","s","Time spent on ground")
-		t_passenger = Variable("t_{passenger}",2,"minute",
+		t_passenger = Variable("t_{passenger}",5,"minute",
 			"Time required to load/unload passengers and conduct safety checks")
 		t_charge = Variable("t_{charge}","s","Time required to fully charge the battery")
 		charger_power = Variable("charger_power",charger_power,"kW","Charger power")
@@ -691,8 +690,8 @@ if __name__=="__main__":
 	T_A = 16.3*ureg("lbf")/ureg("ft")**2
 	L_D = 14. #estimated L/D in cruise
 	eta_cruise = 0.85 #propulsive efficiency in cruise
-	eta_electric = 0.95 #electrical system efficiency
-	weight_fraction = 0.3444 #structural mass fraction
+	eta_electric = 0.9 #electrical system efficiency
+	weight_fraction = 0.3188 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	Cl_mean_max = 1.0
 	n=1.0#battery discharge parameter
