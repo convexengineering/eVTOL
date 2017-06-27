@@ -349,7 +349,7 @@ class OnDemandSizingMission(Model):
 class OnDemandTypicalMission(Model):
 	#Typical mission. Economic analysis included.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	N_passengers=1,time_in_hover=60*ureg.s):
+    	N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW):
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
@@ -357,7 +357,8 @@ class OnDemandTypicalMission(Model):
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
-        t_mission = Variable("t_{mission}","minutes","Time to complete mission")
+        t_mission = Variable("t_{mission}","minutes","Time to complete mission (including charging)")
+        t_flight = Variable("t_{flight}","minutes","Time in flight")
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.W = W
@@ -369,8 +370,10 @@ class OnDemandTypicalMission(Model):
         self.fs0 = Hover(self,aircraft,hoverState,t=time_in_hover)#takeoff
         self.fs1 = LevelFlight(self,aircraft,V=V_cruise)#fly to destination
         self.fs2 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing
-       		
+        self.time_on_ground = TimeOnGround(self,charger_power=charger_power)
+
         constraints = []
+        constraints += [self.fs0, self.fs1, self.fs2, self.time_on_ground]
 
         constraints += [W >= aircraft.topvar("W_{noPassengers}") + self.passengers.topvar("W")]
         constraints += [aircraft.topvar("MTOW") >= W]
@@ -379,12 +382,12 @@ class OnDemandTypicalMission(Model):
         constraints += [mission_range == self.fs1.topvar("segment_range")]
         constraints += [E_mission >= self.fs0.topvar("E") + self.fs1.topvar("E") 
         	+ self.fs2.topvar("E")]
-        constraints += [self.fs0, self.fs1, self.fs2]
         constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
         constraints += hoverState
 
-        constraints += [t_mission >= self.fs0.topvar("t") + self.fs1.topvar("t") \
+        constraints += [t_flight >= self.fs0.topvar("t") + self.fs1.topvar("t") \
         	+ self.fs2.topvar("t")]
+        constraints += [t_mission >= t_flight + self.time_on_ground.topvar("t")]
         constraints += [C_eff >= E_mission]
         
         return constraints
@@ -418,7 +421,7 @@ class OnDemandMissionCost(Model):
 
 class VehicleAcquisitionCost(Model):
 	def setup(self,aircraft,mission,cost_per_weight=112*ureg.lbf**-1,
-		vehicle_life=10*ureg.year):
+		vehicle_life=20000*ureg.hour):
 		
 		t_mission = mission.topvar("t_{mission}")
 		MTOW = aircraft.topvar("MTOW")
@@ -426,7 +429,7 @@ class VehicleAcquisitionCost(Model):
 		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
 			"Cost per unit empty weight of the aircraft")
 		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
-		vehicle_life = Variable("vehicle_life",vehicle_life,"years","Vehicle lifetime")
+		vehicle_life = Variable("vehicle_life",vehicle_life,"hours","Vehicle lifetime")
 		
 		cost_per_time = Variable("cost_per_time","hr**-1",
 			"Amortized vehicle purchase price per unit mission time")
@@ -629,6 +632,8 @@ if __name__=="__main__":
 	sizing_N_passengers = 1
 	typical_N_passengers = 1
 
+	charger_power=200*ureg.kW
+
 	vehicle_cost_per_weight=112*ureg.lbf**-1
 	battery_cost_per_C = 400*ureg.kWh**-1
 	pilot_wrap_rate = 70*ureg.hr**-1
@@ -645,7 +650,8 @@ if __name__=="__main__":
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
 
 	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover)
+		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
+		charger_power=charger_power)
 
 	testMissionCost = OnDemandMissionCost(testAircraft,testTypicalMission,
 		vehicle_cost_per_weight=vehicle_cost_per_weight,battery_cost_per_C=battery_cost_per_C,
@@ -702,11 +708,15 @@ if __name__=="__main__":
 		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
 	print "Vehicle purchase price: $%0.0f " % \
 		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
-	print "Battery purchase price: $%0.0f " % \
+	print "Battery purchase price:  $%0.0f " % \
 		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
 	print
-	print "Typical mission time: %0.1f minutes" % \
+	print "Typical-mission total time: %0.1f minutes" % \
 		solution["variables"]["t_{mission}_OnDemandTypicalMission"].to(ureg.minute).magnitude
+	print "Typical-mission flight time: %0.1f minutes" % \
+		solution["variables"]["t_{flight}_OnDemandTypicalMission"].to(ureg.minute).magnitude
+	print "Typical-mission time on ground: %0.1f minutes" % \
+		solution["variables"]["t_OnDemandTypicalMission/TimeOnGround"].to(ureg.minute).magnitude
 	print "Cost per trip: $%0.2f" % \
 		solution["variables"]["cost_per_trip_OnDemandMissionCost"]
 	print "Cost per trip, per passenger: $%0.2f" % \
