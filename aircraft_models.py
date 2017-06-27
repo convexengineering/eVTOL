@@ -432,10 +432,7 @@ class InfrastructureCost(Model):
 			"Amortized infrastructure cost per mission")
 
 		constraints = []
-		
-		constraints += [cost_per_time == cost_per_time]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
-		
 		return constraints
 
 class BatteryAcquisitionCost(Model):
