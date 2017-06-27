@@ -7,8 +7,8 @@ from standard_atmosphere import stdatmo
 
 class OnDemandAircraft(Model):
 	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9,
-		autonomousEnabled="No",cost_per_weight=112*ureg.lbf**-1,
-		vehicle_life=20000*ureg.hour,battery_cost_per_C=400*ureg.kWh**-1):
+		cost_per_weight=112*ureg.lbf**-1,vehicle_life=20000*ureg.hour,cost_per_C=400*ureg.kWh**-1,
+		autonomousEnabled="No"):
 		
 		MTOW = Variable("MTOW","lbf","Takeoff weight")
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
@@ -26,7 +26,7 @@ class OnDemandAircraft(Model):
 		self.autonomousEnabled = autonomousEnabled
 
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
-		self.battery = Battery(C_m=C_m,n=n,cost_per_C=battery_cost_per_C)
+		self.battery = Battery(C_m=C_m,n=n,cost_per_C=cost_per_C)
 		self.structure = Structure(self,weight_fraction)
 		self.powerSystem = PowerSystem(eta=eta_electric)
 		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
@@ -192,12 +192,21 @@ class BatteryPerformance(Model):
 		return constraints
 
 class Crew(Model):
-	def setup(self,W_oneCrew=190*ureg.lbf,N_crew=1):
+	def setup(self,autonomousMission="No",W_oneCrew=190*ureg.lbf):
+		
 		W_oneCrew = Variable("W_{oneCrew}",W_oneCrew,"lbf","Weight of 1 crew member")
-		N_crew = Variable("N_{crew}",N_crew,"-","Number of crew members")
+		W_noCrew = Variable("W_{noCrew}",0,"lbf","Weight with no crew members")
+		N_crew = Variable("N_{crew}",1,"-","Number of crew members (assuming present)")
 		W = Variable("W","lbf","Total weight")
 
-		return [W == N_crew*W_oneCrew]
+		constraints = []
+
+		if autonomousMission == "Yes":
+			constraints += [W == W_noCrew]
+		if autonomousMission == "No":
+			constraints += [W == N_crew*W_oneCrew]
+
+		return constraints
 
 class Passengers(Model):
 	def setup(self,W_onePassenger=200*ureg.lbf,N_passengers=1):
@@ -340,8 +349,11 @@ class TimeOnGround(Model):
 class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	V_loiter=100*ureg.mph,N_crew=1,N_passengers=1,time_in_hover=120*ureg.s,
-    	reserve_type="Uber"):
+    	V_loiter=100*ureg.mph,N_passengers=1,time_in_hover=120*ureg.s,reserve_type="Uber",
+    	autonomousMission="No"):
+
+    	if (aircraft.autonomousEnabled == "No") & (autonomousMission == "Yes"):
+    		raise ValueError("Autonomy is not enabled for Aircraft() model.")
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
@@ -351,7 +363,8 @@ class OnDemandSizingMission(Model):
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.W = W
-        self.crew = Crew(N_crew=N_crew)
+        self.autonomousMission = autonomousMission
+        self.crew = Crew(autonomousMission=autonomousMission)
         self.passengers = Passengers(N_passengers=N_passengers)
         
         hoverState = FlightState(h=0*ureg.ft)
@@ -392,7 +405,11 @@ class OnDemandSizingMission(Model):
 class OnDemandTypicalMission(Model):
 	#Typical mission. Economic analysis included.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	N_crew=1,N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW):
+    	N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW,
+    	autonomousMission="No"):
+
+    	if (aircraft.autonomousEnabled == "No") & (autonomousMission == "Yes"):
+    		raise ValueError("Autonomy is not enabled for Aircraft() model.")
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
@@ -406,7 +423,8 @@ class OnDemandTypicalMission(Model):
 
         self.W = W
         self.E_mission = E_mission
-        self.crew = Crew(N_crew=N_crew)
+        self.autonomousMission = autonomousMission
+        self.crew = Crew(autonomousMission=autonomousMission)
         self.passengers = Passengers(N_passengers=N_passengers)
         
         hoverState = FlightState(h=0*ureg.ft)
@@ -680,7 +698,8 @@ if __name__=="__main__":
 	sizing_time_in_hover=120*ureg.s
 	typical_time_in_hover=30*ureg.s
 
-	N_crew = 1
+	autonomousEnabled = "No"
+	autonomousMission = "No"
 	sizing_N_passengers = 1
 	typical_N_passengers = 1
 
@@ -694,16 +713,18 @@ if __name__=="__main__":
 
 	testAircraft = OnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
-		cost_per_weight=vehicle_cost_per_weight,battery_cost_per_C=battery_cost_per_C)
+		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
+		autonomousEnabled=autonomousEnabled)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,V_loiter=V_loiter,N_crew=N_crew,N_passengers=sizing_N_passengers,
-		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
+		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
+		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type,
+		autonomousMission=autonomousMission)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
 
 	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_crew=N_crew,N_passengers=typical_N_passengers,
-		time_in_hover=typical_time_in_hover,charger_power=charger_power)
+		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
+		charger_power=charger_power,autonomousMission=autonomousMission)
 
 	testMissionCost = OnDemandMissionCost(testAircraft,testTypicalMission,
 		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH)
@@ -759,6 +780,8 @@ if __name__=="__main__":
 		solution["variables"]["W_OnDemandAircraft/Battery"].to(ureg.lbf).magnitude
 	print "Vehicle purchase price: $%0.0f " % \
 		solution["variables"]["purchase_price_OnDemandAircraft"]
+	print "Avionics purchase price: $%0.0f " % \
+		solution["variables"]["purchase_price_OnDemandAircraft/Avionics"]
 	print "Battery purchase price:  $%0.0f " % \
 		solution["variables"]["purchase_price_OnDemandAircraft/Battery"]
 	print
