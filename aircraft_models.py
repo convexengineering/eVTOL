@@ -5,8 +5,10 @@ import numpy as np
 from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
 
-class SimpleOnDemandAircraft(Model):
-	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9):
+class OnDemandAircraft(Model):
+	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9,
+		autonomousEnabled="No",cost_per_weight=112*ureg.lbf**-1,
+		vehicle_life=20000*ureg.hour,battery_cost_per_C=400*ureg.kWh**-1):
 		
 		MTOW = Variable("MTOW","lbf","Takeoff weight")
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
@@ -15,20 +17,29 @@ class SimpleOnDemandAircraft(Model):
 		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
 		eta_cruise = Variable("\eta_{cruise}",eta_cruise,"-","Cruise propulsive efficiency")
 
+		cost_per_weight = Variable("cost_per_weight",vehicle_cost_per_weight,"lbf**-1",
+			"Cost per unit empty weight of the aircraft")
+		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
+		vehicle_life = Variable("vehicle_life",vehicle_life,"hours","Vehicle lifetime")
+
 		self.MTOW = MTOW
 
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
-		self.battery = Battery(C_m=C_m,n=n)
+		self.battery = Battery(C_m=C_m,n=n,cost_per_C=battery_cost_per_C)
 		self.structure = Structure(self,weight_fraction)
 		self.powerSystem = PowerSystem(eta=eta_electric)
+		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
 		
-		self.components = [self.rotors,self.battery,self.structure,self.powerSystem]
+		self.components = [self.rotors,self.battery,self.structure,self.powerSystem,self.avionics]
 		
 		constraints = []
+		
 		constraints += [g == self.battery.topvar("g")]
 		constraints += [self.components]#all constraints implemented at component level
 		constraints += [C_eff == self.battery.topvar("C_{eff}")]#battery-capacity constraint
 		constraints += [W_empty >= sum(c.topvar("W") for c in self.components)]#weight constraint
+		constraints += [purchase_price == cost_per_weight*self.structure.topvar("W")]
+
 		return constraints
 
 class Structure(Model):
@@ -36,7 +47,7 @@ class Structure(Model):
 		W = Variable("W","lbf","Structural weight")
 		weight_fraction = Variable("weight_fraction",weight_fraction,"-","Structural weight fraction")
 
-		return [W==weight_fraction*aircraft.MTOW]
+		return [W == weight_fraction*aircraft.MTOW]
 
 
 class Rotors(Model):
@@ -134,7 +145,9 @@ class Battery(Model):
 		return BatteryPerformance(self)
 
 	#Requires a substitution or constraint for g (gravitational acceleration)
-	def setup(self,C_m=350*ureg.Wh/ureg.kg,usable_energy_fraction=0.8,P_m=3000*ureg.W/ureg.kg,n=1.):
+	def setup(self,C_m=350*ureg.Wh/ureg.kg,usable_energy_fraction=0.8,P_m=3000*ureg.W/ureg.kg,
+		n=1.,cost_per_C=400*ureg.kWh**-1):
+		
 		g = Variable("g","m/s**2","Gravitational acceleration")
 		
 		C = Variable("C","kWh","Battery capacity")
@@ -148,10 +161,22 @@ class Battery(Model):
 		P_m = Variable("P_m",P_m,"W/kg","Battery power density")
 		P_max = Variable("P_{max}","kW","Battery maximum power")
 
+		cost_per_C = Variable("cost_per_C",cost_per_C,"kWh**-1",
+			"Battery cost per unit energy stored")
+		purchase_price = Variable("purchase_price","-","Purchase price of the battery")
+		cycle_life = Variable("cycle_life",2000,"-",
+			"Number of cycles before battery needs replacement")
+
 		self.P_max = P_max
 		self.n = n #battery discharge parameter (needed for Peukert effect)
 
-		return [C==m*C_m, W==m*g, C_eff == usable_energy_fraction*C, P_max==P_m*m]
+		constraints = []
+
+		constraints += [C==m*C_m, W==m*g]
+		constraints += [C_eff == usable_energy_fraction*C, P_max==P_m*m]
+		constraints += [purchase_price == cost_per_C*C]
+
+		return constraints
 
 class BatteryPerformance(Model):
 	def setup(self,battery):
@@ -204,6 +229,22 @@ class PowerSystemPerformance(Model):
 		constraints = []
 		constraints += [P_out == powerSystem.eta*P_in]
 		return constraints
+
+class Avionics(Model):
+	def setup(self,autonomousEnabled="No"):
+
+		W = Variable("W",0,"lbf","Weight of the avionics")
+		purchase_price = Variable("purchase_price","-","Purchase price of the avionics")
+
+		constraints = []
+
+		if autonomousEnabled == "Yes":
+			constraints += [purchase_price == 60000] #Uber estimate
+		if autonomousEnabled == "No":
+			constraints += [purchase_price == 1] #Negligible. Setting to 0 causes a crash
+
+		return constraints
+
 
 class FlightState(Model):
 	def setup(self,h):
@@ -398,8 +439,7 @@ class OnDemandTypicalMission(Model):
         return constraints
 
 class OnDemandMissionCost(Model):
-	def setup(self,aircraft,mission,vehicle_cost_per_weight=112*ureg.lbf**-1,
-		battery_cost_per_C=400*ureg.kWh**-1,pilot_wrap_rate=70*ureg.hr**-1,
+	def setup(self,aircraft,mission,pilot_wrap_rate=70*ureg.hr**-1,
 		mechanic_wrap_rate=60*ureg.hr**-1,MMH_FH=0.6):
 
 		cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
@@ -408,9 +448,7 @@ class OnDemandMissionCost(Model):
 
 		N_passengers = mission.passengers.topvar("N_{passengers}")
 
-		capital_expenses = CapitalExpenses(aircraft,mission,
-			vehicle_cost_per_weight=vehicle_cost_per_weight,
-			battery_cost_per_C=battery_cost_per_C)
+		capital_expenses = CapitalExpenses(aircraft,mission)
 		operating_expenses = OperatingExpenses(aircraft,mission,
 			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,
 			MMH_FH=MMH_FH)
@@ -425,16 +463,11 @@ class OnDemandMissionCost(Model):
 		return constraints
 
 class VehicleAcquisitionCost(Model):
-	def setup(self,aircraft,mission,cost_per_weight=112*ureg.lbf**-1,
-		vehicle_life=20000*ureg.hour):
+	def setup(self,aircraft,mission):
 		
 		t_mission = mission.topvar("t_{mission}")
-		MTOW = aircraft.topvar("MTOW")
-		
-		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
-			"Cost per unit empty weight of the aircraft")
-		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
-		vehicle_life = Variable("vehicle_life",vehicle_life,"hours","Vehicle lifetime")
+		purchase_price = aircraft.topvar("purchase_price")
+		vehicle_life = aircraft.topvar("vehicle_life")
 		
 		cost_per_time = Variable("cost_per_time","hr**-1",
 			"Amortized vehicle purchase price per unit mission time")
@@ -443,22 +476,18 @@ class VehicleAcquisitionCost(Model):
 
 		constraints = []
 
-		constraints += [purchase_price == cost_per_weight*MTOW]
 		constraints += [cost_per_time == purchase_price/vehicle_life]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 		
 		return constraints
 
 class BatteryAcquisitionCost(Model):
-	def setup(self,battery,mission,cost_per_C=400*ureg.kWh**-1):
+	def setup(self,battery,mission):
 		
-		C = battery.topvar("C")
 		t_mission = mission.topvar("t_{mission}")
 
-		cost_per_C = Variable("cost_per_C",cost_per_C,"kWh**-1",
-			"Battery cost per unit energy stored")
-		purchase_price = Variable("purchase_price","-","Purchase price of the battery")
-		cycle_life = Variable("cycle_life",2000,"-","Number of cycles before battery needs replacement")
+		purchase_price = battery.topvar("purchase_price")
+		cycle_life = battery.topvar("cycle_life")
 		
 		cost_per_time = Variable("cost_per_time","hr**-1",
 			"Amortized battery purchase price per unit mission time")
@@ -467,25 +496,21 @@ class BatteryAcquisitionCost(Model):
 
 		constraints = []
 
-		constraints += [purchase_price == cost_per_C*C]
 		constraints += [cost_per_mission == purchase_price/cycle_life]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
 
 class CapitalExpenses(Model):
-	def setup(self,aircraft,mission,vehicle_cost_per_weight=112*ureg.lbf**-1,
-		battery_cost_per_C=400*ureg.kWh**-1):
+	def setup(self,aircraft,mission):
 
 		t_mission = mission.topvar("t_{mission}")
 
 		cost_per_time = Variable("cost_per_time","hr**-1","Capital expenses per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","Capital expenses per mission")
 
-		vehicle_cost = VehicleAcquisitionCost(aircraft,mission,
-			cost_per_weight=vehicle_cost_per_weight)
-		battery_cost = BatteryAcquisitionCost(aircraft.battery,mission,
-			cost_per_C=battery_cost_per_C)
+		vehicle_cost = VehicleAcquisitionCost(aircraft,mission)
+		battery_cost = BatteryAcquisitionCost(aircraft.battery,mission)
 
 		constraints = []
 
@@ -645,8 +670,9 @@ if __name__=="__main__":
 	mechanic_wrap_rate = 60*ureg.hr**-1
 	MMH_FH = 0.6
 
-	testAircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric)
+	testAircraft = OnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
+		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
+		cost_per_weight=vehicle_cost_per_weight,battery_cost_per_C=battery_cost_per_C)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_crew=N_crew,N_passengers=sizing_N_passengers,
@@ -658,7 +684,6 @@ if __name__=="__main__":
 		time_in_hover=typical_time_in_hover,charger_power=charger_power)
 
 	testMissionCost = OnDemandMissionCost(testAircraft,testTypicalMission,
-		vehicle_cost_per_weight=vehicle_cost_per_weight,battery_cost_per_C=battery_cost_per_C,
 		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH)
 	
 	problem = Model(testMissionCost["cost_per_trip"],
@@ -707,13 +732,13 @@ if __name__=="__main__":
 	print "SPL in hover: %0.1f dB" % SPL_typical
 	print
 	print "Maximum takeoff weight: %0.0f lbs" % \
-		solution["variables"]["MTOW_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
+		solution["variables"]["MTOW_OnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
-		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
+		solution["variables"]["W_OnDemandAircraft/Battery"].to(ureg.lbf).magnitude
 	print "Vehicle purchase price: $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
+		solution["variables"]["purchase_price_OnDemandAircraft"]
 	print "Battery purchase price:  $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
+		solution["variables"]["purchase_price_OnDemandAircraft/Battery"]
 	print
 	print "Typical-mission total time: %0.1f minutes" % \
 		solution["variables"]["t_{mission}_OnDemandTypicalMission"].to(ureg.minute).magnitude
