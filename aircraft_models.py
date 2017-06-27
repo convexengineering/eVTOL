@@ -394,15 +394,21 @@ class OnDemandMissionCost(Model):
 		return constraints
 
 class VehicleAcquisitionCost(Model):
-	def setup(self,aircraft,cost_per_weight=112*ureg.lbf**-1,
+	def setup(self,aircraft,mission,cost_per_weight=112*ureg.lbf**-1,
 		vehicle_life=10*ureg.year):
+		
+		self.mission = mission
+		t_mission = self.mission.topvar("t_{mission}")
 		
 		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
 			"Cost per unit empty weight of the aircraft")
 		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
 		vehicle_life = Variable("vehicle_life",vehicle_life,"years","Vehicle lifetime")
+		
 		cost_per_time = Variable("cost_per_time","hr**-1",
-			"Vehicle purchase price per unit mission time")
+			"Amortized vehicle purchase price per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-",
+			"Amortized vehicle acquisition cost per mission")
 
 		self.aircraft = aircraft
 
@@ -410,24 +416,43 @@ class VehicleAcquisitionCost(Model):
 
 		constraints += [purchase_price == cost_per_weight*self.aircraft.topvar("MTOW")]
 		constraints += [cost_per_time == purchase_price/vehicle_life]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+		
+		return constraints
 
 class InfrastructureCost(Model):
-	def setup(self):
+	def setup(self,mission):
+		
+		self.mission = mission
+		t_mission = self.mission.topvar("t_{mission}")
+		
 		cost_per_time = Variable("cost_per_time",86000,"year**-1",
-			"Infrastructure cost per unit mission time")
+			"Amortized infrastructure cost per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-",
+			"Amortized infrastructure cost per mission")
 
 		constraints = []
-		constraints += [cost_per_time]
+		
+		constraints += [cost_per_time == cost_per_time]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+		
 		return constraints
 
 class BatteryAcquisitionCost(Model):
-	def setup(self,battery,cost_per_C=400*ureg.kWh**-1):
+	def setup(self,battery,mission,cost_per_C=400*ureg.kWh**-1):
+		
+		self.mission = mission
+		t_mission = self.mission.topvar("t_{mission}")
 
 		cost_per_C = Variable("cost_per_C",cost_per_C,"kWh**-1",
 			"Battery cost per unit energy stored")
 		purchase_price = Variable("purchase_price","-","Purchase price of the battery")
-		cycle_life = Variable("cycle_life","-","Number of cycles before battery needs replacement")
-		cost_per_mission = Variable("cost_per_mission","-","Battery cost, amortized over number of missions")
+		cycle_life = Variable("cycle_life",2000,"-","Number of cycles before battery needs replacement")
+		
+		cost_per_time = Variable("cost_per_time","hr**-1",
+			"Amortized battery purchase price per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-",
+			"Amortized battery cost per mission")
 
 		self.battery = battery
 
@@ -435,6 +460,7 @@ class BatteryAcquisitionCost(Model):
 
 		constraints += [purchase_price == cost_per_C*self.battery.topvar("C")]
 		constraints += [cost_per_mission == purchase_price/cycle_life]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
 
@@ -450,15 +476,17 @@ class CapitalExpenses(Model):
 
 		t_mission = self.mission.topvar("t_{mission}")
 
-		vehicle_cost = VehicleAcquisitionCost(self.aircraft,cost_per_weight=vehicle_cost_per_weight)
-		infrastructure_cost = InfrastructureCost()
-		battery_cost = BatteryAcquisitionCost(self.aircraft.battery,cost_per_C=battery_cost_per_C)
+		vehicle_cost = VehicleAcquisitionCost(self.aircraft,self.mission,
+			cost_per_weight=vehicle_cost_per_weight)
+		infrastructure_cost = InfrastructureCost(self.mission)
+		battery_cost = BatteryAcquisitionCost(self.aircraft.battery,self.mission,cost_per_C=battery_cost_per_C)
 
 		constraints = []
 
 		constraints += [vehicle_cost, infrastructure_cost, battery_cost]
 		constraints += [cost_per_mission >= t_mission*vehicle_cost.topvar("cost_per_time")
 			+ t_mission*infrastructure_cost.topvar("cost_per_time") + battery_cost.topvar("cost_per_mission")]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
 
@@ -629,12 +657,12 @@ if __name__=="__main__":
 	
 	problem = Model(testMissionCost["cost_per_trip"],
 		[testAircraft, testSizingMission, testTypicalMission, testMissionCost])
+	
 	solution = problem.solve(verbosity=0)
-
+	
 	SPL_sizing  = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
 	SPL_typical = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]))
 
-	
 	if reserve_type == "FAA":
 		num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
 		reserve_type_string = " (%0.0f-minute loiter time)" % num
@@ -684,17 +712,29 @@ if __name__=="__main__":
 	print "Cost per trip, per passenger: $%0.2f" % \
 		solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
 	print "Vehicle purchase price: $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandMissionCost"]
-	print "Overhaul cost: $%0.2f " % \
-		solution["variables"]["overhaul_cost_OnDemandMissionCost"]
+		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
 	print
-	print "Vehicle amortized cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{vehicle}_OnDemandMissionCost"]
-	print "Energy cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{energy}_OnDemandMissionCost"]
-	print "Pilot cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{pilot}_OnDemandMissionCost"]
-	print "Maintenance cost, per trip: $%0.2f " % \
-		solution["variables"]["c_{maintenance}_OnDemandMissionCost"]
-
+	print "Vehicle capital expenses, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses"]
+	print "Amortized vehicle acquisition cost, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
+	print "Amortized infrastructure cost, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/InfrastructureCost"]
+	print "Amortized battery acquisition cost, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
+	print	
+	print "Vehicle operating expenses, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses"]
+	print "Direct operating cost, per trip: $%0.2f" % \
+		solution["variables"]["DOC_OnDemandMissionCost/OperatingExpenses"]
+	print "Indirect operating cost, per trip: $%0.2f" % \
+		solution["variables"]["IOC_OnDemandMissionCost/OperatingExpenses"]
+	print
+	print "Pilot cost, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses/PilotCost"]
+	print "Amortized maintenance cost, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses/MaintenanceCost"]
+	print "Energy cost, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses/EnergyCost"]
+	
 	#print solution.summary()
