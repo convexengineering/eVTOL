@@ -14,13 +14,9 @@ class SimpleOnDemandAircraft(Model):
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
 		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
-		eta_cruise = Variable("\eta",eta_cruise,"-","Cruise propulsive efficiency")
+		eta_cruise = Variable("\eta_{cruise}",eta_cruise,"-","Cruise propulsive efficiency")
 
 		self.MTOW = MTOW
-		self.C_eff = C_eff
-		self.g = g
-		self.L_D = L_D
-		self.eta_cruise = eta_cruise
 
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
 		self.battery = Battery(C_m=C_m,n=n)
@@ -238,7 +234,9 @@ class Hover(Model):
 		batteryPerf = aircraft.battery.performance()
 		powerSystemPerf = aircraft.powerSystem.performance()
 
-		constraints = [rotorPerf, batteryPerf, powerSystemPerf]
+		constraints = []
+		
+		constraints += [rotorPerf, batteryPerf, powerSystemPerf]
 		constraints += [P_rotors==rotorPerf.topvar("P"),T==rotorPerf.topvar("T"),
 			T_A==rotorPerf.topvar("T/A")]
 		constraints += [P_battery == powerSystemPerf.topvar("P_{in}"),
@@ -246,6 +244,7 @@ class Hover(Model):
 		constraints += [E==batteryPerf.topvar("E"), P_battery==batteryPerf.topvar("P"), 
 			t==batteryPerf.topvar("t")]
 		constraints += [T==W]
+		
 		return constraints
 
 class LevelFlight(Model):
@@ -262,8 +261,8 @@ class LevelFlight(Model):
 		V = Variable("V",V,"mph","Velocity during segment")
 		
 		W = mission.W
-		L_D = aircraft.L_D
-		eta_cruise = aircraft.eta_cruise
+		L_D = aircraft.topvar("L_D")
+		eta_cruise = aircraft.topvar("\eta_{cruise}")
 
 		self.E = E
 		
@@ -289,7 +288,7 @@ class OnDemandSizingMission(Model):
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
-        C_eff = aircraft.C_eff
+        C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 
         self.aircraft = aircraft
         self.W = W
@@ -335,7 +334,7 @@ class OnDemandTypicalMission(Model):
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
     		"Mission range (not including reserves)")
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
-        C_eff = aircraft.C_eff #effective battery capacity
+        C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
         t_mission = Variable("t_{mission}","minutes","Time to complete mission")
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
@@ -377,17 +376,17 @@ class OnDemandMissionCost(Model):
 		cptpp = Variable("cost_per_trip_per_passenger","-",
 			"Cost (in dollars) for one trip, per passenger")
 
-		self.aircraft = aircraft
-		self.mission  = mission
+		N_passengers = mission.passengers.topvar("N_{passengers}")
 
-		capital_expenses = CapitalExpenses(self.aircraft,self.mission,
-			vehicle_cost_per_weight=vehicle_cost_per_weight,battery_cost_per_C=battery_cost_per_C)
-		operating_expenses = OperatingExpenses(self.aircraft,self.mission)
+		capital_expenses = CapitalExpenses(aircraft,mission,
+			vehicle_cost_per_weight=vehicle_cost_per_weight,
+			battery_cost_per_C=battery_cost_per_C)
+		operating_expenses = OperatingExpenses(aircraft,mission)
 
 		constraints = []
 		constraints += [capital_expenses, operating_expenses]
-
-		constraints += [cpt == cptpp*self.mission.passengers.topvar("N_{passengers}")]
+		
+		constraints += [cpt == cptpp*N_passengers]
 		constraints += [cpt >= capital_expenses.topvar("cost_per_mission")
 			+ operating_expenses.topvar("cost_per_mission")]
 
@@ -397,8 +396,8 @@ class VehicleAcquisitionCost(Model):
 	def setup(self,aircraft,mission,cost_per_weight=112*ureg.lbf**-1,
 		vehicle_life=10*ureg.year):
 		
-		self.mission = mission
-		t_mission = self.mission.topvar("t_{mission}")
+		t_mission = mission.topvar("t_{mission}")
+		MTOW = aircraft.topvar("MTOW")
 		
 		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
 			"Cost per unit empty weight of the aircraft")
@@ -410,11 +409,9 @@ class VehicleAcquisitionCost(Model):
 		cost_per_mission = Variable("cost_per_mission","-",
 			"Amortized vehicle acquisition cost per mission")
 
-		self.aircraft = aircraft
-
 		constraints = []
 
-		constraints += [purchase_price == cost_per_weight*self.aircraft.topvar("MTOW")]
+		constraints += [purchase_price == cost_per_weight*MTOW]
 		constraints += [cost_per_time == purchase_price/vehicle_life]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 		
@@ -423,8 +420,7 @@ class VehicleAcquisitionCost(Model):
 class InfrastructureCost(Model):
 	def setup(self,mission):
 		
-		self.mission = mission
-		t_mission = self.mission.topvar("t_{mission}")
+		t_mission = mission.topvar("t_{mission}")
 		
 		cost_per_time = Variable("cost_per_time",86000,"year**-1",
 			"Amortized infrastructure cost per unit mission time")
@@ -438,8 +434,8 @@ class InfrastructureCost(Model):
 class BatteryAcquisitionCost(Model):
 	def setup(self,battery,mission,cost_per_C=400*ureg.kWh**-1):
 		
-		self.mission = mission
-		t_mission = self.mission.topvar("t_{mission}")
+		C = battery.topvar("C")
+		t_mission = mission.topvar("t_{mission}")
 
 		cost_per_C = Variable("cost_per_C",cost_per_C,"kWh**-1",
 			"Battery cost per unit energy stored")
@@ -451,11 +447,10 @@ class BatteryAcquisitionCost(Model):
 		cost_per_mission = Variable("cost_per_mission","-",
 			"Amortized battery cost per mission")
 
-		self.battery = battery
 
 		constraints = []
 
-		constraints += [purchase_price == cost_per_C*self.battery.topvar("C")]
+		constraints += [purchase_price == cost_per_C*C]
 		constraints += [cost_per_mission == purchase_price/cycle_life]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
@@ -465,18 +460,16 @@ class CapitalExpenses(Model):
 	def setup(self,aircraft,mission,vehicle_cost_per_weight=112*ureg.lbf**-1,
 		battery_cost_per_C=400*ureg.kWh**-1):
 
+		t_mission = mission.topvar("t_{mission}")
+
 		cost_per_time = Variable("cost_per_time","hr**-1","Capital expenses per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","Capital expenses per mission")
 
-		self.aircraft = aircraft
-		self.mission = mission
-
-		t_mission = self.mission.topvar("t_{mission}")
-
-		vehicle_cost = VehicleAcquisitionCost(self.aircraft,self.mission,
+		vehicle_cost = VehicleAcquisitionCost(aircraft,mission,
 			cost_per_weight=vehicle_cost_per_weight)
-		infrastructure_cost = InfrastructureCost(self.mission)
-		battery_cost = BatteryAcquisitionCost(self.aircraft.battery,self.mission,cost_per_C=battery_cost_per_C)
+		infrastructure_cost = InfrastructureCost(mission)
+		battery_cost = BatteryAcquisitionCost(aircraft.battery,mission,
+			cost_per_C=battery_cost_per_C)
 
 		constraints = []
 
@@ -491,8 +484,7 @@ class CapitalExpenses(Model):
 class PilotCost(Model):
 	def setup(self,mission,wrap_rate=70*ureg.hr**-1,pilots_per_aircraft=1.5):
 
-		self.mission = mission
-		t_mission = self.mission.topvar("t_{mission}")
+		t_mission = mission.topvar("t_{mission}")
 
 		wrap_rate = Variable("wrap_rate",wrap_rate,"hr**-1",
 			"Cost per pilot, per unit mission time (including benefits and overhead)")
@@ -511,8 +503,7 @@ class PilotCost(Model):
 class MaintenanceCost(Model):
 	def setup(self,mission,wrap_rate=60*ureg.hr**-1,MMH_FH=0.4):
 
-		self.mission = mission
-		t_mission = self.mission.topvar("t_{mission}")
+		t_mission = mission.topvar("t_{mission}")
 
 		MMH_FH = Variable("MMH_FH",MMH_FH,"-","Maintenance man-hours per flight hour")
 		wrap_rate = Variable("wrap_rate",wrap_rate,"hr**-1",
@@ -531,8 +522,8 @@ class MaintenanceCost(Model):
 class EnergyCost(Model):
 	def setup(self,mission,cost_per_energy=0.12*ureg.kWh**-1):
 
-		self.mission = mission
-		t_mission = self.mission.topvar("t_{mission}")
+		t_mission = mission.topvar("t_{mission}")
+		E_mission = mission.topvar("E_{mission}")
 
 		cost_per_energy = Variable("cost_per_energy",cost_per_energy,"kWh**-1",
 			"Price of electricity")
@@ -543,7 +534,7 @@ class EnergyCost(Model):
 
 		constraints = []
 
-		constraints += [cost_per_mission == self.mission.topvar("E_{mission}")*cost_per_energy/eta_charger]
+		constraints += [cost_per_mission == E_mission*cost_per_energy/eta_charger]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
@@ -566,12 +557,7 @@ class IndirectOperatingCost(Model):
 class OperatingExpenses(Model):
 	def setup(self,aircraft,mission):
 
-		cost_per_mission = Variable("cost_per_mission","-","Operating expenses per mission")
-		
-		self.aircraft = aircraft
-		self.mission = mission
-
-		t_mission = self.mission.topvar("t_{mission}")
+		t_mission = mission.topvar("t_{mission}")
 
 		cost_per_time = Variable("cost_per_time","hr**-1","Operating expenses per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","Operating expenses per mission")
@@ -584,9 +570,9 @@ class OperatingExpenses(Model):
 		self.DOC = DOC
 		self.DOC_per_time = DOC_per_time
 
-		pilot_cost = PilotCost(self.mission)
-		maintenance_cost = MaintenanceCost(self.mission)
-		energy_cost = EnergyCost(self.mission)
+		pilot_cost = PilotCost(mission)
+		maintenance_cost = MaintenanceCost(mission)
+		energy_cost = EnergyCost(mission)
 		indirect_operating_cost = IndirectOperatingCost(self)
 
 		constraints = []
