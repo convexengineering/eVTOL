@@ -23,6 +23,7 @@ class OnDemandAircraft(Model):
 		vehicle_life = Variable("vehicle_life",vehicle_life,"hours","Vehicle lifetime")
 
 		self.MTOW = MTOW
+		self.autonomousEnabled = autonomousEnabled
 
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
 		self.battery = Battery(C_m=C_m,n=n,cost_per_C=battery_cost_per_C)
@@ -481,6 +482,25 @@ class VehicleAcquisitionCost(Model):
 		
 		return constraints
 
+class AvionicsAcquisitionCost(Model):
+	def setup(self,aircraft,mission):
+		
+		t_mission = mission.topvar("t_{mission}")
+		purchase_price = aircraft.avionics.topvar("purchase_price")
+		vehicle_life = aircraft.topvar("vehicle_life")
+		
+		cost_per_time = Variable("cost_per_time","hr**-1",
+			"Amortized avionics purchase price per unit mission time")
+		cost_per_mission = Variable("cost_per_mission","-",
+			"Amortized avionics acquisition cost per mission")
+
+		constraints = []
+
+		constraints += [cost_per_time == purchase_price/vehicle_life]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+		
+		return constraints
+
 class BatteryAcquisitionCost(Model):
 	def setup(self,battery,mission):
 		
@@ -510,13 +530,15 @@ class CapitalExpenses(Model):
 		cost_per_mission = Variable("cost_per_mission","-","Capital expenses per mission")
 
 		vehicle_cost = VehicleAcquisitionCost(aircraft,mission)
+		avionics_cost = AvionicsAcquisitionCost(aircraft,mission)
 		battery_cost = BatteryAcquisitionCost(aircraft.battery,mission)
 
-		constraints = []
+		self.costs = [vehicle_cost, avionics_cost, battery_cost]
 
-		constraints += [vehicle_cost, battery_cost]
-		constraints += [cost_per_mission >= t_mission*vehicle_cost.topvar("cost_per_time")
-			+ battery_cost.topvar("cost_per_mission")]
+		constraints = []
+		constraints += [self.costs]
+		
+		constraints += [cost_per_mission >= sum(c.topvar("cost_per_mission") for c in self.costs)]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
@@ -755,6 +777,8 @@ if __name__=="__main__":
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses"]
 	print "Amortized vehicle acquisition cost, per trip: $%0.2f" % \
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
+	print "Amortized avionics acquisition cost, per trip: $%0.2f" % \
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/AvionicsAcquisitionCost"]
 	print "Amortized battery acquisition cost, per trip: $%0.2f" % \
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
 	print	
