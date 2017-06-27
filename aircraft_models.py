@@ -228,21 +228,20 @@ class Hover(Model):
 		T_A = Variable("T/A","lbf/ft**2","Disk loading during hover segment")
 		t = Variable("t",t,"s","Time in hover segment")
 		W = mission.W
-		self.E = E
 
-		rotorPerf = aircraft.rotors.performance(state)
-		batteryPerf = aircraft.battery.performance()
-		powerSystemPerf = aircraft.powerSystem.performance()
+		self.rotorPerf = aircraft.rotors.performance(state)
+		self.batteryPerf = aircraft.battery.performance()
+		self.powerSystemPerf = aircraft.powerSystem.performance()
 
 		constraints = []
+		constraints += [self.rotorPerf, self.batteryPerf, self.powerSystemPerf]
 		
-		constraints += [rotorPerf, batteryPerf, powerSystemPerf]
-		constraints += [P_rotors==rotorPerf.topvar("P"),T==rotorPerf.topvar("T"),
-			T_A==rotorPerf.topvar("T/A")]
-		constraints += [P_battery == powerSystemPerf.topvar("P_{in}"),
-			P_rotors == powerSystemPerf.topvar("P_{out}")]
-		constraints += [E==batteryPerf.topvar("E"), P_battery==batteryPerf.topvar("P"), 
-			t==batteryPerf.topvar("t")]
+		constraints += [P_rotors==self.rotorPerf.topvar("P"),T==self.rotorPerf.topvar("T"),
+			T_A==self.rotorPerf.topvar("T/A")]
+		constraints += [P_battery == self.powerSystemPerf.topvar("P_{in}"),
+			P_rotors == self.powerSystemPerf.topvar("P_{out}")]
+		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"), 
+			t==self.batteryPerf.topvar("t")]
 		constraints += [T==W]
 		
 		return constraints
@@ -263,20 +262,18 @@ class LevelFlight(Model):
 		W = mission.W
 		L_D = aircraft.topvar("L_D")
 		eta_cruise = aircraft.topvar("\eta_{cruise}")
-
-		self.E = E
 		
-		batteryPerf = aircraft.battery.performance()
-		powerSystemPerf = aircraft.powerSystem.performance()
+		self.batteryPerf = aircraft.battery.performance()
+		self.powerSystemPerf = aircraft.powerSystem.performance()
 
 		constraints = []
-		constraints += [E==batteryPerf.topvar("E"), P_battery==batteryPerf.topvar("P"),
-			t==batteryPerf.topvar("t")]
-		constraints += [P_battery == powerSystemPerf.topvar("P_{in}"),
-			P_cruise == powerSystemPerf.topvar("P_{out}")]
+		constraints += [self.batteryPerf, self.powerSystemPerf]
+
+		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"),
+			t==self.batteryPerf.topvar("t")]
+		constraints += [P_battery == self.powerSystemPerf.topvar("P_{in}"),
+			P_cruise == self.powerSystemPerf.topvar("P_{out}")]
 		constraints += [segment_range==V*t,eta_cruise*P_cruise==T*V,T==D,W==L_D*D]
-		
-		constraints += [batteryPerf, powerSystemPerf]
 
 		return constraints
 
@@ -289,6 +286,8 @@ class OnDemandSizingMission(Model):
     	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
+
+        E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.aircraft = aircraft
         self.W = W
@@ -317,11 +316,16 @@ class OnDemandSizingMission(Model):
         	constraints += [R_divert == self.fs4.topvar("segment_range")]
 
         constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E + self.fs3.E
-        	+ self.fs4.E + self.fs5.E]
+        constraints += [E_mission >= self.fs0.topvar("E") + self.fs1.topvar("E") 
+        	+ self.fs2.topvar("E") + self.fs3.topvar("E") + self.fs4.topvar("E") 
+        	+ self.fs5.topvar("E")]
+        
         constraints += [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
-        constraints += [p_ratio == self.fs0["p_{ratio}"]]
+        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
         constraints += hoverState
+
+        constraints += [C_eff >= E_mission]
+        
         return constraints
 
 class OnDemandTypicalMission(Model):
@@ -356,14 +360,15 @@ class OnDemandTypicalMission(Model):
         constraints += [self.passengers]
 
         constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [C_eff >= self.fs0.E + self.fs1.E + self.fs2.E]
+        constraints += [E_mission >= self.fs0.topvar("E") + self.fs1.topvar("E") 
+        	+ self.fs2.topvar("E")]
         constraints += [self.fs0, self.fs1, self.fs2]
-        constraints += [p_ratio == self.fs0["p_{ratio}"]]
+        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
         constraints += hoverState
 
         constraints += [t_mission >= self.fs0.topvar("t") + self.fs1.topvar("t") \
         	+ self.fs2.topvar("t")]
-        constraints += [E_mission >= self.fs0.E + self.fs1.E + self.fs2.E]
+        constraints += [C_eff >= E_mission]
         
         return constraints
 
