@@ -701,6 +701,10 @@ if __name__=="__main__":
 		solution["variables"]["MTOW_SimpleOnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
 		solution["variables"]["W_SimpleOnDemandAircraft/Battery"].to(ureg.lbf).magnitude
+	print "Vehicle purchase price: $%0.0f " % \
+		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
+	print "Battery purchase price: $%0.0f " % \
+		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
 	print
 	print "Typical mission time: %0.1f minutes" % \
 		solution["variables"]["t_{mission}_OnDemandTypicalMission"].to(ureg.minute).magnitude
@@ -708,8 +712,6 @@ if __name__=="__main__":
 		solution["variables"]["cost_per_trip_OnDemandMissionCost"]
 	print "Cost per trip, per passenger: $%0.2f" % \
 		solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
-	print "Vehicle purchase price: $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
 	print
 	print "Vehicle capital expenses, per trip: $%0.2f" % \
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses"]
