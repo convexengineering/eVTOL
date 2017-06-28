@@ -456,26 +456,55 @@ class OnDemandTypicalMission(Model):
         return constraints
 
 class OnDemandMissionCost(Model):
-	def setup(self,aircraft,mission,pilot_wrap_rate=70*ureg.hr**-1,
-		mechanic_wrap_rate=60*ureg.hr**-1,MMH_FH=0.6):
+	#Includes both revenue and deadhead missions
+	def setup(self,aircraft,revenue_mission,deadhead_mission,pilot_wrap_rate=70*ureg.hr**-1,
+		mechanic_wrap_rate=60*ureg.hr**-1,MMH_FH=0.6,deadhead_ratio=0.2):
+
+		N_passengers = revenue_mission.passengers.topvar("N_{passengers}")
 
 		cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
 		cptpp = Variable("cost_per_trip_per_passenger","-",
-			"Cost (in dollars) for one trip, per passenger")
+			"Cost (in dollars) for one trip, per passenger carried on revenue trip")
 
-		N_passengers = mission.passengers.topvar("N_{passengers}")
+		NdNr = Variable("N_{deadhead}/N_{typical}",deadhead_ratio/(1-deadhead_ratio),"-",
+			"Number of deadhead missions per typical mission")
+
+		revenue_mission_costs = OneMissionCost(aircraft,revenue_mission,
+			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,
+			MMH_FH=MMH_FH)
+		deadhead_mission_costs = OneMissionCost(aircraft,deadhead_mission,
+			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,
+			MMH_FH=MMH_FH)
+		
+		constraints = []
+		constraints += [revenue_mission_costs, deadhead_mission_costs]
+		
+		constraints += [cpt >= revenue_mission_costs.topvar("cost_per_mission") + NdNr*deadhead_mission_costs.topvar("cost_per_mission")]
+		constraints += [cpt == cptpp*N_passengers]
+		
+		return constraints
+
+class OneMissionCost(Model):
+	#Cost for one mission. Can be either deadhead or typical.
+	def setup(self,aircraft,mission,pilot_wrap_rate=70*ureg.hr**-1,
+		mechanic_wrap_rate=60*ureg.hr**-1,MMH_FH=0.6):
+
+		t_mission = mission.topvar("t_{mission}")
+
+		cost_per_mission = Variable("cost_per_mission","-","Cost per mission")
+		cost_per_time = Variable("cost_per_time","hr**-1","Cost per unit mission time")
 
 		capital_expenses = CapitalExpenses(aircraft,mission)
 		operating_expenses = OperatingExpenses(aircraft,mission,
 			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,
 			MMH_FH=MMH_FH)
+		expenses = [capital_expenses, operating_expenses]
 
 		constraints = []
-		constraints += [capital_expenses, operating_expenses]
 		
-		constraints += [cpt == cptpp*N_passengers]
-		constraints += [cpt >= capital_expenses.topvar("cost_per_mission")
-			+ operating_expenses.topvar("cost_per_mission")]
+		constraints += [expenses]
+		constraints += [cost_per_mission >= sum(c.topvar("cost_per_mission") for c in expenses)]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
 
@@ -701,16 +730,21 @@ if __name__=="__main__":
 	V_loiter=100*ureg.mph
 
 	sizing_mission_range = 200*ureg.nautical_mile
-	typical_mission_range = 100*ureg.nautical_mile
+	revenue_mission_range = 100*ureg.nautical_mile
+	deadhead_mission_range = 100*ureg.nautical_mile
 
 	sizing_time_in_hover=120*ureg.s
-	typical_time_in_hover=30*ureg.s
+	revenue_time_in_hover=30*ureg.s
+	deadhead_time_in_hover=30*ureg.s
 
 	autonomousEnabled = "No"
 	sizing_mission_type = "piloted"
-	typical_mission_type = "piloted"
+	revenue_mission_type = "piloted"
+	deadhead_mission_type = "piloted"
+
 	sizing_N_passengers = 1
-	typical_N_passengers = 1
+	revenue_N_passengers = 1
+	deadhead_N_passengers = 0.00001
 
 	charger_power=200*ureg.kW
 
@@ -719,6 +753,7 @@ if __name__=="__main__":
 	pilot_wrap_rate = 70*ureg.hr**-1
 	mechanic_wrap_rate = 60*ureg.hr**-1
 	MMH_FH = 0.6
+	deadhead_ratio = 0.2
 
 	testAircraft = OnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -731,21 +766,29 @@ if __name__=="__main__":
 		mission_type=sizing_mission_type)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
 
-	testTypicalMission = OnDemandTypicalMission(testAircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover,
-		charger_power=charger_power,mission_type=typical_mission_type)
+	testRevenueMission = OnDemandTypicalMission(testAircraft,mission_range=revenue_mission_range,
+		V_cruise=V_cruise,N_passengers=revenue_N_passengers,time_in_hover=revenue_time_in_hover,
+		charger_power=charger_power,mission_type=revenue_mission_type)
 
-	testMissionCost = OnDemandMissionCost(testAircraft,testTypicalMission,
-		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH)
+	testDeadheadMission = OnDemandTypicalMission(testAircraft,mission_range=deadhead_mission_range,
+		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,time_in_hover=deadhead_time_in_hover,
+		charger_power=charger_power,mission_type=deadhead_mission_type)
+
+	testMissionCost = OnDemandMissionCost(testAircraft,testRevenueMission,testDeadheadMission,
+		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
+		deadhead_ratio=deadhead_ratio)
 	
 	problem = Model(testMissionCost["cost_per_trip"],
-		[testAircraft, testSizingMission, testTypicalMission, testMissionCost])
+		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission, testMissionCost])
 	
 	solution = problem.solve(verbosity=0)
 	
+	
 	SPL_sizing  = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
-	SPL_typical = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]))
+	SPL_revenue = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]["p_{ratio}_OnDemandTypicalMission.1"]))
+	SPL_deadhead = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]["p_{ratio}_OnDemandTypicalMission"]))
 
+	'''
 	if reserve_type == "FAA":
 		num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
 		reserve_type_string = " (%0.0f-minute loiter time)" % num
@@ -832,3 +875,4 @@ if __name__=="__main__":
 		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses/EnergyCost"]
 	
 	#print solution.summary()
+	'''
