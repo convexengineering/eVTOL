@@ -32,7 +32,7 @@ deadhead_time_in_hover = 30*ureg.s
 autonomousEnabled = "Yes"
 sizing_mission_type = "piloted"
 revenue_mission_type = "piloted"
-deadhead_mission_type = "piloted"
+deadhead_mission_type = "autonomous"
 
 sizing_N_passengers = 3
 revenue_N_passengers = 2
@@ -99,13 +99,13 @@ for config in configs:
 # Plotting commands
 plt.ion()
 fig1 = plt.figure(figsize=(17,11), dpi=80)
+plt.rc('axes', axisbelow=True)
 plt.show()
 
 y_pos = np.arange(len(configs))
 labels = [""]*len(configs)
 for i, config in enumerate(configs):
 	labels[i] = config
-
 
 #Maximum takeoff weight
 plt.subplot(2,2,1)
@@ -165,45 +165,108 @@ if autonomousEnabled == "Yes":
 if autonomousEnabled == "No":
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg, %s\n" \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
 	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_time_in_hover.to(ureg.s).magnitude) \
 	+ reserve_type + reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve\n" \
-	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, revenue_N_passengers, revenue_time_in_hover.to(ureg.s).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve" \
-	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude)
+	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
+		revenue_N_passengers, revenue_time_in_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
+	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
+		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 plt.suptitle(title_str,fontsize = 16)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
 plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.84)#adds space at the top for the title
 
-'''
+
 #Cost breakdown plot
 
 fig2 = plt.figure(figsize=(17,11), dpi=80)
 plt.show()
 
+#Revenue and deadhead costs
+
+plt.subplot(2,2,1)
 for i, config in enumerate(configs):
-	c_vehicle = configs[config]["solution"]["variables"]["c_{vehicle}_OnDemandMissionCost"]/typical_N_passengers
-	c_energy = configs[config]["solution"]["variables"]["c_{energy}_OnDemandMissionCost"]/typical_N_passengers
-	c_pilot = configs[config]["solution"]["variables"]["c_{pilot}_OnDemandMissionCost"]/typical_N_passengers
-	c_maintenance = configs[config]["solution"]["variables"]["c_{maintenance}_OnDemandMissionCost"]/typical_N_passengers
 	
-	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
-	p2 = plt.bar(i,c_energy,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
-	p3 = plt.bar(i,c_pilot,bottom=c_vehicle+c_energy, align='center',alpha=1,color="k",hatch="-")
-	p4 = plt.bar(i,c_maintenance,bottom=c_vehicle+c_energy+c_pilot,align='center',alpha=1,color="g",hatch="|")
+	c_revenue = configs[config]["solution"]("revenue_cost_per_trip_OnDemandMissionCost")
+	c_deadhead = configs[config]["solution"]("deadhead_cost_per_trip_OnDemandMissionCost")
+	
+	p1 = plt.bar(i,c_revenue,bottom=0,align='center',alpha=1,color="b",hatch="/")
+	p2 = plt.bar(i,c_deadhead,bottom=c_revenue,align='center',alpha=1,color="r",hatch="\\")
 
 plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Cost ($US)', fontsize = 16)
-plt.legend((p1[0],p2[0],p3[0],p4[0]), \
-	("Vehicle amortized cost","Energy cost","Pilot cost","Maintenance cost"),\
-	loc='upper left', fontsize = 16)
+plt.ylabel('Cost per trip ($US)', fontsize = 16)
+plt.grid()
+plt.title("Revenue-generating and Deadhead Costs",fontsize = 16)
+plt.legend((p1[0],p2[0]),("Revenue-generating cost","Deadhead cost"),
+	loc='upper right', fontsize = 14)
 
-plt.title(title_str,fontsize = 16)
+plt.subplot(2,2,2)
+for i, config in enumerate(configs):
+	
+	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
+	c_operating = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
+	
+	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,color="b",hatch="/")
+	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,color="r",hatch="\\")
+
+plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
+plt.ylabel('Cost per mission ($US)', fontsize = 16)
+plt.grid()
+plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
+plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
+	loc='upper right', fontsize = 14)
+
+plt.subplot(2,2,3)
+for i, config in enumerate(configs):
+	
+	c_vehicle = configs[config]["solution"]("purchase_price_OnDemandAircraft")/1000
+	c_avionics = configs[config]["solution"]("purchase_price_OnDemandAircraft/Avionics")/1000
+	c_battery = configs[config]["solution"]("purchase_price_OnDemandAircraft/Battery")/1000
+	
+	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
+	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
+	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="k",hatch="-")
+
+plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
+plt.ylabel('Acquisition cost ($thousands US)', fontsize = 16)
+plt.grid()
+plt.title("Capital Expenses",fontsize = 16)
+plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
+	loc='upper left', fontsize = 14)
+
+plt.subplot(2,2,4)
+for i, config in enumerate(configs):
+	
+	c_pilot = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
+	c_maintenance = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/MaintenanceCost")
+	c_energy = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
+	IOC = configs[config]["solution"]("IOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
+	
+	p1 = plt.bar(i,c_pilot,bottom=0,align='center',alpha=1,color="b",hatch="/")
+	p2 = plt.bar(i,c_maintenance,bottom=c_pilot,align='center',alpha=1,color="r",hatch="\\")
+	p3 = plt.bar(i,c_energy,bottom=c_maintenance+c_pilot, align='center',alpha=1,color="k",hatch="-")
+	p4 = plt.bar(i,IOC,bottom=c_energy+c_maintenance+c_pilot,align='center',alpha=1,color="g",hatch="|")
+
+plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
+plt.ylabel('Cost per mission ($US)', fontsize = 16)
+plt.grid()
+plt.title("Operating Expenses (revenue mission only)",fontsize = 16)
+plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
+	loc='upper left', fontsize = 14)
+
+cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; battery cost ratio = \$%0.0f per kWh; %s\n" \
+	% (vehicle_cost_per_weight.to(ureg.lbf**-1).magnitude, \
+		battery_cost_per_C.to(ureg.kWh**-1).magnitude, autonomy_string) \
+	+ "Pilot wrap rate = \$%0.0f/hour; mechanic wrap rate = \$%0.0f/hour; MMH per FH = %0.1f; deadhead ratio = %0.1f" \
+	% (pilot_wrap_rate.to(ureg.hr**-1).magnitude, mechanic_wrap_rate.to(ureg.hr**-1).magnitude, \
+		MMH_FH, deadhead_ratio)
+
+plt.suptitle(cost_title_str,fontsize = 16)
 plt.tight_layout()
-#plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.86)#adds space at the top for the title
-'''
+plt.subplots_adjust(left=0.05,right=0.95,bottom=0.14,top=0.89)#adds space at the top for the title
