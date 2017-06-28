@@ -400,8 +400,63 @@ class OnDemandSizingMission(Model):
         
         return constraints
 
-class OnDemandTypicalMission(Model):
-	#Typical mission. Economic analysis included.
+class OnDemandRevenueMission(Model):
+	#Revenue-generating mission. Exactly the same code as OnDemandDeadheadMission.
+    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
+    	N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW,
+    	mission_type="piloted"):
+
+    	if (aircraft.autonomousEnabled == "No") & (mission_type != "piloted"):
+    		raise ValueError("Autonomy is not enabled for Aircraft() model.")
+
+    	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
+    	mission_range = Variable("mission_range",mission_range,"nautical_mile",
+    		"Mission range (not including reserves)")
+    	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
+        C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
+        
+        t_mission = Variable("t_{mission}","minutes","Time to complete mission (including charging)")
+        t_flight = Variable("t_{flight}","minutes","Time in flight")
+        E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
+
+        self.W = W
+        self.E_mission = E_mission
+        self.mission_type = mission_type
+        self.crew = Crew(mission_type=mission_type)
+        self.passengers = Passengers(N_passengers=N_passengers)
+        
+        hoverState = FlightState(h=0*ureg.ft)
+
+        self.fs0 = Hover(self,aircraft,hoverState,t=time_in_hover)#takeoff
+        self.fs1 = LevelFlight(self,aircraft,V=V_cruise)#fly to destination
+        self.fs2 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing
+        self.time_on_ground = TimeOnGround(self,charger_power=charger_power)
+
+        self.segments = [self.fs0, self.fs1, self.fs2, self.time_on_ground]
+        self.flight_segments = [self.fs0, self.fs1, self.fs2]
+
+        constraints = []
+        constraints += [self.segments]
+        constraints += [self.crew,self.passengers]
+
+        constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
+        	+ self.crew.topvar("W")]
+        constraints += [aircraft.topvar("MTOW") >= W]
+        
+        constraints += [mission_range == self.fs1.topvar("segment_range")]
+        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
+        constraints += hoverState
+
+        constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
+        constraints += [C_eff >= E_mission]
+
+        constraints += [t_flight >= sum(c.topvar("t") for c in self.flight_segments)]
+        constraints += [t_mission >= t_flight + self.time_on_ground.topvar("t")]
+        
+        return constraints
+
+class OnDemandDeadheadMission(Model):
+	#Deadhead mission. Exactly the same code as OnDemandRevenueMission.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
     	N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW,
     	mission_type="piloted"):
@@ -461,31 +516,66 @@ class OnDemandMissionCost(Model):
 		mechanic_wrap_rate=60*ureg.hr**-1,MMH_FH=0.6,deadhead_ratio=0.2):
 
 		N_passengers = revenue_mission.passengers.topvar("N_{passengers}")
+		trip_distance = revenue_mission.topvar("mission_range")
 
 		cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
+		cpt_revenue = Variable("revenue_cost_per_trip","-",
+			"Portion of the cost per trip incurred during the revenue-generating flights")
+		cpt_deadhead = Variable("deadhead_cost_per_trip","-",
+			"Portion of the cost per trip incurred during the deadhead flights")
 		cptpp = Variable("cost_per_trip_per_passenger","-",
 			"Cost (in dollars) for one trip, per passenger carried on revenue trip")
+		cpt_seat_mile = Variable("cost_per_trip_per_seat_mile","mile**-1",
+			"Cost per trip, per passenger mile")
 
 		NdNr = Variable("N_{deadhead}/N_{typical}",deadhead_ratio/(1-deadhead_ratio),"-",
 			"Number of deadhead missions per typical mission")
 
-		revenue_mission_costs = OneMissionCost(aircraft,revenue_mission,
+		revenue_mission_costs = RevenueMissionCost(aircraft,revenue_mission,
 			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,
 			MMH_FH=MMH_FH)
-		deadhead_mission_costs = OneMissionCost(aircraft,deadhead_mission,
+		deadhead_mission_costs = DeadheadMissionCost(aircraft,deadhead_mission,
 			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,
 			MMH_FH=MMH_FH)
 		
 		constraints = []
 		constraints += [revenue_mission_costs, deadhead_mission_costs]
 		
-		constraints += [cpt >= revenue_mission_costs.topvar("cost_per_mission") + NdNr*deadhead_mission_costs.topvar("cost_per_mission")]
+		constraints += [cpt_revenue == revenue_mission_costs.topvar("cost_per_mission")]
+		constraints += [cpt_deadhead == NdNr*deadhead_mission_costs.topvar("cost_per_mission")]
+		constraints += [cpt >= cpt_revenue + cpt_deadhead]
+		
 		constraints += [cpt == cptpp*N_passengers]
+		constraints += [cpt == cpt_seat_mile*N_passengers*trip_distance]
 		
 		return constraints
 
-class OneMissionCost(Model):
-	#Cost for one mission. Can be either deadhead or typical.
+class RevenueMissionCost(Model):
+	#Cost for one mission. Exactly the same code as DeadheadMissionCost.
+	def setup(self,aircraft,mission,pilot_wrap_rate=70*ureg.hr**-1,
+		mechanic_wrap_rate=60*ureg.hr**-1,MMH_FH=0.6):
+
+		t_mission = mission.topvar("t_{mission}")
+
+		cost_per_mission = Variable("cost_per_mission","-","Cost per mission")
+		cost_per_time = Variable("cost_per_time","hr**-1","Cost per unit mission time")
+
+		capital_expenses = CapitalExpenses(aircraft,mission)
+		operating_expenses = OperatingExpenses(aircraft,mission,
+			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,
+			MMH_FH=MMH_FH)
+		expenses = [capital_expenses, operating_expenses]
+
+		constraints = []
+		
+		constraints += [expenses]
+		constraints += [cost_per_mission >= sum(c.topvar("cost_per_mission") for c in expenses)]
+		constraints += [cost_per_mission == t_mission*cost_per_time]
+
+		return constraints
+
+class DeadheadMissionCost(Model):
+	#Cost for one mission. Exactly the same code as RevenueMissionCost.
 	def setup(self,aircraft,mission,pilot_wrap_rate=70*ureg.hr**-1,
 		mechanic_wrap_rate=60*ureg.hr**-1,MMH_FH=0.6):
 
@@ -766,11 +856,11 @@ if __name__=="__main__":
 		mission_type=sizing_mission_type)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
 
-	testRevenueMission = OnDemandTypicalMission(testAircraft,mission_range=revenue_mission_range,
+	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_range=revenue_mission_range,
 		V_cruise=V_cruise,N_passengers=revenue_N_passengers,time_in_hover=revenue_time_in_hover,
 		charger_power=charger_power,mission_type=revenue_mission_type)
 
-	testDeadheadMission = OnDemandTypicalMission(testAircraft,mission_range=deadhead_mission_range,
+	testDeadheadMission = OnDemandDeadheadMission(testAircraft,mission_range=deadhead_mission_range,
 		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,time_in_hover=deadhead_time_in_hover,
 		charger_power=charger_power,mission_type=deadhead_mission_type)
 
@@ -785,18 +875,17 @@ if __name__=="__main__":
 	
 	
 	SPL_sizing  = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
-	SPL_revenue = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]["p_{ratio}_OnDemandTypicalMission.1"]))
-	SPL_deadhead = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandTypicalMission"]["p_{ratio}_OnDemandTypicalMission"]))
+	SPL_revenue = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandRevenueMission"]))
+	SPL_deadhead = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandDeadheadMission"]))
 
-	'''
+	
 	if reserve_type == "FAA":
 		num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
 		reserve_type_string = " (%0.0f-minute loiter time)" % num
 	if reserve_type == "Uber":
 		num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 		reserve_type_string = " (%0.1f-nm diversion distance)" % num
-
-
+	
 	print
 	print "Concept representative analysis"
 	print
@@ -818,15 +907,37 @@ if __name__=="__main__":
 		solution["variables"]["W_{mission}_OnDemandSizingMission"].to(ureg.lbf).magnitude
 	print "SPL in hover: %0.1f dB" % SPL_sizing
 	print
-	print "Typical Mission (%s)" % typical_mission_type
+	print "Revenue-Generating Mission (%s)" % revenue_mission_type
 	print "Mission range: %0.0f nm" % \
-		solution["variables"]["mission_range_OnDemandTypicalMission"].to(ureg.nautical_mile).magnitude
+		solution["variables"]["mission_range_OnDemandRevenueMission"].to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
-		solution["constants"]["N_{passengers}_OnDemandTypicalMission/Passengers"]
+		solution["constants"]["N_{passengers}_OnDemandRevenueMission/Passengers"]
 	print "Vehicle weight during mission: %0.0f lbf" % \
-		solution["variables"]["W_{mission}_OnDemandTypicalMission"].to(ureg.lbf).magnitude
-	print "SPL in hover: %0.1f dB" % SPL_typical
+		solution["variables"]["W_{mission}_OnDemandRevenueMission"].to(ureg.lbf).magnitude
+	print "Total time: %0.1f minutes" % \
+		solution["variables"]["t_{mission}_OnDemandRevenueMission"].to(ureg.minute).magnitude
+	print "Flight time: %0.1f minutes" % \
+		solution["variables"]["t_{flight}_OnDemandRevenueMission"].to(ureg.minute).magnitude
+	print "Time on ground: %0.1f minutes" % \
+		solution["variables"]["t_OnDemandRevenueMission/TimeOnGround"].to(ureg.minute).magnitude
+	print "SPL in hover: %0.1f dB" % SPL_revenue
 	print
+	print "Deadhead Mission (%s)" % deadhead_mission_type
+	print "Mission range: %0.0f nm" % \
+		solution["variables"]["mission_range_OnDemandDeadheadMission"].to(ureg.nautical_mile).magnitude
+	print "Number of passengers: %0.1f" % \
+		solution["constants"]["N_{passengers}_OnDemandDeadheadMission/Passengers"]
+	print "Vehicle weight during mission: %0.0f lbf" % \
+		solution["variables"]["W_{mission}_OnDemandDeadheadMission"].to(ureg.lbf).magnitude
+	print "Total time: %0.1f minutes" % \
+		solution["variables"]["t_{mission}_OnDemandDeadheadMission"].to(ureg.minute).magnitude
+	print "Flight time: %0.1f minutes" % \
+		solution["variables"]["t_{flight}_OnDemandDeadheadMission"].to(ureg.minute).magnitude
+	print "Time on ground: %0.1f minutes" % \
+		solution["variables"]["t_OnDemandDeadheadMission/TimeOnGround"].to(ureg.minute).magnitude
+	print "SPL in hover: %0.1f dB" % SPL_deadhead
+	print
+	
 	print "Maximum takeoff weight: %0.0f lbs" % \
 		solution["variables"]["MTOW_OnDemandAircraft"].to(ureg.lbf).magnitude
 	print "Structural weight: %0.0f lbs" % \
@@ -840,39 +951,40 @@ if __name__=="__main__":
 	print "Battery purchase price:  $%0.0f " % \
 		solution["variables"]["purchase_price_OnDemandAircraft/Battery"]
 	print
-	print "Typical-mission total time: %0.1f minutes" % \
-		solution["variables"]["t_{mission}_OnDemandTypicalMission"].to(ureg.minute).magnitude
-	print "Typical-mission flight time: %0.1f minutes" % \
-		solution["variables"]["t_{flight}_OnDemandTypicalMission"].to(ureg.minute).magnitude
-	print "Typical-mission time on ground: %0.1f minutes" % \
-		solution["variables"]["t_OnDemandTypicalMission/TimeOnGround"].to(ureg.minute).magnitude
 	print "Cost per trip: $%0.2f" % \
 		solution["variables"]["cost_per_trip_OnDemandMissionCost"]
 	print "Cost per trip, per passenger: $%0.2f" % \
 		solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
+	print "Cost per trip, per seat mile: $%0.2f per mile" % \
+		solution["variables"]["cost_per_trip_per_seat_mile_OnDemandMissionCost"].to(ureg.mile**-1).magnitude
+	print "Cost from revenue-generating flight: $%0.2f" % \
+		solution["variables"]["revenue_cost_per_trip_OnDemandMissionCost"]
+	print "Cost from deadhead flight: $%0.2f" % \
+		solution["variables"]["deadhead_cost_per_trip_OnDemandMissionCost"]
+	print
+	print "Cost Breakdown from Revenue-Generating Flight Only (no deadhead)"
 	print
 	print "Vehicle capital expenses, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses"]
 	print "Amortized vehicle acquisition cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
 	print "Amortized avionics acquisition cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/AvionicsAcquisitionCost"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AvionicsAcquisitionCost"]
 	print "Amortized battery acquisition cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
 	print	
 	print "Vehicle operating expenses, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses"]
 	print "Direct operating cost, per trip: $%0.2f" % \
-		solution["variables"]["DOC_OnDemandMissionCost/OperatingExpenses"]
+		solution["variables"]["DOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses"]
 	print "Indirect operating cost, per trip: $%0.2f" % \
-		solution["variables"]["IOC_OnDemandMissionCost/OperatingExpenses"]
+		solution["variables"]["IOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses"]
 	print
 	print "Pilot cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses/PilotCost"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost"]
 	print "Amortized maintenance cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses/MaintenanceCost"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/MaintenanceCost"]
 	print "Energy cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/OperatingExpenses/EnergyCost"]
+		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost"]
 	
 	#print solution.summary()
-	'''
