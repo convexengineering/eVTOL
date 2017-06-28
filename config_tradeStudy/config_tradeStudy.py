@@ -110,7 +110,7 @@ for i, config in enumerate(configs):
 #Maximum takeoff weight
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
-	MTOW = configs[config]["solution"]["variables"]["MTOW_OnDemandAircraft"].to(ureg.lbf).magnitude
+	MTOW = configs[config]["solution"]("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 	plt.bar(i,MTOW,align='center',alpha=1)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-60)
@@ -120,7 +120,7 @@ plt.title("Maximum Takeoff Weight",fontsize = 20)
 #Battery weight
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
-	W_battery = configs[config]["solution"]["variables"]["W_OnDemandAircraft/Battery"].to(ureg.lbf).magnitude
+	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 	plt.bar(i,W_battery,align='center',alpha=1)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-60)
@@ -130,7 +130,7 @@ plt.title("Battery Weight",fontsize = 20)
 #Trip cost per passenger 
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
-	cptpp = configs[config]["solution"]["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
+	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
 	plt.bar(i,cptpp,align='center',alpha=1)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-60)
@@ -140,7 +140,7 @@ plt.title("Cost per Trip, per Passenger",fontsize = 20)
 #Sound pressure level (in hover) 
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
-	SPL_sizing  = np.array(20*np.log10(configs[config]["solution"]["variables"]["p_{ratio}_OnDemandSizingMission"]))
+	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission"))
 	plt.bar(i,SPL_sizing,align='center',alpha=1)
 
 SPL_req = 62
@@ -150,7 +150,7 @@ plt.ylim(ymin = 57, ymax = 75)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-60)
 plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover",fontsize = 20)
+plt.title("Sound Pressure Level in Hover (sizing mission)",fontsize = 20)
 
 
 if reserve_type == "FAA":
