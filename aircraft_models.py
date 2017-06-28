@@ -827,7 +827,7 @@ if __name__=="__main__":
 	revenue_time_in_hover=30*ureg.s
 	deadhead_time_in_hover=30*ureg.s
 
-	autonomousEnabled = "No"
+	autonomousEnabled = "Yes"
 	sizing_mission_type = "piloted"
 	revenue_mission_type = "piloted"
 	deadhead_mission_type = "piloted"
@@ -873,17 +873,16 @@ if __name__=="__main__":
 	
 	solution = problem.solve(verbosity=0)
 	
-	
-	SPL_sizing  = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
-	SPL_revenue = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandRevenueMission"]))
-	SPL_deadhead = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandDeadheadMission"]))
 
-	
+	SPL_sizing  = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission"))
+	SPL_revenue = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission"))
+	SPL_deadhead = 20*np.log10(solution("p_{ratio}_OnDemandDeadheadMission"))
+
 	if reserve_type == "FAA":
-		num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
+		num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
 		reserve_type_string = " (%0.0f-minute loiter time)" % num
 	if reserve_type == "Uber":
-		num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
+		num = solution("R_{divert}_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
 		reserve_type_string = " (%0.1f-nm diversion distance)" % num
 	
 	print
@@ -899,92 +898,92 @@ if __name__=="__main__":
 	print
 	print "Sizing Mission (%s)" % sizing_mission_type
 	print "Mission range: %0.0f nm" % \
-		solution["variables"]["mission_range_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
+		solution("mission_range_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
-		solution["constants"]["N_{passengers}_OnDemandSizingMission/Passengers"]
+		solution("N_{passengers}_OnDemandSizingMission/Passengers")
 	print "Reserve type: " + reserve_type + reserve_type_string
 	print "Vehicle weight during mission: %0.0f lbf" % \
-		solution["variables"]["W_{mission}_OnDemandSizingMission"].to(ureg.lbf).magnitude
+		solution("W_{mission}_OnDemandSizingMission").to(ureg.lbf).magnitude
 	print "SPL in hover: %0.1f dB" % SPL_sizing
 	print
 	print "Revenue-Generating Mission (%s)" % revenue_mission_type
 	print "Mission range: %0.0f nm" % \
-		solution["variables"]["mission_range_OnDemandRevenueMission"].to(ureg.nautical_mile).magnitude
+		solution("mission_range_OnDemandRevenueMission").to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
-		solution["constants"]["N_{passengers}_OnDemandRevenueMission/Passengers"]
+		solution("N_{passengers}_OnDemandRevenueMission/Passengers")
 	print "Vehicle weight during mission: %0.0f lbf" % \
-		solution["variables"]["W_{mission}_OnDemandRevenueMission"].to(ureg.lbf).magnitude
+		solution("W_{mission}_OnDemandRevenueMission").to(ureg.lbf).magnitude
 	print "Total time: %0.1f minutes" % \
-		solution["variables"]["t_{mission}_OnDemandRevenueMission"].to(ureg.minute).magnitude
+		solution("t_{mission}_OnDemandRevenueMission").to(ureg.minute).magnitude
 	print "Flight time: %0.1f minutes" % \
-		solution["variables"]["t_{flight}_OnDemandRevenueMission"].to(ureg.minute).magnitude
+		solution("t_{flight}_OnDemandRevenueMission").to(ureg.minute).magnitude
 	print "Time on ground: %0.1f minutes" % \
-		solution["variables"]["t_OnDemandRevenueMission/TimeOnGround"].to(ureg.minute).magnitude
+		solution("t_OnDemandRevenueMission/TimeOnGround").to(ureg.minute).magnitude
 	print "SPL in hover: %0.1f dB" % SPL_revenue
 	print
 	print "Deadhead Mission (%s)" % deadhead_mission_type
 	print "Mission range: %0.0f nm" % \
-		solution["variables"]["mission_range_OnDemandDeadheadMission"].to(ureg.nautical_mile).magnitude
+		solution("mission_range_OnDemandDeadheadMission").to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
-		solution["constants"]["N_{passengers}_OnDemandDeadheadMission/Passengers"]
+		solution("N_{passengers}_OnDemandDeadheadMission/Passengers")
 	print "Vehicle weight during mission: %0.0f lbf" % \
-		solution["variables"]["W_{mission}_OnDemandDeadheadMission"].to(ureg.lbf).magnitude
+		solution("W_{mission}_OnDemandDeadheadMission").to(ureg.lbf).magnitude
 	print "Total time: %0.1f minutes" % \
-		solution["variables"]["t_{mission}_OnDemandDeadheadMission"].to(ureg.minute).magnitude
+		solution("t_{mission}_OnDemandDeadheadMission").to(ureg.minute).magnitude
 	print "Flight time: %0.1f minutes" % \
-		solution["variables"]["t_{flight}_OnDemandDeadheadMission"].to(ureg.minute).magnitude
+		solution("t_{flight}_OnDemandDeadheadMission").to(ureg.minute).magnitude
 	print "Time on ground: %0.1f minutes" % \
-		solution["variables"]["t_OnDemandDeadheadMission/TimeOnGround"].to(ureg.minute).magnitude
+		solution("t_OnDemandDeadheadMission/TimeOnGround").to(ureg.minute).magnitude
 	print "SPL in hover: %0.1f dB" % SPL_deadhead
 	print
 	
 	print "Maximum takeoff weight: %0.0f lbs" % \
-		solution["variables"]["MTOW_OnDemandAircraft"].to(ureg.lbf).magnitude
+		solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 	print "Structural weight: %0.0f lbs" % \
-		solution["variables"]["W_OnDemandAircraft/Structure"].to(ureg.lbf).magnitude
+		solution("W_OnDemandAircraft/Structure").to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
-		solution["variables"]["W_OnDemandAircraft/Battery"].to(ureg.lbf).magnitude
+		solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 	print "Vehicle purchase price: $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandAircraft"]
+		solution("purchase_price_OnDemandAircraft")
 	print "Avionics purchase price: $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandAircraft/Avionics"]
+		solution("purchase_price_OnDemandAircraft/Avionics")
 	print "Battery purchase price:  $%0.0f " % \
-		solution["variables"]["purchase_price_OnDemandAircraft/Battery"]
+		solution("purchase_price_OnDemandAircraft/Battery")
 	print
 	print "Cost per trip: $%0.2f" % \
-		solution["variables"]["cost_per_trip_OnDemandMissionCost"]
+		solution("cost_per_trip_OnDemandMissionCost")
 	print "Cost per trip, per passenger: $%0.2f" % \
-		solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
+		solution("cost_per_trip_per_passenger_OnDemandMissionCost")
 	print "Cost per trip, per seat mile: $%0.2f per mile" % \
-		solution["variables"]["cost_per_trip_per_seat_mile_OnDemandMissionCost"].to(ureg.mile**-1).magnitude
+		solution("cost_per_trip_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
 	print "Cost from revenue-generating flight: $%0.2f" % \
-		solution["variables"]["revenue_cost_per_trip_OnDemandMissionCost"]
+		solution("revenue_cost_per_trip_OnDemandMissionCost")
 	print "Cost from deadhead flight: $%0.2f" % \
-		solution["variables"]["deadhead_cost_per_trip_OnDemandMissionCost"]
+		solution("deadhead_cost_per_trip_OnDemandMissionCost")
 	print
 	print "Cost Breakdown from Revenue-Generating Flight Only (no deadhead)"
 	print
 	print "Vehicle capital expenses, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
 	print "Amortized vehicle acquisition cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/VehicleAcquisitionCost"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/VehicleAcquisitionCost")
 	print "Amortized avionics acquisition cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AvionicsAcquisitionCost"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AvionicsAcquisitionCost")
 	print "Amortized battery acquisition cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/BatteryAcquisitionCost"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/BatteryAcquisitionCost")
 	print	
 	print "Vehicle operating expenses, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	print "Direct operating cost, per trip: $%0.2f" % \
-		solution["variables"]["DOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses"]
+		solution("DOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	print "Indirect operating cost, per trip: $%0.2f" % \
-		solution["variables"]["IOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses"]
+		solution("IOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	print
 	print "Pilot cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
 	print "Amortized maintenance cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/MaintenanceCost"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/MaintenanceCost")
 	print "Energy cost, per trip: $%0.2f" % \
-		solution["variables"]["cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost"]
+		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	
 	#print solution.summary()
