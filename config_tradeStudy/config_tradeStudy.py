@@ -10,48 +10,47 @@ from matplotlib import pyplot as plt
 from aircraft_models import OnDemandAircraft 
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
-from configuration_data import configurations
+from study_input_data import generic_data, configuration_data
 
 #General data
-N = 12 #number of propellers. Required, but has no effect since T/A is constrained
-eta_cruise = 0.85 #propulsive efficiency in cruise
-eta_electric = 0.9 #electrical system efficiency
-weight_fraction = 0.5 #structural mass fraction
-C_m = 400*ureg.Wh/ureg.kg #battery energy density
-n=1.0#battery discharge parameter
-reserve_type = "Uber"
+eta_cruise = generic_data["\eta_{cruise}"] 
+eta_electric = generic_data["\eta_{electric}"]
+weight_fraction = generic_data["weight_fraction"]
+C_m = generic_data["C_m"]
+n = generic_data["n"]
 
-sizing_mission_range = 50*ureg.nautical_mile
-revenue_mission_range = 30*ureg.nautical_mile
-deadhead_mission_range = 30*ureg.nautical_mile
+reserve_type = generic_data["reserve_type"]
+autonomousEnabled = generic_data["autonomousEnabled"]
+charger_power = generic_data["charger_power"]
 
-sizing_time_in_hover = 120*ureg.s
-revenue_time_in_hover = 30*ureg.s
-deadhead_time_in_hover = 30*ureg.s
+vehicle_cost_per_weight = generic_data["vehicle_cost_per_weight"]
+battery_cost_per_C = generic_data["battery_cost_per_C"]
+pilot_wrap_rate = generic_data["pilot_wrap_rate"]
+mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
+MMH_FH = generic_data["MMH_FH"]
+deadhead_ratio = generic_data["deadhead_ratio"]
 
-autonomousEnabled = True
-sizing_mission_type = "piloted"
-revenue_mission_type = "piloted"
-deadhead_mission_type = "autonomous"
+sizing_mission_type = generic_data["sizing_mission"]["type"]
+sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
+sizing_mission_range = generic_data["sizing_mission"]["range"]
+sizing_time_in_hover = generic_data["sizing_mission"]["time_in_hover"]
 
-sizing_N_passengers = 3
-revenue_N_passengers = 2
-deadhead_N_passengers = 0.00001
+revenue_mission_type = generic_data["revenue_mission"]["type"]
+revenue_N_passengers = generic_data["revenue_mission"]["N_passengers"]
+revenue_mission_range = generic_data["revenue_mission"]["range"]
+revenue_time_in_hover = generic_data["revenue_mission"]["time_in_hover"]
 
-charger_power = 200*ureg.kW
-
-vehicle_cost_per_weight = 350*ureg.lbf**-1
-battery_cost_per_C = 400*ureg.kWh**-1
-pilot_wrap_rate = 70*ureg.hr**-1
-mechanic_wrap_rate = 60*ureg.hr**-1
-MMH_FH = 0.6
-deadhead_ratio = 0.2
+deadhead_mission_type = generic_data["deadhead_mission"]["type"]
+deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
+deadhead_mission_range = generic_data["deadhead_mission"]["range"]
+deadhead_time_in_hover = generic_data["deadhead_mission"]["time_in_hover"]
 
 
-# Delete configurations that won't solve
-configs = configurations.copy()
+# Delete some configurations
+configs = configuration_data.copy()
 del configs["Tilt duct"]
 del configs["Multirotor"]
+del configs["Autogyro"]
 
 #Optimize remaining configurations
 for config in configs:
@@ -65,6 +64,7 @@ for config in configs:
 	L_D = c["L/D"]
 	T_A = c["T/A"]
 	Cl_mean_max = c["Cl_{mean_{max}}"]
+	N = c["N"]
 
 	Aircraft = OnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -204,7 +204,7 @@ plt.ylabel('Cost per trip ($US)', fontsize = 16)
 plt.grid()
 plt.title("Revenue-generating and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue-generating cost","Deadhead cost"),
-	loc='upper right', fontsize = 14)
+	loc='upper left', fontsize = 14)
 
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
@@ -220,7 +220,7 @@ plt.ylabel('Cost per mission ($US)', fontsize = 16)
 plt.grid()
 plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
-	loc='upper right', fontsize = 14)
+	loc='upper left', fontsize = 14)
 
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
