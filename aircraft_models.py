@@ -10,7 +10,7 @@ class OnDemandAircraft(Model):
 		cost_per_weight=350*ureg.lbf**-1,vehicle_life=20000*ureg.hour,cost_per_C=400*ureg.kWh**-1,
 		autonomousEnabled=False):
 		
-		MTOW = Variable("MTOW","lbf","Takeoff weight")
+		MTOW = Variable("MTOW","lbf","Aircraft maximum takeoff weight")
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
@@ -22,15 +22,16 @@ class OnDemandAircraft(Model):
 		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
 		vehicle_life = Variable("vehicle_life",vehicle_life,"hours","Vehicle lifetime")
 
-		self.MTOW = MTOW
 		self.autonomousEnabled = autonomousEnabled
 
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
 		self.battery = Battery(C_m=C_m,n=n,cost_per_C=cost_per_C)
-		self.structure = Structure(self,weight_fraction)
+		self.structure = Structure(weight_fraction)
 		self.powerSystem = PowerSystem(eta=eta_electric)
 		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
 		
+		self.structure.subinplace({self.structure.topvar("MTOW"):MTOW})
+
 		self.components = [self.rotors,self.battery,self.structure,self.powerSystem,self.avionics]
 		
 		constraints = []
@@ -44,11 +45,15 @@ class OnDemandAircraft(Model):
 		return constraints
 
 class Structure(Model):
-	def setup(self,aircraft,weight_fraction):
+	def setup(self,weight_fraction):
+		
+		MTOW = Variable("MTOW","lbf",
+			"Aircraft maximum takeoff weight (requires substitution or subinplace)")
 		W = Variable("W","lbf","Structural weight")
-		weight_fraction = Variable("weight_fraction",weight_fraction,"-","Structural weight fraction")
+		weight_fraction = Variable("weight_fraction",weight_fraction,"-",
+			"Structural weight fraction")
 
-		return [W == weight_fraction*aircraft.MTOW]
+		return [W == weight_fraction*MTOW]
 
 
 class Rotors(Model):
@@ -871,8 +876,7 @@ if __name__=="__main__":
 	problem = Model(testMissionCost["cost_per_trip"],
 		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission, testMissionCost])
 	
-	solution = problem.solve(verbosity=0)
-	
+	solution = problem.solve(verbosity=0)	
 
 	SPL_sizing  = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission"))
 	SPL_revenue = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission"))
