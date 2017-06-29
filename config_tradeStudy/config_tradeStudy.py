@@ -298,8 +298,5 @@ for config in configs:
 
 	 output_data.write("\n")
 
-
-#output_data.write("\t%s: %0.4f %s\n" % (key, cessna_310[key].magnitude, cessna_310[key].units))
-
 output_data.close()
 
