@@ -29,7 +29,7 @@ sizing_time_in_hover = 120*ureg.s
 revenue_time_in_hover = 30*ureg.s
 deadhead_time_in_hover = 30*ureg.s
 
-autonomousEnabled = "Yes"
+autonomousEnabled = True
 sizing_mission_type = "piloted"
 revenue_mission_type = "piloted"
 deadhead_mission_type = "autonomous"
@@ -38,9 +38,9 @@ sizing_N_passengers = 3
 revenue_N_passengers = 2
 deadhead_N_passengers = 0.00001
 
-charger_power=200*ureg.kW
+charger_power = 200*ureg.kW
 
-vehicle_cost_per_weight=350*ureg.lbf**-1
+vehicle_cost_per_weight = 350*ureg.lbf**-1
 battery_cost_per_C = 400*ureg.kWh**-1
 pilot_wrap_rate = 70*ureg.hr**-1
 mechanic_wrap_rate = 60*ureg.hr**-1
@@ -160,9 +160,9 @@ if reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
-if autonomousEnabled == "Yes":
+if autonomousEnabled:
 	autonomy_string = "autonomy enabled"
-if autonomousEnabled == "No":
+else:
 	autonomy_string = "pilot required"
 
 title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
@@ -225,16 +225,16 @@ plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	
-	c_vehicle = configs[config]["solution"]("purchase_price_OnDemandAircraft")/1000
-	c_avionics = configs[config]["solution"]("purchase_price_OnDemandAircraft/Avionics")/1000
-	c_battery = configs[config]["solution"]("purchase_price_OnDemandAircraft/Battery")/1000
+	c_vehicle = configs[config]["solution"]("purchase_price_OnDemandAircraft")/1e6
+	c_avionics = configs[config]["solution"]("purchase_price_OnDemandAircraft/Avionics")/1e6
+	c_battery = configs[config]["solution"]("purchase_price_OnDemandAircraft/Battery")/1e6
 	
 	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
 	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
 	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="k",hatch="-")
 
 plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Acquisition cost ($thousands US)', fontsize = 16)
+plt.ylabel('Acquisition cost ($millions US)', fontsize = 16)
 plt.grid()
 plt.title("Capital Expenses",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
@@ -245,7 +245,7 @@ for i, config in enumerate(configs):
 	
 	c_pilot = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
 	c_maintenance = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/MaintenanceCost")
-	c_energy = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
+	c_energy = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	IOC = configs[config]["solution"]("IOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	
 	p1 = plt.bar(i,c_pilot,bottom=0,align='center',alpha=1,color="b",hatch="/")

@@ -7,32 +7,44 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
 import numpy as np
 from gpkit import Model, ureg
 from matplotlib import pyplot as plt
-from aircraft_models import SimpleOnDemandAircraft 
-from aircraft_models import OnDemandSizingMission, OnDemandTypicalMission
-from aircraft_models import OnDemandMissionCost
+from aircraft_models import OnDemandAircraft 
+from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
+from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from configuration_data import configurations
 
 #General data
 N = 6 #number of propellers. Required, but has no effect since T/A is constrained
 eta_cruise = 0.85 #propulsive efficiency in cruise
-eta_electric = 0.95 #electrical system efficiency
+eta_electric = 0.9 #electrical system efficiency
 weight_fraction = 0.5 #structural mass fraction
-N_crew = 1
 n=1.0#battery discharge parameter
 reserve_type = "Uber"
 
 sizing_mission_range = 50*ureg.nautical_mile
-typical_mission_range = 30*ureg.nautical_mile
+revenue_mission_range = 30*ureg.nautical_mile
+deadhead_mission_range = 30*ureg.nautical_mile
 
-sizing_time_in_hover=120*ureg.s
-typical_time_in_hover=30*ureg.s
+sizing_time_in_hover = 120*ureg.s
+revenue_time_in_hover = 30*ureg.s
+deadhead_time_in_hover = 30*ureg.s
+
+autonomousEnabled = True
+sizing_mission_type = "piloted"
+revenue_mission_type = "piloted"
+deadhead_mission_type = "autonomous"
 
 sizing_N_passengers = 3
-typical_N_passengers = 2
+revenue_N_passengers = 2
+deadhead_N_passengers = 0.00001
 
-cost_per_weight=112*ureg.lbf**-1
-pilot_salary = 40*ureg.hr**-1
-mechanic_salary=30*ureg.hr**-1
+charger_power = 200*ureg.kW
+
+vehicle_cost_per_weight = 350*ureg.lbf**-1
+battery_cost_per_C = 400*ureg.kWh**-1
+pilot_wrap_rate = 70*ureg.hr**-1
+mechanic_wrap_rate = 60*ureg.hr**-1
+MMH_FH = 0.6
+deadhead_ratio = 0.2
 
 # Delete configurations that won't solve
 configs = configurations.copy()
@@ -40,15 +52,22 @@ del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
 
-#set up C_m array
-C_m = np.linspace(300,600,10)*ureg.Wh/ureg.kg #battery energy density
-C_m = ("sweep",C_m)
-
-
 #Optimize remaining configurations
 for config in configs:
-	
+
 	print "Solving configuration: " + config
+
+	#set up C_m arrays (different for each configuration)
+	if config == "Helicopter":
+		C_m = np.linspace(350,600,10)*ureg.Wh/ureg.kg
+	elif config == "Coaxial heli":
+		C_m = np.linspace(300,600,11)*ureg.Wh/ureg.kg
+	elif config == "Lift + cruise":
+		C_m = np.linspace(250,600,13)*ureg.Wh/ureg.kg
+	else:
+		C_m = np.linspace(200,600,15)*ureg.Wh/ureg.kg
+
+	C_m = ("sweep",C_m)
 
 	c = configs[config]
 
@@ -58,29 +77,42 @@ for config in configs:
 	T_A = c["T/A"]
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 
-	Aircraft = SimpleOnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,N_crew=N_crew,n=n,
-		eta_electric=eta_electric)
+	Aircraft = OnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
+		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
+		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
+		autonomousEnabled=autonomousEnabled)
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
-		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type)
+		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type,
+		mission_type=sizing_mission_type)
 	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 
-	TypicalMission = OnDemandTypicalMission(Aircraft,mission_range=typical_mission_range,
-		V_cruise=V_cruise,N_passengers=typical_N_passengers,time_in_hover=typical_time_in_hover)
+	RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
+		V_cruise=V_cruise,N_passengers=revenue_N_passengers,time_in_hover=revenue_time_in_hover,
+		charger_power=charger_power,mission_type=revenue_mission_type)
 
-	MissionCost = OnDemandMissionCost(Aircraft,TypicalMission,cost_per_weight=cost_per_weight,
-		pilot_salary=pilot_salary,mechanic_salary=mechanic_salary)
-	
+	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
+		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,time_in_hover=deadhead_time_in_hover,
+		charger_power=charger_power,mission_type=deadhead_mission_type)
+
+	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
+		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,\
+		deadhead_ratio=deadhead_ratio)
+
 	problem = Model(MissionCost["cost_per_trip"],
-		[Aircraft, SizingMission, TypicalMission, MissionCost])
+		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+
 	solution = problem.solve(verbosity=0)
 
-	configs[config]["MTOW"] = solution["variables"]["MTOW_SimpleOnDemandAircraft"]
-	configs[config]["W_{battery}"] = solution["variables"]["W_SimpleOnDemandAircraft/Battery"]
-	configs[config]["cost_per_trip_per_passenger"] = solution["variables"]["cost_per_trip_per_passenger_OnDemandMissionCost"]
-	configs[config]["SPL"] = np.array(20*np.log10(solution["variables"]["p_{ratio}_OnDemandSizingMission"]))
+	configs[config]["solution"] = solution
+
+	configs[config]["C_m_array"] = solution("C_m_OnDemandAircraft/Battery")
+
+	configs[config]["MTOW"] = solution("MTOW_OnDemandAircraft")
+	configs[config]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
+	configs[config]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
+	configs[config]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission"))
 		
 
 # Plotting commands
@@ -100,7 +132,7 @@ C_m = C_m[1] #convert back to array from tuple
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["MTOW"].to(ureg.lbf).magnitude,
+	plt.plot(c["C_m_array"].to(ureg.Wh/ureg.kg).magnitude,c["MTOW"].to(ureg.lbf).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
@@ -114,7 +146,7 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["W_{battery}"].to(ureg.lbf).magnitude,
+	plt.plot(c["C_m_array"].to(ureg.Wh/ureg.kg).magnitude,c["W_{battery}"].to(ureg.lbf).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
@@ -128,7 +160,7 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["cost_per_trip_per_passenger"],
+	plt.plot(c["C_m_array"].to(ureg.Wh/ureg.kg).magnitude,c["cost_per_trip_per_passenger"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
@@ -142,13 +174,13 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(C_m.to(ureg.Wh/ureg.kg).magnitude,c["SPL"],
+	plt.plot(c["C_m_array"].to(ureg.Wh/ureg.kg).magnitude,c["SPL"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover",fontsize = 20)
+plt.title("Sound Pressure Level in Hover (sizing mission)",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 
@@ -159,12 +191,22 @@ if reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_fraction \
-	+ "Sizing-mission parameters: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_time_in_hover.to(ureg.s).magnitude) \
+if autonomousEnabled:
+	autonomy_string = "autonomy enabled"
+else:
+	autonomy_string = "pilot required"
+
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; %s\n" \
+	% (weight_fraction, autonomy_string) \
+	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
+	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_time_in_hover.to(ureg.s).magnitude) \
 	+ reserve_type + reserve_type_string + "\n"\
-	+ "Typical-mission parameters: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; no reserve" \
-	% (typical_mission_range.to(ureg.nautical_mile).magnitude, typical_N_passengers, typical_time_in_hover.to(ureg.s).magnitude)
+	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
+		revenue_N_passengers, revenue_time_in_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
+	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
+		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 plt.suptitle(title_str,fontsize = 16)
 

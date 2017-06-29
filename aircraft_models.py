@@ -8,7 +8,7 @@ from standard_atmosphere import stdatmo
 class OnDemandAircraft(Model):
 	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9,
 		cost_per_weight=350*ureg.lbf**-1,vehicle_life=20000*ureg.hour,cost_per_C=400*ureg.kWh**-1,
-		autonomousEnabled="No"):
+		autonomousEnabled=False):
 		
 		MTOW = Variable("MTOW","lbf","Takeoff weight")
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
@@ -240,14 +240,14 @@ class PowerSystemPerformance(Model):
 		return constraints
 
 class Avionics(Model):
-	def setup(self,autonomousEnabled="No"):
+	def setup(self,autonomousEnabled=False):
 
 		W = Variable("W",0,"lbf","Weight of the avionics")
 
-		if autonomousEnabled == "Yes":
+		if autonomousEnabled:
 			purchase_price = Variable("purchase_price",60000,"-",
 				"Purchase price of the avionics (Uber estimate)")
-		if autonomousEnabled == "No":
+		else:
 			purchase_price = Variable("purchase_price",1,"-",
 				"Purchase price of the avionics (negligibly small)")
 
@@ -350,7 +350,7 @@ class OnDemandSizingMission(Model):
     	V_loiter=100*ureg.mph,N_passengers=1,time_in_hover=120*ureg.s,reserve_type="Uber",
     	mission_type="piloted"):
 
-    	if (aircraft.autonomousEnabled == "No") & (mission_type != "piloted"):
+    	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
     		raise ValueError("Autonomy is not enabled for Aircraft() model.")
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
@@ -406,7 +406,7 @@ class OnDemandRevenueMission(Model):
     	N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW,
     	mission_type="piloted"):
 
-    	if (aircraft.autonomousEnabled == "No") & (mission_type != "piloted"):
+    	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
     		raise ValueError("Autonomy is not enabled for Aircraft() model.")
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
@@ -461,7 +461,7 @@ class OnDemandDeadheadMission(Model):
     	N_passengers=1,time_in_hover=60*ureg.s,charger_power=200*ureg.kW,
     	mission_type="piloted"):
 
-    	if (aircraft.autonomousEnabled == "No") & (mission_type != "piloted"):
+    	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
     		raise ValueError("Autonomy is not enabled for Aircraft() model.")
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
@@ -827,7 +827,7 @@ if __name__=="__main__":
 	revenue_time_in_hover=30*ureg.s
 	deadhead_time_in_hover=30*ureg.s
 
-	autonomousEnabled = "Yes"
+	autonomousEnabled = True
 	sizing_mission_type = "piloted"
 	revenue_mission_type = "piloted"
 	deadhead_mission_type = "piloted"
