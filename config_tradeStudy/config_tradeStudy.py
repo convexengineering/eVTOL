@@ -184,7 +184,6 @@ plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.84)#adds space at th
 
 
 #Cost breakdown plot
-
 fig2 = plt.figure(figsize=(17,11), dpi=80)
 plt.show()
 
@@ -270,3 +269,37 @@ cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; bat
 plt.suptitle(cost_title_str,fontsize = 16)
 plt.tight_layout()
 plt.subplots_adjust(left=0.05,right=0.95,bottom=0.14,top=0.89)#adds space at the top for the title
+
+
+#Rotor data output (to text file)
+
+output_data = open("rotor_data.txt","w")
+
+output_data.write("Rotor design data (from sizing mission)\n\n")
+
+output_data.write("Configuration \tN \tR (ft)\tT_perRotor (lbf)\tP_perRotor (hp)\t")
+output_data.write("VT (ft/s)\tomega (rpm)\tMT\tFOM\tSPL (dB)\n")
+
+for config in configs:
+	 
+	 sol = configs[config]["solution"]
+	 
+	 output_data.write(config)
+	 output_data.write("\t%0.0f" % sol("N_OnDemandAircraft/Rotors"))
+	 output_data.write("\t%0.2f" % sol("R_OnDemandAircraft/Rotors").to(ureg.ft).magnitude)
+	 output_data.write("\t%0.1f" % sol("T_perRotor_OnDemandSizingMission").to(ureg.lbf).magnitude)
+	 output_data.write("\t%0.1f" % sol("P_perRotor_OnDemandSizingMission").to(ureg.hp).magnitude)
+	 output_data.write("\t%0.1f" % sol("VT_OnDemandSizingMission").to(ureg.ft/ureg.s).magnitude)
+	 output_data.write("\t%0.0f" % sol("\omega_OnDemandSizingMission").to(ureg.rpm).magnitude)
+	 output_data.write("\t%0.3f" % sol("MT_OnDemandSizingMission"))
+	 output_data.write("\t%0.3f" % sol("FOM_OnDemandSizingMission"))
+	 SPL = 20*np.log10(sol("p_{ratio}_OnDemandSizingMission"))
+	 output_data.write("\t%0.1f" % SPL)
+
+	 output_data.write("\n")
+
+
+#output_data.write("\t%s: %0.4f %s\n" % (key, cessna_310[key].magnitude, cessna_310[key].units))
+
+output_data.close()
+

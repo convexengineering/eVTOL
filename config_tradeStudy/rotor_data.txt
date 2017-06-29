@@ -1,0 +1,4 @@
+Rotor design data (from sizing mission)
+
+Configuration 	N 	R (ft)	T_perRotor (lbf)	P_perRotor (hp)	VT (ft/s)	omega (rpm)	MT	FOM	SPL (dB)
+Tilt wing	8	2.79	367.4	44.4	615.3	2105	0.551	0.846

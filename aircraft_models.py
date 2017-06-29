@@ -363,6 +363,13 @@ class OnDemandSizingMission(Model):
     	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 
+        T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
+        P_perRotor = Variable("P_perRotor","kW","Power per rotor")
+        VT = Variable("VT","ft/s","Propeller tip speed")
+        omega = Variable("\omega","rpm","Propeller angular velocity")
+        MT = Variable("MT","-","Propeller tip Mach number")
+        FOM = Variable("FOM","-","Figure of merit")
+
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.W = W
@@ -402,7 +409,14 @@ class OnDemandSizingMission(Model):
 
         constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
         constraints += [C_eff >= E_mission]
-        
+
+        constraints += [T_perRotor == self.fs0.rotorPerf.topvar("T_perRotor")]
+        constraints += [P_perRotor == self.fs0.rotorPerf.topvar("P_perRotor")]
+        constraints += [VT == self.fs0.rotorPerf.topvar("VT")]
+        constraints += [omega == self.fs0.rotorPerf.topvar("\omega")]
+        constraints += [MT == self.fs0.rotorPerf.topvar("MT")]
+        constraints += [FOM == self.fs0.rotorPerf.topvar("FOM")]
+       
         return constraints
 
 class OnDemandRevenueMission(Model):
@@ -841,9 +855,9 @@ if __name__=="__main__":
 	revenue_N_passengers = 1
 	deadhead_N_passengers = 0.00001
 
-	charger_power=200*ureg.kW
+	charger_power = 200*ureg.kW
 
-	vehicle_cost_per_weight=350*ureg.lbf**-1
+	vehicle_cost_per_weight = 350*ureg.lbf**-1
 	battery_cost_per_C = 400*ureg.kWh**-1
 	pilot_wrap_rate = 70*ureg.hr**-1
 	mechanic_wrap_rate = 60*ureg.hr**-1
