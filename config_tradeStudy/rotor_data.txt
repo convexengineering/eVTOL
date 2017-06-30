@@ -1,6 +1,8 @@
-Rotor design data (from sizing mission)
+Rotor design data (from sizing mission) 
 
-Configuration 	N 	R (ft)	T_perRotor (lbf)	P_perRotor (hp)	VT (ft/s)	omega (rpm)	MT	FOM	SPL (dB)
+Note: T and P are per rotor; SPL is for the entire vehicle.
+
+Configuration 	N 	R (ft)	T (lbf)	P (hp)	VT (ft/s)	omega (rpm)	MT	FOM	SPL (dB)
 Tilt wing	8	2.79	367.4	44.4	615.3	2105	0.551	0.846	72.4
 Compound heli	1	14.15	2829.5	192.3	376.8	254	0.338	0.823	62.7
 Coaxial heli	2	9.79	2108.4	187.8	542.7	529	0.486	0.783	69.5

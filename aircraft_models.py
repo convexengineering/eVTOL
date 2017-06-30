@@ -364,6 +364,7 @@ class OnDemandSizingMission(Model):
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 
         T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
+        P = Variable("P","kW","Total power")
         P_perRotor = Variable("P_perRotor","kW","Power per rotor")
         VT = Variable("VT","ft/s","Propeller tip speed")
         omega = Variable("\omega","rpm","Propeller angular velocity")
@@ -411,6 +412,7 @@ class OnDemandSizingMission(Model):
         constraints += [C_eff >= E_mission]
 
         constraints += [T_perRotor == self.fs0.rotorPerf.topvar("T_perRotor")]
+        constraints += [P == self.fs0.rotorPerf.topvar("P")]
         constraints += [P_perRotor == self.fs0.rotorPerf.topvar("P_perRotor")]
         constraints += [VT == self.fs0.rotorPerf.topvar("VT")]
         constraints += [omega == self.fs0.rotorPerf.topvar("\omega")]

@@ -275,9 +275,11 @@ plt.subplots_adjust(left=0.05,right=0.95,bottom=0.14,top=0.89)#adds space at the
 
 output_data = open("rotor_data.txt","w")
 
-output_data.write("Rotor design data (from sizing mission)\n\n")
+output_data.write("Rotor design data (from sizing mission) \n\n")
 
-output_data.write("Configuration \tN \tR (ft)\tT_perRotor (lbf)\tP_perRotor (hp)\t")
+output_data.write("Note: T and P are per rotor; SPL is for the entire vehicle.\n\n")
+
+output_data.write("Configuration \tN \tR (ft)\tT (lbf)\tP (hp)\t")
 output_data.write("VT (ft/s)\tomega (rpm)\tMT\tFOM\tSPL (dB)\n")
 
 for config in configs:
