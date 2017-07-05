@@ -177,7 +177,7 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.xlabel('Battery discharge parameter n', fontsize = 16)
+plt.xlabel('Battery discharge parameter', fontsize = 16)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover (sizing mission)",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
