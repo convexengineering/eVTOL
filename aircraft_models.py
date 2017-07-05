@@ -6,7 +6,7 @@ from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
 
 class OnDemandAircraft(Model):
-	def setup(self,N,L_D_cruise,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9,
+	def setup(self,N,L_D_cruise,eta_cruise,weight_fraction,C_m,Cl_mean_max,s=0.1,n=1.,eta_electric=0.9,
 		cost_per_weight=350*ureg.lbf**-1,vehicle_life=20000*ureg.hour,cost_per_C=400*ureg.kWh**-1,
 		autonomousEnabled=False):
 		
@@ -25,7 +25,7 @@ class OnDemandAircraft(Model):
 
 		self.autonomousEnabled = autonomousEnabled
 
-		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max)
+		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max,s=s)
 		self.battery = Battery(C_m=C_m,n=n,cost_per_C=cost_per_C)
 		self.structure = Structure(weight_fraction)
 		self.powerSystem = PowerSystem(eta=eta_electric)
@@ -74,7 +74,7 @@ class Rotors(Model):
 
 		W = Variable("W",0,"lbf","Rotor weight") #weight model not implemented yet
 
-		constraints = [A == math.pi*R**2, D==2*R, N==N, s==s, A_total==N*A, 
+		constraints = [A == math.pi*R**2, D==2*R, A_total==N*A,
 			Cl_mean_max == Cl_mean_max]
 
 		return constraints
@@ -988,7 +988,7 @@ if __name__=="__main__":
 	print "Cost per trip, per passenger: $%0.2f" % \
 		solution("cost_per_trip_per_passenger_OnDemandMissionCost")
 	print "Cost per trip, per seat mile: $%0.2f per mile" % \
-		solution("cost_per_trip_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
+		solution("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
 	print "Cost from revenue-generating flight: $%0.2f" % \
 		solution("revenue_cost_per_trip_OnDemandMissionCost")
 	print "Cost from deadhead flight: $%0.2f" % \
