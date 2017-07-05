@@ -561,8 +561,8 @@ class OnDemandMissionCost(Model):
 			"Portion of the cost per trip incurred during the deadhead flights")
 		cptpp = Variable("cost_per_trip_per_passenger","-",
 			"Cost (in dollars) for one trip, per passenger carried on revenue trip")
-		cpt_seat_mile = Variable("cost_per_trip_per_seat_mile","mile**-1",
-			"Cost per trip, per passenger mile")
+		cpt_seat_mile = Variable("cost_per_seat_mile","mile**-1",
+			"Cost per trip, per seat (passenger) mile")
 
 		NdNr = Variable("N_{deadhead}/N_{typical}",deadhead_ratio/(1-deadhead_ratio),"-",
 			"Number of deadhead missions per typical mission")

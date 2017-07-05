@@ -182,12 +182,25 @@ plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.84)#adds space at th
 
 
 #Cost breakdown plot
-fig2 = plt.figure(figsize=(17,11), dpi=80)
+fig2 = plt.figure(figsize=(20,11), dpi=80)
 plt.show()
 
 #Revenue and deadhead costs
 
-plt.subplot(2,2,1)
+plt.subplot(2,3,1)
+for i, config in enumerate(configs):
+	
+	cpsm = configs[config]["solution"]("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
+	
+	p1 = plt.bar(i,cpsm,bottom=0,align='center',alpha=1,color="b")
+
+plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
+plt.ylabel('Cost per seat mile ($US/mile)', fontsize = 16)
+plt.grid()
+plt.title("Cost per Seat Mile",fontsize = 16)
+
+
+plt.subplot(2,3,2)
 for i, config in enumerate(configs):
 	
 	c_revenue = configs[config]["solution"]("revenue_cost_per_trip_OnDemandMissionCost")
@@ -203,7 +216,7 @@ plt.title("Revenue-generating and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue-generating cost","Deadhead cost"),
 	loc='upper left', fontsize = 14)
 
-plt.subplot(2,2,2)
+plt.subplot(2,3,3)
 for i, config in enumerate(configs):
 	
 	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
@@ -219,7 +232,7 @@ plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
 	loc='upper left', fontsize = 14)
 
-plt.subplot(2,2,3)
+plt.subplot(2,3,4)
 for i, config in enumerate(configs):
 	
 	c_vehicle = configs[config]["solution"]("purchase_price_OnDemandAircraft")/1e6
@@ -237,7 +250,25 @@ plt.title("Capital Expenses",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
 	loc='upper left', fontsize = 14)
 
-plt.subplot(2,2,4)
+plt.subplot(2,3,5)
+for i, config in enumerate(configs):
+	
+	c_vehicle = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/VehicleAcquisitionCost")
+	c_avionics = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AvionicsAcquisitionCost")
+	c_battery = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/BatteryAcquisitionCost")
+	
+	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
+	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
+	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="k",hatch="-")
+
+plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
+plt.ylabel('Cost per mission ($US)', fontsize = 16)
+plt.grid()
+plt.title("Amortized Capital Expenses (revenue mission only)",fontsize = 14)
+plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
+	loc='upper left', fontsize = 14)
+
+plt.subplot(2,3,6)
 for i, config in enumerate(configs):
 	
 	c_pilot = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
