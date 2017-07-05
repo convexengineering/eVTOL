@@ -6,7 +6,7 @@ from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
 
 class OnDemandAircraft(Model):
-	def setup(self,N,L_D,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9,
+	def setup(self,N,L_D_cruise,eta_cruise,weight_fraction,C_m,Cl_mean_max,n=1.,eta_electric=0.9,
 		cost_per_weight=350*ureg.lbf**-1,vehicle_life=20000*ureg.hour,cost_per_C=400*ureg.kWh**-1,
 		autonomousEnabled=False):
 		
@@ -14,7 +14,8 @@ class OnDemandAircraft(Model):
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
-		L_D = Variable("L_D",L_D,"-","Cruise L/D ratio")
+		L_D_loiter = Variable("L_D_loiter",((3**0.5)/2.)*L_D_cruise,"-","Loiter L/D ratio (approximation)")
+		L_D_cruise = Variable("L_D_cruise",L_D_cruise,"-","Cruise L/D ratio")
 		eta_cruise = Variable("\eta_{cruise}",eta_cruise,"-","Cruise propulsive efficiency")
 
 		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
@@ -301,7 +302,7 @@ class Hover(Model):
 
 class LevelFlight(Model):
 	#Substitution required for either segment_range  or t (loiter time).
-	def setup(self,mission,aircraft,V=150*ureg.mph):
+	def setup(self,mission,aircraft,V=150*ureg.mph,segment_type="cruise"):
 		E = Variable("E","kWh","Electrical energy used during level-flight segment")
 		P_battery = Variable("P_{battery}","kW","Power drawn (from batteries) during segment")
 		P_cruise  = Variable("P_{cruise}","kW","Power used (by propulsion system) during cruise segment")
@@ -311,15 +312,21 @@ class LevelFlight(Model):
 		segment_range = Variable("segment_range","nautical_mile",
 			"Distance travelled during segment")
 		V = Variable("V",V,"mph","Velocity during segment")
+		L_D = Variable("L_D","-","Segment lift-to-drag ratio")
 		
 		W = mission.W
-		L_D = aircraft.topvar("L_D")
 		eta_cruise = aircraft.topvar("\eta_{cruise}")
+		
+		constraints = []
+		
+		if segment_type == "cruise":
+			constraints += [L_D == aircraft.topvar("L_D_cruise")]
+		if segment_type == "loiter":
+			constraints += [L_D == aircraft.topvar("L_D_loiter")]
 		
 		self.batteryPerf = aircraft.battery.performance()
 		self.powerSystemPerf = aircraft.powerSystem.performance()
 
-		constraints = []
 		constraints += [self.batteryPerf, self.powerSystemPerf]
 
 		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"),
@@ -351,75 +358,83 @@ class TimeOnGround(Model):
 
 class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
-    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	V_loiter=100*ureg.mph,N_passengers=1,time_in_hover=120*ureg.s,reserve_type="Uber",
-    	mission_type="piloted"):
-
-    	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
-    		raise ValueError("Autonomy is not enabled for Aircraft() model.")
-
-    	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
-    	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
-    	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
-        C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
-
-        T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
-        P = Variable("P","kW","Total power")
-        P_perRotor = Variable("P_perRotor","kW","Power per rotor")
-        VT = Variable("VT","ft/s","Propeller tip speed")
-        omega = Variable("\omega","rpm","Propeller angular velocity")
-        MT = Variable("MT","-","Propeller tip Mach number")
-        FOM = Variable("FOM","-","Figure of merit")
-
-        E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
-
-        self.W = W
-        self.mission_type = mission_type
-        self.crew = Crew(mission_type=mission_type)
-        self.passengers = Passengers(N_passengers=N_passengers)
-        
-        hoverState = FlightState(h=0*ureg.ft)
-
-        self.fs0 = Hover(self,aircraft,hoverState,t=time_in_hover)#takeoff
-        self.fs1 = LevelFlight(self,aircraft,V=V_cruise)#fly to destination
-        self.fs2 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing
-        self.fs3 = Hover(self,aircraft,hoverState,t=time_in_hover)#take off again
-        self.fs4 = LevelFlight(self,aircraft,V=V_loiter)#loiter (reserve)
-        self.fs5 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing again
-
-        self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
-
-        constraints = []
-        constraints += [self.flight_segments]
-        constraints += [self.crew, self.passengers]
-       
-        constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
-        	+ self.crew.topvar("W")]
-        constraints += [aircraft.topvar("MTOW") >= W]
-        
-        if reserve_type == "FAA":#45-minute loiter time, as per night VFR rules
-        	t_loiter = Variable("t_{loiter}",45,"minutes","Loiter time")
-        	constraints += [t_loiter == self.fs4.topvar("t")]
-        if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
-        	R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
-        	constraints += [R_divert == self.fs4.topvar("segment_range")]
-
-        constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
-        constraints += hoverState
-
-        constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
-        constraints += [C_eff >= E_mission]
-
-        constraints += [T_perRotor == self.fs0.rotorPerf.topvar("T_perRotor")]
-        constraints += [P == self.fs0.rotorPerf.topvar("P")]
-        constraints += [P_perRotor == self.fs0.rotorPerf.topvar("P_perRotor")]
-        constraints += [VT == self.fs0.rotorPerf.topvar("VT")]
-        constraints += [omega == self.fs0.rotorPerf.topvar("\omega")]
-        constraints += [MT == self.fs0.rotorPerf.topvar("MT")]
-        constraints += [FOM == self.fs0.rotorPerf.topvar("FOM")]
-       
-        return constraints
+    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,
+		V_cruise=150*ureg.mph,N_passengers=1,time_in_hover=120*ureg.s,
+		reserve_type="Uber",mission_type="piloted"):
+		
+		if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
+			raise ValueError("Autonomy is not enabled for Aircraft() model.")
+		
+		W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
+		mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
+		p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
+		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
+		
+		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
+		P = Variable("P","kW","Total power")
+		P_perRotor = Variable("P_perRotor","kW","Power per rotor")
+		VT = Variable("VT","ft/s","Propeller tip speed")
+		omega = Variable("\omega","rpm","Propeller angular velocity")
+		MT = Variable("MT","-","Propeller tip Mach number")
+		FOM = Variable("FOM","-","Figure of merit")
+		
+		E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
+		
+		self.W = W
+		self.mission_type = mission_type
+		self.crew = Crew(mission_type=mission_type)
+		self.passengers = Passengers(N_passengers=N_passengers)
+		
+		hoverState = FlightState(h=0*ureg.ft)
+		
+		constraints = []
+		
+		self.fs0 = Hover(self,aircraft,hoverState,t=time_in_hover)#takeoff
+		self.fs1 = LevelFlight(self,aircraft,V=V_cruise)#fly to destination
+		self.fs2 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing
+		self.fs3 = Hover(self,aircraft,hoverState,t=time_in_hover)#take off again
+		self.fs5 = Hover(self,aircraft,hoverState,t=time_in_hover)#landing again
+		
+		if reserve_type == "FAA_day":#30-minute loiter time, as per day VFR rules
+			V_reserve = ((1/3.)**(1/4.))*V_cruise #Approximation for max-endurance speed
+			t_loiter = Variable("t_{loiter}",30,"minutes","Loiter time")
+			self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter")#reserve segment
+			constraints += [t_loiter == self.fs4.topvar("t")]
+		if reserve_type == "FAA_night":#45-minute loiter time, as per night VFR rules
+			V_reserve = ((1/3.)**(1/4.))*V_cruise #Approximation for max-endurance speed
+			t_loiter = Variable("t_{loiter}",45,"minutes","Loiter time")
+			self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter")#reserve segment
+			constraints += [t_loiter == self.fs4.topvar("t")]
+		if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
+			V_reserve = V_cruise
+			R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
+			self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="cruise")#reserve segment
+			constraints += [R_divert == self.fs4.topvar("segment_range")]
+		
+		self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
+		
+		constraints += [self.flight_segments]
+		constraints += [self.crew, self.passengers]
+		constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
+			+ self.crew.topvar("W")]
+		constraints += [aircraft.topvar("MTOW") >= W]
+		
+		constraints += [mission_range == self.fs1.topvar("segment_range")]
+		constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
+		constraints += [hoverState]
+		
+		constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
+		constraints += [C_eff >= E_mission]
+		
+		constraints += [T_perRotor == self.fs0.rotorPerf.topvar("T_perRotor")]
+		constraints += [P == self.fs0.rotorPerf.topvar("P")]
+		constraints += [P_perRotor == self.fs0.rotorPerf.topvar("P_perRotor")]
+		constraints += [VT == self.fs0.rotorPerf.topvar("VT")]
+		constraints += [omega == self.fs0.rotorPerf.topvar("\omega")]
+		constraints += [MT == self.fs0.rotorPerf.topvar("MT")]
+		constraints += [FOM == self.fs0.rotorPerf.topvar("FOM")]
+		
+		return constraints
 
 class OnDemandRevenueMission(Model):
 	#Revenue-generating mission. Exactly the same code as OnDemandDeadheadMission.
@@ -828,17 +843,16 @@ if __name__=="__main__":
 	
 	N = 12 #number of propellers
 	T_A = 16.3*ureg("lbf")/ureg("ft")**2
-	L_D = 14. #estimated L/D in cruise
+	L_D_cruise = 14. #estimated L/D in cruise
 	eta_cruise = 0.85 #propulsive efficiency in cruise
 	eta_electric = 0.9 #electrical system efficiency
 	weight_fraction = 0.3188 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	Cl_mean_max = 1.0
 	n=1.0#battery discharge parameter
-	reserve_type = "FAA"
+	reserve_type = "FAA_night"
 
 	V_cruise = 200*ureg.mph
-	V_loiter=100*ureg.mph
 
 	sizing_mission_range = 200*ureg.nautical_mile
 	revenue_mission_range = 100*ureg.nautical_mile
@@ -866,15 +880,14 @@ if __name__=="__main__":
 	MMH_FH = 0.6
 	deadhead_ratio = 0.2
 
-	testAircraft = OnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
+	testAircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
 		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
 		autonomousEnabled=autonomousEnabled)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
-		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type,
-		mission_type=sizing_mission_type)
+		V_cruise=V_cruise,N_passengers=sizing_N_passengers,time_in_hover=sizing_time_in_hover,
+		reserve_type=reserve_type,mission_type=sizing_mission_type)
 	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
 
 	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_range=revenue_mission_range,
@@ -898,7 +911,7 @@ if __name__=="__main__":
 	SPL_revenue = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission"))
 	SPL_deadhead = 20*np.log10(solution("p_{ratio}_OnDemandDeadheadMission"))
 
-	if reserve_type == "FAA":
+	if (reserve_type == "FAA_day") or (reserve_type == "FAA_night"):
 		num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
 		reserve_type_string = " (%0.0f-minute loiter time)" % num
 	if reserve_type == "Uber":
@@ -910,7 +923,7 @@ if __name__=="__main__":
 	print
 	print "Battery energy density: %0.0f Wh/kg" % C_m.to(ureg.Wh/ureg.kg).magnitude
 	print "Structural mass fraction: %0.4f" % weight_fraction
-	print "Cruise lift-to-drag ratio: %0.1f" % L_D
+	print "Cruise lift-to-drag ratio: %0.1f" % L_D_cruise
 	print "Hover disk loading: %0.1f lbf/ft^2" % T_A.to(ureg("lbf/ft**2")).magnitude
 	print "Rotor maximum mean lift coefficient: %0.2f" % Cl_mean_max
 	print "Cruise propulsive efficiency: %0.2f" % eta_cruise
