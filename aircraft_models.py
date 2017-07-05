@@ -846,7 +846,7 @@ if __name__=="__main__":
 	L_D_cruise = 14. #estimated L/D in cruise
 	eta_cruise = 0.85 #propulsive efficiency in cruise
 	eta_electric = 0.9 #electrical system efficiency
-	weight_fraction = 0.3188 #structural mass fraction
+	weight_fraction = 0.2464 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	Cl_mean_max = 1.0
 	n=1.0#battery discharge parameter
