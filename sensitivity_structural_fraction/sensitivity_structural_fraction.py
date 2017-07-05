@@ -63,19 +63,18 @@ for config in configs:
 	c = configs[config]
 
 	V_cruise = c["V_{cruise}"]
-	V_loiter = V_cruise #approximation
-	L_D = c["L/D"]
+	L_D_cruise = c["L/D"]
 	T_A = c["T/A"]
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 	N = c["N"]
 
-	Aircraft = OnDemandAircraft(N=N,L_D=L_D,eta_cruise=eta_cruise,C_m=C_m,
+	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
 		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
 		autonomousEnabled=autonomousEnabled)
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,V_loiter=V_loiter,N_passengers=sizing_N_passengers,
+		V_cruise=V_cruise,N_passengers=sizing_N_passengers,
 		time_in_hover=sizing_time_in_hover,reserve_type=reserve_type,
 		mission_type=sizing_mission_type)
 	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
