@@ -2,12 +2,12 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
 
 import math
 import numpy as np
 from gpkit import Variable, VectorVariable, Model, Vectorize, ureg
-from rotor_models import rotors_analysis_function
+from rotor_test import rotors_analysis_function
 from standard_atmosphere import stdatmo
 from matplotlib import pyplot as plt
 
