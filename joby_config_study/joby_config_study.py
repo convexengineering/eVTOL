@@ -183,7 +183,7 @@ for i, config in enumerate(configs):
 	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
 	c_operating = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,width=0.8,color="k")
-	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,width=0.8,color="w",hatch="\\")
+	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,width=0.8,color="lightgrey")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
