@@ -28,12 +28,12 @@ class OnDemandAircraft(Model):
 		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max,s=s)
 		self.battery = Battery(C_m=C_m,n=n,cost_per_C=cost_per_C)
 		self.structure = Structure(weight_fraction)
-		self.powerSystem = PowerSystem(eta=eta_electric)
+		self.electricalSystem = ElectricalSystem(eta=eta_electric)
 		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
 		
 		self.structure.subinplace({self.structure.topvar("MTOW"):MTOW})
 
-		self.components = [self.rotors,self.battery,self.structure,self.powerSystem,self.avionics]
+		self.components = [self.rotors,self.battery,self.structure,self.electricalSystem,self.avionics]
 		
 		constraints = []
 		
@@ -222,27 +222,26 @@ class Passengers(Model):
 
 		return [W == N_passengers*W_onePassenger]
 
-class PowerSystem(Model):
+class ElectricalSystem(Model):
 	def performance(self):
-		return PowerSystemPerformance(self)
+		return ElectricalSystemPerformance(self)
 
 	def setup(self,eta=0.9):
 		W = Variable("W",0,"lbf","Electrical power system weight")
-		eta = Variable("eta",eta,"-","Electrical power system efficiency")
-
-		self.eta = eta
+		eta = Variable("\eta",eta,"-","Electrical power system efficiency")
 
 		constraints = []
-		constraints += [W==W, eta==eta]
 		return constraints
 
-class PowerSystemPerformance(Model):
-	def setup(self,powerSystem):
+class ElectricalSystemPerformance(Model):
+	def setup(self,electricalSystem):
 		P_in = Variable("P_{in}","kW","Input power (from the battery)")
 		P_out = Variable("P_{out}","kW","Output power (to the motor or motors)")
 
+		eta = electricalSystem.topvar("\eta")
+
 		constraints = []
-		constraints += [P_out == powerSystem.eta*P_in]
+		constraints += [P_out == eta*P_in]
 		return constraints
 
 class Avionics(Model):
@@ -285,15 +284,15 @@ class Hover(Model):
 
 		self.rotorPerf = aircraft.rotors.performance(state)
 		self.batteryPerf = aircraft.battery.performance()
-		self.powerSystemPerf = aircraft.powerSystem.performance()
+		self.electricalSystemPerf = aircraft.electricalSystem.performance()
 
 		constraints = []
-		constraints += [self.rotorPerf, self.batteryPerf, self.powerSystemPerf]
+		constraints += [self.rotorPerf, self.batteryPerf, self.electricalSystemPerf]
 		
 		constraints += [P_rotors==self.rotorPerf.topvar("P"),T==self.rotorPerf.topvar("T"),
 			T_A==self.rotorPerf.topvar("T/A")]
-		constraints += [P_battery == self.powerSystemPerf.topvar("P_{in}"),
-			P_rotors == self.powerSystemPerf.topvar("P_{out}")]
+		constraints += [P_battery == self.electricalSystemPerf.topvar("P_{in}"),
+			P_rotors == self.electricalSystemPerf.topvar("P_{out}")]
 		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"), 
 			t==self.batteryPerf.topvar("t")]
 		constraints += [T==W]
@@ -325,14 +324,14 @@ class LevelFlight(Model):
 			constraints += [L_D == aircraft.topvar("L_D_loiter")]
 		
 		self.batteryPerf = aircraft.battery.performance()
-		self.powerSystemPerf = aircraft.powerSystem.performance()
+		self.electricalSystemPerf = aircraft.electricalSystem.performance()
 
-		constraints += [self.batteryPerf, self.powerSystemPerf]
+		constraints += [self.batteryPerf, self.electricalSystemPerf]
 
 		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"),
 			t==self.batteryPerf.topvar("t")]
-		constraints += [P_battery == self.powerSystemPerf.topvar("P_{in}"),
-			P_cruise == self.powerSystemPerf.topvar("P_{out}")]
+		constraints += [P_battery == self.electricalSystemPerf.topvar("P_{in}"),
+			P_cruise == self.electricalSystemPerf.topvar("P_{out}")]
 		constraints += [segment_range==V*t,eta_cruise*P_cruise==T*V,T==D,W==L_D*D]
 
 		return constraints
