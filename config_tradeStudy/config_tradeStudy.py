@@ -109,7 +109,7 @@ for i, config in enumerate(configs):
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
 	MTOW = configs[config]["solution"]("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
-	plt.bar(i,MTOW,align='center',alpha=1)
+	plt.bar(i,MTOW,align='center',alpha=1,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
@@ -119,7 +119,7 @@ plt.title("Maximum Takeoff Weight",fontsize = 18)
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
-	plt.bar(i,W_battery,align='center',alpha=1)
+	plt.bar(i,W_battery,align='center',alpha=1,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
@@ -129,7 +129,7 @@ plt.title("Battery Weight",fontsize = 18)
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
-	plt.bar(i,cptpp,align='center',alpha=1)
+	plt.bar(i,cptpp,align='center',alpha=1,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
@@ -139,7 +139,7 @@ plt.title("Cost per Trip, per Passenger",fontsize = 18)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission"))
-	plt.bar(i,SPL_sizing,align='center',alpha=1)
+	plt.bar(i,SPL_sizing,align='center',alpha=1,color='k')
 
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
@@ -192,7 +192,7 @@ for i, config in enumerate(configs):
 	
 	cpsm = configs[config]["solution"]("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
 	
-	p1 = plt.bar(i,cpsm,bottom=0,align='center',alpha=1,color="b")
+	p1 = plt.bar(i,cpsm,bottom=0,align='center',alpha=1,color="k")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per seat mile ($US/mile)', fontsize = 14)
@@ -206,8 +206,8 @@ for i, config in enumerate(configs):
 	c_revenue = configs[config]["solution"]("revenue_cost_per_trip_OnDemandMissionCost")
 	c_deadhead = configs[config]["solution"]("deadhead_cost_per_trip_OnDemandMissionCost")
 	
-	p1 = plt.bar(i,c_revenue,bottom=0,align='center',alpha=1,color="b",hatch="/")
-	p2 = plt.bar(i,c_deadhead,bottom=c_revenue,align='center',alpha=1,color="r",hatch="\\")
+	p1 = plt.bar(i,c_revenue,bottom=0,align='center',alpha=1,color="k")
+	p2 = plt.bar(i,c_deadhead,bottom=c_revenue,align='center',alpha=1,color="w",hatch="\\")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per trip ($US)', fontsize = 14)
@@ -222,8 +222,8 @@ for i, config in enumerate(configs):
 	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
 	c_operating = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	
-	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,color="b",hatch="/")
-	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,color="r",hatch="\\")
+	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,color="k")
+	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,color="w",hatch="\\")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
@@ -239,9 +239,9 @@ for i, config in enumerate(configs):
 	c_avionics = configs[config]["solution"]("purchase_price_OnDemandAircraft/Avionics")/1e6
 	c_battery = configs[config]["solution"]("purchase_price_OnDemandAircraft/Battery")/1e6
 	
-	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
-	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
-	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="k",hatch="-")
+	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="k")
+	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="w",hatch="\\")
+	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="w",hatch="/")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Acquisition cost ($millions US)', fontsize = 14)
@@ -257,9 +257,9 @@ for i, config in enumerate(configs):
 	c_avionics = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AvionicsAcquisitionCost")
 	c_battery = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/BatteryAcquisitionCost")
 	
-	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="b",hatch="/")
-	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
-	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="k",hatch="-")
+	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="k")
+	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="w",hatch="\\")
+	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="w",hatch="/")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
@@ -276,10 +276,10 @@ for i, config in enumerate(configs):
 	c_energy = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	IOC = configs[config]["solution"]("IOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	
-	p1 = plt.bar(i,c_pilot,bottom=0,align='center',alpha=1,color="b",hatch="/")
-	p2 = plt.bar(i,c_maintenance,bottom=c_pilot,align='center',alpha=1,color="r",hatch="\\")
-	p3 = plt.bar(i,c_energy,bottom=c_maintenance+c_pilot, align='center',alpha=1,color="k",hatch="-")
-	p4 = plt.bar(i,IOC,bottom=c_energy+c_maintenance+c_pilot,align='center',alpha=1,color="g",hatch="|")
+	p1 = plt.bar(i,c_pilot,bottom=0,align='center',alpha=1,color="k")
+	p2 = plt.bar(i,c_maintenance,bottom=c_pilot,align='center',alpha=1,color="w",hatch="\\")
+	p3 = plt.bar(i,c_energy,bottom=c_maintenance+c_pilot, align='center',alpha=1,color="w",hatch="/")
+	p4 = plt.bar(i,IOC,bottom=c_energy+c_maintenance+c_pilot,align='center',alpha=1,color="w",hatch="|")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)

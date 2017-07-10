@@ -107,7 +107,7 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(17,11), dpi=80)
+fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
@@ -117,32 +117,32 @@ for i, config in enumerate(configs):
 	labels[i] = config
 
 #Maximum takeoff weight
-plt.subplot(2,3,1)
+plt.subplot(3,2,1)
 for i, config in enumerate(configs):
 	MTOW = configs[config]["solution"]("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
-	plt.bar(i,MTOW,align='center',alpha=1,width=0.8)
+	plt.bar(i,MTOW,align='center',alpha=1,width=0.8,color='k')
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Maximum Takeoff Weight",fontsize = 20)
+plt.ylabel('Weight (lbf)', fontsize = 14)
+plt.title("Maximum Takeoff Weight",fontsize = 16)
 
 #Battery weight
-plt.subplot(2,3,2)
+plt.subplot(3,2,2)
 for i, config in enumerate(configs):
 	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
-	plt.bar(i,W_battery,align='center',alpha=1,width=0.8)
+	plt.bar(i,W_battery,align='center',alpha=1,width=0.8,color='k')
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Battery Weight",fontsize = 20)
+plt.ylabel('Weight (lbf)', fontsize = 14)
+plt.title("Battery Weight",fontsize = 16)
 
 #Sound pressure level in hover (sizing mission) 
-plt.subplot(2,3,3)
+plt.subplot(3,2,3)
 for i, config in enumerate(configs):
 	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission"))
-	plt.bar(i,SPL_sizing,align='center',alpha=1,width=0.8)
+	plt.bar(i,SPL_sizing,align='center',alpha=1,width=0.8,color='k')
 
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
@@ -150,47 +150,48 @@ plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 #plt.ylim(ymin = 57, ymax = 76)
 plt.ylim(ymin = 57)
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover",fontsize = 20)
+plt.ylabel('SPL (dB)', fontsize = 14)
+plt.title("Sound Pressure Level in Hover",fontsize = 16)
 
 #Trip cost per passenger 
-plt.subplot(2,3,4)
+plt.subplot(3,2,4)
 for i, config in enumerate(configs):
 	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
-	plt.bar(i,cptpp,align='center',alpha=1,width=0.8)
+	plt.bar(i,cptpp,align='center',alpha=1,width=0.8,color='k')
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Cost ($US)', fontsize = 16)
-plt.title("Cost per Trip, per Passenger",fontsize = 20)
+plt.ylabel('Cost ($US)', fontsize = 14)
+plt.title("Cost per Trip, per Passenger",fontsize = 16)
 
 #Cost per seat mile 
-plt.subplot(2,3,5)
+plt.subplot(3,2,5)
 for i, config in enumerate(configs):
 	cpsm = configs[config]["solution"]("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
-	plt.bar(i,cpsm,align='center',alpha=1,width=0.8)
+	plt.bar(i,cpsm,align='center',alpha=1,width=0.8,color='k')
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Cost ($US/mile)', fontsize = 16)
-plt.title("Cost per Seat Mile",fontsize = 20)
+plt.ylabel('Cost ($US/mile)', fontsize = 14)
+plt.title("Cost per Seat Mile",fontsize = 16)
 
-plt.subplot(2,3,6)
+#Cost per mission
+plt.subplot(3,2,6)
 for i, config in enumerate(configs):
 	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
 	c_operating = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
-	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,width=0.8,color="b",hatch="/")
-	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,width=0.8,color="r",hatch="\\")
+	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,width=0.8,color="k")
+	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,width=0.8,color="w",hatch="\\")
 
-plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Cost per mission ($US)', fontsize = 16)
+plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
-	loc='lower right', fontsize = 14)
+	loc='lower left', fontsize = 12)
 
 
 if (reserve_type == "FAA_day"):
@@ -220,7 +221,7 @@ title_str = "Aircraft parameters: cruising speed = %0.0f knots; structural mass 
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 16)
+plt.suptitle(title_str,fontsize = 12)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.05,right=0.95,bottom=0.1,top=0.84)#adds space at the top for the title
+plt.subplots_adjust(left=0.07,right=0.99,bottom=0.07,top=0.88)#adds space at the top for the title

@@ -113,7 +113,7 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(17,11), dpi=80)
+fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
@@ -135,7 +135,7 @@ for i, config in enumerate(configs):
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymin=0)
-plt.xlabel('Rotor solidity', fontsize = 16)
+plt.xlabel('Rotor mean lift coefficient', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
@@ -150,7 +150,7 @@ for i, config in enumerate(configs):
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymin=0)
-plt.xlabel('Rotor solidity', fontsize = 16)
+plt.xlabel('Rotor mean lift coefficient', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
@@ -166,7 +166,7 @@ for i, config in enumerate(configs):
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymin=0)
-plt.xlabel('Rotor solidity', fontsize = 16)
+plt.xlabel('Rotor mean lift coefficient', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
@@ -181,9 +181,9 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.xlabel('Rotor solidity', fontsize = 16)
+plt.xlabel('Rotor mean lift coefficient', fontsize = 16)
 plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover (sizing mission)",fontsize = 20)
+plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 if reserve_type == "FAA":
@@ -210,7 +210,8 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 16)
+plt.suptitle(title_str,fontsize = 14)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.05,right=0.95,bottom=0.05,top=0.85)#adds space at the top for the title
+plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)#adds space at the top for the title
+

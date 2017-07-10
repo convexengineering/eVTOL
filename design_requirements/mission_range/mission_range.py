@@ -135,7 +135,7 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(17,11), dpi=80)
+fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.show()
 
 style = {}
@@ -197,7 +197,7 @@ for i, config in enumerate(configs):
 plt.grid()
 plt.xlabel('Mission range (nm)', fontsize = 16)
 plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover (sizing mission)",fontsize = 20)
+plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 
@@ -225,7 +225,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, \
 		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 16)
+plt.suptitle(title_str,fontsize = 13)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.05,right=0.95,bottom=0.05,top=0.86)#adds space at the top for the title
+plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)#adds space at the top for the title
