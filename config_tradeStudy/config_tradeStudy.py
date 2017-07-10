@@ -96,7 +96,7 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(17,11), dpi=80)
+fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
@@ -111,9 +111,9 @@ for i, config in enumerate(configs):
 	MTOW = configs[config]["solution"]("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 	plt.bar(i,MTOW,align='center',alpha=1)
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Maximum Takeoff Weight",fontsize = 20)
+plt.title("Maximum Takeoff Weight",fontsize = 18)
 
 #Battery weight
 plt.subplot(2,2,2)
@@ -121,9 +121,9 @@ for i, config in enumerate(configs):
 	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 	plt.bar(i,W_battery,align='center',alpha=1)
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Battery Weight",fontsize = 20)
+plt.title("Battery Weight",fontsize = 18)
 
 #Trip cost per passenger 
 plt.subplot(2,2,3)
@@ -131,9 +131,9 @@ for i, config in enumerate(configs):
 	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
 	plt.bar(i,cptpp,align='center',alpha=1)
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
-plt.title("Cost per Trip, per Passenger",fontsize = 20)
+plt.title("Cost per Trip, per Passenger",fontsize = 18)
 
 #Sound pressure level (in hover) 
 plt.subplot(2,2,4)
@@ -146,9 +146,9 @@ plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 	color="black", linewidth=3, linestyle="-")
 plt.ylim(ymin = 57, ymax = 75)
 plt.grid()
-plt.xticks(y_pos, labels, rotation=-60)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover (sizing mission)",fontsize = 20)
+plt.title("Sound Pressure Level in Hover",fontsize = 18)
 
 
 if reserve_type == "FAA":
@@ -175,32 +175,32 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 16)
+plt.suptitle(title_str,fontsize = 14)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.05,right=0.95,bottom=0.125,top=0.84)#adds space at the top for the title
+plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
 
 
 #Cost breakdown plot
-fig2 = plt.figure(figsize=(20,11), dpi=80)
+fig2 = plt.figure(figsize=(12,12), dpi=80)
 plt.show()
 
 #Revenue and deadhead costs
 
-plt.subplot(2,3,1)
+plt.subplot(3,2,1)
 for i, config in enumerate(configs):
 	
 	cpsm = configs[config]["solution"]("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
 	
 	p1 = plt.bar(i,cpsm,bottom=0,align='center',alpha=1,color="b")
 
-plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Cost per seat mile ($US/mile)', fontsize = 16)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.ylabel('Cost per seat mile ($US/mile)', fontsize = 14)
 plt.grid()
 plt.title("Cost per Seat Mile",fontsize = 16)
 
 
-plt.subplot(2,3,2)
+plt.subplot(3,2,2)
 for i, config in enumerate(configs):
 	
 	c_revenue = configs[config]["solution"]("revenue_cost_per_trip_OnDemandMissionCost")
@@ -209,14 +209,14 @@ for i, config in enumerate(configs):
 	p1 = plt.bar(i,c_revenue,bottom=0,align='center',alpha=1,color="b",hatch="/")
 	p2 = plt.bar(i,c_deadhead,bottom=c_revenue,align='center',alpha=1,color="r",hatch="\\")
 
-plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Cost per trip ($US)', fontsize = 16)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.ylabel('Cost per trip ($US)', fontsize = 14)
 plt.grid()
 plt.title("Revenue-generating and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue-generating cost","Deadhead cost"),
-	loc='upper left', fontsize = 14)
+	loc='upper left', fontsize = 12)
 
-plt.subplot(2,3,3)
+plt.subplot(3,2,3)
 for i, config in enumerate(configs):
 	
 	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
@@ -225,14 +225,14 @@ for i, config in enumerate(configs):
 	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,color="b",hatch="/")
 	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,color="r",hatch="\\")
 
-plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Cost per mission ($US)', fontsize = 16)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
-	loc='upper left', fontsize = 14)
+	loc='upper left', fontsize = 12)
 
-plt.subplot(2,3,4)
+plt.subplot(3,2,4)
 for i, config in enumerate(configs):
 	
 	c_vehicle = configs[config]["solution"]("purchase_price_OnDemandAircraft")/1e6
@@ -243,14 +243,14 @@ for i, config in enumerate(configs):
 	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
 	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="k",hatch="-")
 
-plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Acquisition cost ($millions US)', fontsize = 16)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.ylabel('Acquisition cost ($millions US)', fontsize = 14)
 plt.grid()
 plt.title("Capital Expenses",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper left', fontsize = 14)
+	loc='upper left', fontsize = 12)
 
-plt.subplot(2,3,5)
+plt.subplot(3,2,5)
 for i, config in enumerate(configs):
 	
 	c_vehicle = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/VehicleAcquisitionCost")
@@ -261,14 +261,14 @@ for i, config in enumerate(configs):
 	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="r",hatch="\\")
 	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="k",hatch="-")
 
-plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Cost per mission ($US)', fontsize = 16)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 plt.title("Amortized Capital Expenses (revenue mission only)",fontsize = 14)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper left', fontsize = 14)
+	loc='upper left', fontsize = 12)
 
-plt.subplot(2,3,6)
+plt.subplot(3,2,6)
 for i, config in enumerate(configs):
 	
 	c_pilot = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
@@ -281,12 +281,12 @@ for i, config in enumerate(configs):
 	p3 = plt.bar(i,c_energy,bottom=c_maintenance+c_pilot, align='center',alpha=1,color="k",hatch="-")
 	p4 = plt.bar(i,IOC,bottom=c_energy+c_maintenance+c_pilot,align='center',alpha=1,color="g",hatch="|")
 
-plt.xticks(y_pos, labels, rotation=-60,fontsize=14)
-plt.ylabel('Cost per mission ($US)', fontsize = 16)
+plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 plt.title("Operating Expenses (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
-	loc='upper left', fontsize = 14)
+	loc='upper left', fontsize = 12)
 
 cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; battery cost ratio = \$%0.0f per kWh; %s\n" \
 	% (vehicle_cost_per_weight.to(ureg.lbf**-1).magnitude, \
@@ -295,9 +295,9 @@ cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; bat
 	% (pilot_wrap_rate.to(ureg.hr**-1).magnitude, mechanic_wrap_rate.to(ureg.hr**-1).magnitude, \
 		MMH_FH, deadhead_ratio)
 
-plt.suptitle(cost_title_str,fontsize = 16)
+plt.suptitle(cost_title_str,fontsize = 14)
 plt.tight_layout()
-plt.subplots_adjust(left=0.05,right=0.95,bottom=0.14,top=0.89)#adds space at the top for the title
+plt.subplots_adjust(left=0.06,right=0.99,bottom=0.10,top=0.91)#adds space at the top for the title
 
 
 #Rotor data output (to text file)
