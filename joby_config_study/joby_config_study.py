@@ -116,11 +116,13 @@ labels = [""]*len(configs)
 for i, config in enumerate(configs):
 	labels[i] = config
 
+width = 0.4
+
 #Maximum takeoff weight
 plt.subplot(3,2,1)
 for i, config in enumerate(configs):
 	MTOW = configs[config]["solution"]("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
-	plt.bar(i,MTOW,align='center',alpha=1,width=0.8,color='k')
+	plt.bar(i,MTOW,align='center',alpha=1,width=width,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
@@ -131,7 +133,7 @@ plt.title("Maximum Takeoff Weight",fontsize = 16)
 plt.subplot(3,2,2)
 for i, config in enumerate(configs):
 	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
-	plt.bar(i,W_battery,align='center',alpha=1,width=0.8,color='k')
+	plt.bar(i,W_battery,align='center',alpha=1,width=width,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
@@ -142,7 +144,7 @@ plt.title("Battery Weight",fontsize = 16)
 plt.subplot(3,2,3)
 for i, config in enumerate(configs):
 	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission"))
-	plt.bar(i,SPL_sizing,align='center',alpha=1,width=0.8,color='k')
+	plt.bar(i,SPL_sizing,align='center',alpha=1,width=width,color='k')
 
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
@@ -159,7 +161,7 @@ plt.title("Sound Pressure Level in Hover",fontsize = 16)
 plt.subplot(3,2,4)
 for i, config in enumerate(configs):
 	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
-	plt.bar(i,cptpp,align='center',alpha=1,width=0.8,color='k')
+	plt.bar(i,cptpp,align='center',alpha=1,width=width,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
@@ -170,7 +172,7 @@ plt.title("Cost per Trip, per Passenger",fontsize = 16)
 plt.subplot(3,2,5)
 for i, config in enumerate(configs):
 	cpsm = configs[config]["solution"]("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
-	plt.bar(i,cpsm,align='center',alpha=1,width=0.8,color='k')
+	plt.bar(i,cpsm,align='center',alpha=1,width=width,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
@@ -182,8 +184,8 @@ plt.subplot(3,2,6)
 for i, config in enumerate(configs):
 	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
 	c_operating = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
-	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,width=0.8,color="k")
-	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,width=0.8,color="lightgrey")
+	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,width=width,color="k")
+	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,width=width,color="lightgrey")
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)

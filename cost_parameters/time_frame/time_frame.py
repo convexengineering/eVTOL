@@ -60,6 +60,10 @@ time_frame_data["Initial"]["autonomousEnabled"] = False
 time_frame_data["Near term"]["autonomousEnabled"] = True
 time_frame_data["Long term"]["autonomousEnabled"] = True
 
+time_frame_data["Initial"]["C_m"] = 300*ureg.Wh/ureg.kg
+time_frame_data["Near term"]["C_m"] = 400*ureg.Wh/ureg.kg
+time_frame_data["Long term"]["C_m"] = 500*ureg.Wh/ureg.kg
+
 time_frame_data["Initial"]["sizing_mission_type"] = "piloted"
 time_frame_data["Near term"]["sizing_mission_type"] = "piloted"
 time_frame_data["Long term"]["sizing_mission_type"] = "piloted"
@@ -79,10 +83,6 @@ time_frame_data["Long term"]["deadhead_ratio"] = 0.2
 time_frame_data["Initial"]["vehicle_cost_per_weight"] = 600*ureg.lbf**-1
 time_frame_data["Near term"]["vehicle_cost_per_weight"] = 400*ureg.lbf**-1
 time_frame_data["Long term"]["vehicle_cost_per_weight"] = 200*ureg.lbf**-1
-
-time_frame_data["Initial"]["C_m"] = 300*ureg.Wh/ureg.kg
-time_frame_data["Near term"]["C_m"] = 400*ureg.Wh/ureg.kg
-time_frame_data["Long term"]["C_m"] = 500*ureg.Wh/ureg.kg
 
 time_frame_data["Initial"]["battery_cost_per_C"] = 400*ureg.kWh**-1
 time_frame_data["Near term"]["battery_cost_per_C"] = 200*ureg.kWh**-1
