@@ -139,38 +139,78 @@ for i, config in enumerate(configs):
 	c = configs[config]
 	for j,offset in enumerate(offset_array):
 		MTOW = c["MTOW"][j].to(ureg.lbf).magnitude
-		plt.bar(i+offset,MTOW,align='center',alpha=1,width=width,color=colors[j])
+
+		if (i == 0):
+			label = "%0.0f passengers" % sizing_N_passengers_array[j]
+			plt.bar(i+offset,MTOW,align='center',alpha=1,width=width,color=colors[j],
+				label=label)
+		else:
+			plt.bar(i+offset,MTOW,align='center',alpha=1,width=width,color=colors[j])
+
+
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 18)
+plt.legend(loc='upper left', fontsize = 12)
 
-'''
+
+
+
 #Battery weight
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
-	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
-	plt.bar(i,W_battery,align='center',alpha=1,color='k')
+	c = configs[config]
+	for j,offset in enumerate(offset_array):
+		W_battery = c["W_{battery}"][j].to(ureg.lbf).magnitude
+		if (i == 0):
+			label = "%0.0f passengers" % sizing_N_passengers_array[j]
+			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j],
+				label=label)
+		else:
+			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j])
+
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 18)
+plt.legend(loc='upper left', fontsize = 12)
+
+
 
 #Trip cost per passenger 
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
-	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
-	plt.bar(i,cptpp,align='center',alpha=1,color='k')
+	c = configs[config]
+	for j,offset in enumerate(offset_array):
+		cptpp = c["cost_per_trip_per_passenger"][j]
+		if (i == 0):
+			label = "%0.0f passengers" % sizing_N_passengers_array[j]
+			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j],
+				label=label)
+		else:
+			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j])
+
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
+plt.legend(loc='upper left', fontsize = 12)
+
+
 
 #Sound pressure level (in hover) 
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
-	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission"))
-	plt.bar(i,SPL_sizing,align='center',alpha=1,color='k')
+	c = configs[config]
+	for j,offset in enumerate(offset_array):
+		SPL_sizing = c["SPL"][j]
+		if (i == 0):
+			label = "%0.0f passengers" % sizing_N_passengers_array[j]
+			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j],
+				label=label)
+		else:
+			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j])
 
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
@@ -180,6 +220,8 @@ plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
+plt.legend(loc='lower right', fontsize = 12)
+
 
 
 if reserve_type == "FAA":
@@ -196,18 +238,17 @@ else:
 
 title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
 	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
-	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_time_in_hover.to(ureg.s).magnitude) \
+	+ "Sizing mission (%s): range = %0.0f nm; %0.0fs hover time; reserve type = " \
+	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_time_in_hover.to(ureg.s).magnitude) \
 	+ reserve_type + reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	+ "Revenue mission (%s): range = %0.0f nm; passenger ratio = %0.1f; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
-		revenue_N_passengers, revenue_time_in_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+		passenger_ratio, revenue_time_in_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
+	+ "Deadhead mission (%s): range = %0.0f nm; passenger ratio = %0.1f; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
-		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
+		passenger_ratio, deadhead_time_in_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 plt.suptitle(title_str,fontsize = 14)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
-'''
