@@ -198,6 +198,7 @@ for i, config in enumerate(configs):
 	E = np.zeros(3)	
 	E[0] = sol("E_OnDemandSizingMission")[1].to(ureg.kWh).magnitude#cruise
 	E[1] = sol("E_OnDemandSizingMission")[0].to(ureg.kWh).magnitude#hover
+	E[1] = E[1]*4 #number of hover segments
 	E[2] = sol("E_OnDemandSizingMission")[4].to(ureg.kWh).magnitude#reserve
 	
 	for j,offset in enumerate(offset_array):

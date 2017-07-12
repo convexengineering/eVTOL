@@ -11,6 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
+from collections import OrderedDict
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -46,10 +47,14 @@ deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
 deadhead_time_in_hover = generic_data["deadhead_mission"]["time_in_hover"]
 
 # Delete certain configurations
-configs = configuration_data.copy()
+configs = OrderedDict(configuration_data.copy())
 del configs["Tilt duct"]
-#del configs["Multirotor"]
 del configs["Autogyro"]
+
+#Put multirotor at the end
+del configs["Multirotor"]
+configs["Multirotor"] = configuration_data["Multirotor"].copy()
+
 
 #Optimize remaining configurations
 for config in configs:
@@ -70,7 +75,7 @@ for config in configs:
 		mission_range_array = np.linspace(10,100,num_pts)
 	elif (config == "Tilt wing"):
 		mission_range_array = np.linspace(15,120,num_pts)
-	else: #Tilt rotor
+	elif (config == "Tilt rotor"):
 		mission_range_array = np.linspace(15,140,num_pts)
 		
 	mission_range_array = mission_range_array*ureg.nautical_mile
@@ -125,7 +130,7 @@ for config in configs:
 		configs[config]["MTOW"][i] = solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 		configs[config]["W_{battery}"][i] = solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 		configs[config]["cost_per_seat_mile"][i] = solution("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
-		configs[config]["SPL"][i] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission"))
+		configs[config]["SPL"][i] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
 		
 	configs[config]["mission_range"] = mission_range_array
 	configs[config]["MTOW"] = configs[config]["MTOW"]*ureg.lbf
@@ -195,6 +200,7 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
+plt.ylim(ymin=55)
 plt.xlabel('Mission range (nm)', fontsize = 16)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
