@@ -105,6 +105,7 @@ labels = [""]*len(configs)
 for i, config in enumerate(configs):
 	labels[i] = config
 
+
 #Maximum takeoff weight
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
@@ -138,7 +139,7 @@ plt.title("Cost per Trip, per Passenger",fontsize = 18)
 #Sound pressure level (in hover) 
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
-	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission"))
+	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission")[0])
 	plt.bar(i,SPL_sizing,align='center',alpha=1,color='k')
 
 SPL_req = 62
@@ -181,9 +182,103 @@ plt.tight_layout()#makes sure subplots are spaced neatly
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
 
 
+#Additional parameters plot
+fig2 = plt.figure(figsize=(12,12), dpi=80)
+plt.show()
+
+offset_array = [-0.3,0,0.3]
+width = 0.2
+colors = ["grey", "w", "k"]
+
+#Energy use by mission segment (sizing mission)
+plt.subplot(2,2,1)
+for i, config in enumerate(configs):
+	sol = configs[config]["solution"]
+
+	E = np.zeros(3)	
+	E[0] = sol("E_OnDemandSizingMission")[1].to(ureg.kWh).magnitude#cruise
+	E[1] = sol("E_OnDemandSizingMission")[0].to(ureg.kWh).magnitude#hover
+	E[2] = sol("E_OnDemandSizingMission")[4].to(ureg.kWh).magnitude#reserve
+	
+	for j,offset in enumerate(offset_array):
+		if (i == 0):
+			if (j == 0):
+				label = "Cruise"
+			elif (j == 1):
+				label = "Hover"
+			elif (j == 2):
+				label = "Reserve"
+
+			plt.bar(i+offset,E[j],align='center',alpha=1,width=width,color=colors[j],
+				label=label)
+		else:
+			plt.bar(i+offset,E[j],align='center',alpha=1,width=width,color=colors[j])
+
+plt.grid()
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Energy (kWh)', fontsize = 16)
+plt.title("Energy Use",fontsize = 18)
+plt.legend(loc='upper left', fontsize = 12)
 
 
+#Power consumption by mission segment (sizing mission)
+plt.subplot(2,2,2)
+for i, config in enumerate(configs):
+	sol = configs[config]["solution"]
 
+	P_battery = np.zeros(3)	
+	P_battery[0] = sol("P_{battery}_OnDemandSizingMission")[1].to(ureg.kW).magnitude#cruise
+	P_battery[1] = sol("P_{battery}_OnDemandSizingMission")[0].to(ureg.kW).magnitude#hover
+	P_battery[2] = sol("P_{battery}_OnDemandSizingMission")[4].to(ureg.kW).magnitude#reserve
+	
+	for j,offset in enumerate(offset_array):
+		if (i == 0):
+			if (j == 0):
+				label = "Cruise"
+			elif (j == 1):
+				label = "Hover"
+			elif (j == 2):
+				label = "Reserve"
+
+			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j],
+				label=label)
+		else:
+			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j])
+
+plt.grid()
+plt.ylim(ymax = 400)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Power (kW)', fontsize = 16)
+plt.title("Power Consumption",fontsize = 18)
+plt.legend(loc='upper left', fontsize = 12)
+
+#Rotor tip Mach number 
+plt.subplot(2,2,3)
+for i, config in enumerate(configs):
+	sol = configs[config]["solution"]
+	MT = sol("MT_OnDemandSizingMission")[0]
+	plt.bar(i,MT,align='center',alpha=1,color='k')
+
+plt.grid()
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Tip Mach number', fontsize = 16)
+plt.title("Rotor Tip Mach Number",fontsize = 18)
+
+#Rotor figure of merit 
+plt.subplot(2,2,4)
+for i, config in enumerate(configs):
+	sol = configs[config]["solution"]
+	FOM = sol("FOM_OnDemandSizingMission")[0]
+	plt.bar(i,FOM,align='center',alpha=1,color='k')
+plt.grid()
+plt.ylim(ymin=0.7)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('FOM (dimensionless)', fontsize = 16)
+plt.title("Rotor Figure of Merit",fontsize = 18)
+
+plt.suptitle(title_str,fontsize = 14)
+plt.tight_layout()#makes sure subplots are spaced neatly
+plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
 
 
 #Cost breakdown plot
@@ -322,13 +417,13 @@ for config in configs:
 	 output_data.write(config)
 	 output_data.write("\t%0.0f" % sol("N_OnDemandAircraft/Rotors"))
 	 output_data.write("\t%0.2f" % sol("R_OnDemandAircraft/Rotors").to(ureg.ft).magnitude)
-	 output_data.write("\t%0.1f" % sol("T_perRotor_OnDemandSizingMission").to(ureg.lbf).magnitude)
-	 output_data.write("\t%0.1f" % sol("P_perRotor_OnDemandSizingMission").to(ureg.hp).magnitude)
-	 output_data.write("\t%0.1f" % sol("VT_OnDemandSizingMission").to(ureg.ft/ureg.s).magnitude)
-	 output_data.write("\t%0.0f" % sol("\omega_OnDemandSizingMission").to(ureg.rpm).magnitude)
-	 output_data.write("\t%0.3f" % sol("MT_OnDemandSizingMission"))
-	 output_data.write("\t%0.3f" % sol("FOM_OnDemandSizingMission"))
-	 SPL = 20*np.log10(sol("p_{ratio}_OnDemandSizingMission"))
+	 output_data.write("\t%0.1f" % sol("T_perRotor_OnDemandSizingMission")[0].to(ureg.lbf).magnitude)
+	 output_data.write("\t%0.1f" % sol("P_perRotor_OnDemandSizingMission")[0].to(ureg.hp).magnitude)
+	 output_data.write("\t%0.1f" % sol("VT_OnDemandSizingMission")[0].to(ureg.ft/ureg.s).magnitude)
+	 output_data.write("\t%0.0f" % sol("\omega_OnDemandSizingMission")[0].to(ureg.rpm).magnitude)
+	 output_data.write("\t%0.3f" % sol("MT_OnDemandSizingMission")[0])
+	 output_data.write("\t%0.3f" % sol("FOM_OnDemandSizingMission")[0])
+	 SPL = 20*np.log10(sol("p_{ratio}_OnDemandSizingMission")[0])
 	 output_data.write("\t%0.1f" % SPL)
 
 	 output_data.write("\n")

@@ -366,9 +366,8 @@ class OnDemandSizingMission(Model):
 		
 		W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
 		mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
-		p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
-		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 		
+		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 		E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
 		self.W = W
@@ -420,6 +419,7 @@ class OnDemandSizingMission(Model):
 			omega = Variable("\omega","rpm","Propeller angular velocity")
 			MT = Variable("MT","-","Propeller tip Mach number")
 			FOM = Variable("FOM","-","Figure of merit")
+			p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
 
 		constraints += [self.flight_segments]
 		constraints += [self.crew, self.passengers]
@@ -428,7 +428,6 @@ class OnDemandSizingMission(Model):
 		constraints += [aircraft.topvar("MTOW") >= W]
 		
 		constraints += [mission_range == self.fs1.topvar("segment_range")]
-		constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
 		constraints += [hoverState]
 		
 		constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
@@ -444,6 +443,7 @@ class OnDemandSizingMission(Model):
 		constraints += [omega[i] == segment.rotorPerf.topvar("\omega") for i,segment in enumerate(self.hover_segments)]
 		constraints += [MT[i] == segment.rotorPerf.topvar("MT") for i,segment in enumerate(self.hover_segments)]
 		constraints += [FOM[i] == segment.rotorPerf.topvar("FOM") for i,segment in enumerate(self.hover_segments)]
+		constraints += [p_ratio[i] == segment.rotorPerf.topvar("p_{ratio}") for i,segment in enumerate(self.hover_segments)]
 
 		return constraints
 
@@ -459,7 +459,7 @@ class OnDemandRevenueMission(Model):
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
     		"Mission range (not including reserves)")
-    	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
+    	
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
         t_mission = Variable("t_{mission}","minutes","Time to complete mission (including charging)")
@@ -498,6 +498,7 @@ class OnDemandRevenueMission(Model):
         	omega = Variable("\omega","rpm","Propeller angular velocity")
         	MT = Variable("MT","-","Propeller tip Mach number")
         	FOM = Variable("FOM","-","Figure of merit")
+        	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
 
         constraints = []
         constraints += [self.segments]
@@ -527,6 +528,7 @@ class OnDemandRevenueMission(Model):
         constraints += [omega[i] == segment.rotorPerf.topvar("\omega") for i,segment in enumerate(self.hover_segments)]
         constraints += [MT[i] == segment.rotorPerf.topvar("MT") for i,segment in enumerate(self.hover_segments)]
         constraints += [FOM[i] == segment.rotorPerf.topvar("FOM") for i,segment in enumerate(self.hover_segments)]
+        constraints += [p_ratio[i] == segment.rotorPerf.topvar("p_{ratio}") for i,segment in enumerate(self.hover_segments)]
 
         return constraints
 
@@ -542,7 +544,7 @@ class OnDemandDeadheadMission(Model):
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
     	mission_range = Variable("mission_range",mission_range,"nautical_mile",
     		"Mission range (not including reserves)")
-    	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
+    	
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
         t_mission = Variable("t_{mission}","minutes","Time to complete mission (including charging)")
@@ -581,7 +583,8 @@ class OnDemandDeadheadMission(Model):
          	omega = Variable("\omega","rpm","Propeller angular velocity")
          	MT = Variable("MT","-","Propeller tip Mach number")
          	FOM = Variable("FOM","-","Figure of merit")
-
+         	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
+        
         constraints = []
         constraints += [self.segments]
         constraints += [self.crew,self.passengers]
@@ -591,7 +594,6 @@ class OnDemandDeadheadMission(Model):
         constraints += [aircraft.topvar("MTOW") >= W]
         
         constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
         constraints += hoverState
 
         constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
@@ -610,6 +612,7 @@ class OnDemandDeadheadMission(Model):
         constraints += [omega[i] == segment.rotorPerf.topvar("\omega") for i,segment in enumerate(self.hover_segments)]
         constraints += [MT[i] == segment.rotorPerf.topvar("MT") for i,segment in enumerate(self.hover_segments)]
         constraints += [FOM[i] == segment.rotorPerf.topvar("FOM") for i,segment in enumerate(self.hover_segments)]
+        constraints += [p_ratio[i] == segment.rotorPerf.topvar("p_{ratio}") for i,segment in enumerate(self.hover_segments)]
 
         return constraints
 
@@ -974,9 +977,9 @@ if __name__=="__main__":
 	
 	solution = problem.solve(verbosity=0)	
 
-	SPL_sizing  = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission"))
-	SPL_revenue = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission"))
-	SPL_deadhead = 20*np.log10(solution("p_{ratio}_OnDemandDeadheadMission"))
+	SPL_sizing  = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
+	SPL_revenue = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission")[0])
+	SPL_deadhead = 20*np.log10(solution("p_{ratio}_OnDemandDeadheadMission")[0])
 
 	if (reserve_type == "FAA_day") or (reserve_type == "FAA_night"):
 		num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
