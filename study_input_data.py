@@ -80,7 +80,7 @@ configuration_data["Lift + cruise"]["V_{cruise}"] = 150*ureg("mph")
 configuration_data["Lift + cruise"]["L/D"] = 10
 configuration_data["Lift + cruise"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
 configuration_data["Lift + cruise"]["Cl_{mean_{max}}"] = 1.0
-configuration_data["Lift + cruise"]["N"] = 6
+configuration_data["Lift + cruise"]["N"] = 8
 
 configuration_data["Tilt wing"] = {}
 configuration_data["Tilt wing"]["V_{cruise}"] = 150*ureg("mph")
