@@ -57,14 +57,20 @@ for config in configs:
 	print "Solving configuration: " + config
 
 	#set up C_m arrays (different for each configuration)
+	num_pts_short = 3
+	num_pts_long = 9
 	if config == "Helicopter":
-		C_m = np.linspace(350,600,10)*ureg.Wh/ureg.kg
+		C_m = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Coaxial heli":
-		C_m = np.linspace(300,600,11)*ureg.Wh/ureg.kg
+		C_m = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Lift + cruise":
-		C_m = np.linspace(250,600,13)*ureg.Wh/ureg.kg
-	else:
-		C_m = np.linspace(200,600,15)*ureg.Wh/ureg.kg
+		C_m = np.linspace(340,600,num_pts_long)*ureg.Wh/ureg.kg
+	elif config == "Compound heli":
+		C_m = np.linspace(320,600,num_pts_long)*ureg.Wh/ureg.kg
+	elif config == "Tilt rotor":
+		C_m = np.linspace(270,600,num_pts_long)*ureg.Wh/ureg.kg
+	elif config == "Tilt wing":
+		C_m = np.linspace(300,600,num_pts_long)*ureg.Wh/ureg.kg
 
 	C_m = ("sweep",C_m)
 
@@ -139,7 +145,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
+plt.legend(numpoints = 1,loc='lower left', fontsize = 12)
 
 #Battery weight
 plt.subplot(2,2,2)
@@ -153,7 +159,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
+plt.legend(numpoints = 1,loc='lower left', fontsize = 12)
 
 #Trip cost per passenger
 plt.subplot(2,2,3)
@@ -167,7 +173,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
+plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
@@ -184,10 +190,13 @@ plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 
-if reserve_type == "FAA":
-	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
-	reserve_type_string = " (%0.0f-minute loiter time)" % num
-if reserve_type == "Uber":
+if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+	num = solution("t_{loiter}_OnDemandSizingMission")[0].to(ureg.minute).magnitude
+	if reserve_type == "FAA_day":
+		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_night":
+		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
@@ -200,7 +209,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; %s\n" \
 	% (weight_fraction, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
-	+ reserve_type + reserve_type_string + "\n"\
+	+ reserve_type_string + "\n"\
 	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
 		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
@@ -208,7 +217,6 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; %s\n" \
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 14)
-
-plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)#adds space at the top for the title
+plt.suptitle(title_str,fontsize = 13.5)
+plt.tight_layout()
+plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
