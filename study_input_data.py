@@ -45,7 +45,7 @@ configuration_data["Multirotor"]["L/D"] = 1.5
 configuration_data["Multirotor"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
 configuration_data["Multirotor"]["Cl_{mean_{max}}"] = 0.6
 configuration_data["Multirotor"]["N"] = 4
-configuration_data["Multirotor"]["loiter_type"] = "level_flight"
+configuration_data["Multirotor"]["loiter_type"] = "hover"
 
 configuration_data["Autogyro"] = {}
 configuration_data["Autogyro"]["V_{cruise}"] = 100*ureg("mph")
