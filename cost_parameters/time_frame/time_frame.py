@@ -34,17 +34,17 @@ MMH_FH = generic_data["MMH_FH"]
 #sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
 sizing_mission_range = generic_data["sizing_mission"]["range"]
-sizing_time_in_hover = generic_data["sizing_mission"]["time_in_hover"]
+sizing_t_hover = generic_data["sizing_mission"]["t_{hover}"]
 
 #revenue_mission_type = generic_data["revenue_mission"]["type"]
 revenue_N_passengers = generic_data["revenue_mission"]["N_passengers"]
 revenue_mission_range = generic_data["revenue_mission"]["range"]
-revenue_time_in_hover = generic_data["revenue_mission"]["time_in_hover"]
+revenue_t_hover = generic_data["revenue_mission"]["t_{hover}"]
 
 #deadhead_mission_type = generic_data["deadhead_mission"]["type"]
 deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
 deadhead_mission_range = generic_data["deadhead_mission"]["range"]
-deadhead_time_in_hover = generic_data["deadhead_mission"]["time_in_hover"]
+deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 
 # Data specific to study
@@ -114,6 +114,7 @@ for config in configs:
 		T_A = c["T/A"]
 		Cl_mean_max = c["Cl_{mean_{max}}"]
 		N = c["N"]
+		loiter_type = c["loiter_type"]
 
 		autonomousEnabled = time_frame_data[time_frame]["autonomousEnabled"]
 		sizing_mission_type = time_frame_data[time_frame]["sizing_mission_type"]
@@ -131,16 +132,16 @@ for config in configs:
 			autonomousEnabled=autonomousEnabled)
 
 		SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
-			V_cruise=V_cruise,N_passengers=sizing_N_passengers,time_in_hover=sizing_time_in_hover,
-			reserve_type=reserve_type,mission_type=sizing_mission_type)
+			V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
+			reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
 		SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 	
 		RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
-			V_cruise=V_cruise,N_passengers=revenue_N_passengers,time_in_hover=revenue_time_in_hover,
+			V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
 			charger_power=charger_power,mission_type=revenue_mission_type)
 
 		DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
-			V_cruise=V_cruise,N_passengers=deadhead_N_passengers,time_in_hover=deadhead_time_in_hover,
+			V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
 			charger_power=charger_power,mission_type=deadhead_mission_type)
 
 		MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
@@ -157,7 +158,7 @@ for config in configs:
 		configs[config][time_frame]["MTOW"] = solution("MTOW_OnDemandAircraft")
 		configs[config][time_frame]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
 		configs[config][time_frame]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-		configs[config][time_frame]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission"))
+		configs[config][time_frame]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
 
 		c_vehicle = solution("purchase_price_OnDemandAircraft")
 		c_avionics = solution("purchase_price_OnDemandAircraft/Avionics")
@@ -301,13 +302,13 @@ else:
 title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_fraction \
 	+ "Sizing mission: range = %0.0f nm; %0.0f passengers; %0.0fs hover time\n" \
 	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers,\
-		sizing_time_in_hover.to(ureg.s).magnitude) \
+		sizing_t_hover.to(ureg.s).magnitude) \
 	+ "Revenue mission: range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_range.to(ureg.nautical_mile).magnitude, \
-		revenue_N_passengers, revenue_time_in_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
+		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
 	+ "Deadhead mission: range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve" \
 	% (deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
-		deadhead_N_passengers, deadhead_time_in_hover.to(ureg.s).magnitude)
+		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude)
 
 plt.suptitle(title_str,fontsize = 14)
 

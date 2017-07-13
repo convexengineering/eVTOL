@@ -45,7 +45,6 @@ deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
 deadhead_mission_range = generic_data["deadhead_mission"]["range"]
 deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
-
 # Delete some configurations
 configs = configuration_data.copy()
 del configs["Tilt duct"]
