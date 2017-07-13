@@ -51,6 +51,8 @@ configs = configuration_data.copy()
 del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
+del configs["Helicopter"]
+del configs["Coaxial heli"]
 
 #Data specific to study
 sizing_N_passengers_array = np.linspace(1,5,3)
@@ -182,7 +184,6 @@ plt.title("Battery Weight",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 
 
-
 #Trip cost per passenger 
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
@@ -200,11 +201,11 @@ for i, config in enumerate(configs):
 			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.ylim(ymax=240)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
-
 
 
 #Sound pressure level (in hover) 
@@ -233,11 +234,13 @@ plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 
-
-if reserve_type == "FAA":
-	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
-	reserve_type_string = " (%0.0f-minute loiter time)" % num
-if reserve_type == "Uber":
+if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
+	if reserve_type == "FAA_day":
+		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_night":
+		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
@@ -250,7 +253,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_t_hover.to(ureg.s).magnitude) \
-	+ reserve_type + reserve_type_string + "\n"\
+	+ reserve_type_string + "\n"\
 	+ "Revenue mission (%s): range = %0.0f nm; passenger ratio = %0.1f; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
 		passenger_ratio, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
@@ -259,6 +262,5 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 		passenger_ratio, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 plt.suptitle(title_str,fontsize = 14)
-
-plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
+plt.tight_layout()
+plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)

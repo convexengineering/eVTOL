@@ -62,21 +62,23 @@ for config in configs:
 	print "Solving configuration: " + config
 
 	#set up range arrays (different for each configuration)
-	num_pts = 9
+	num_pts_short = 3
+	num_pts_long = 9
+	
 	if (config == "Multirotor"):
-		mission_range_array = np.linspace(2,16,num_pts)
+		mission_range_array = np.linspace(1,8.5,num_pts_short)
 	elif (config == "Helicopter"):
-		mission_range_array = np.linspace(10,50,num_pts)
+		mission_range_array = np.linspace(2,20,num_pts_short)
 	elif (config == "Coaxial heli"):
-		mission_range_array = np.linspace(10,60,num_pts)
+		mission_range_array = np.linspace(2,9,num_pts_short)
 	elif (config == "Compound heli"):
-		mission_range_array = np.linspace(10,110,num_pts)
+		mission_range_array = np.linspace(10,75,num_pts_long)
 	elif (config == "Lift + cruise"):
-		mission_range_array = np.linspace(10,100,num_pts)
+		mission_range_array = np.linspace(10,70,num_pts_long)
 	elif (config == "Tilt wing"):
-		mission_range_array = np.linspace(15,120,num_pts)
+		mission_range_array = np.linspace(15,95,num_pts_long)
 	elif (config == "Tilt rotor"):
-		mission_range_array = np.linspace(15,140,num_pts)
+		mission_range_array = np.linspace(15,120,num_pts_long)
 		
 	mission_range_array = mission_range_array*ureg.nautical_mile
 
@@ -213,10 +215,13 @@ plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 
-if reserve_type == "FAA":
-	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
-	reserve_type_string = " (%0.0f-minute loiter time)" % num
-if reserve_type == "Uber":
+if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
+	if reserve_type == "FAA_day":
+		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_night":
+		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
@@ -229,7 +234,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
-	+ reserve_type + reserve_type_string + "\n"\
+	+ reserve_type_string + "\n"\
 	+ "Revenue mission (%s): same range as sizing mission; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, \
 		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
