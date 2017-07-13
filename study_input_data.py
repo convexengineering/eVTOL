@@ -61,7 +61,7 @@ configuration_data["Helicopter"]["L/D"] = 4.25
 configuration_data["Helicopter"]["T/A"] = 4.5*ureg("lbf")/ureg("ft")**2
 configuration_data["Helicopter"]["Cl_{mean_{max}}"] = 0.6
 configuration_data["Helicopter"]["N"] = 1
-configuration_data["Helicopter"]["loiter_type"] = "level_flight"
+configuration_data["Helicopter"]["loiter_type"] = "hover"
 
 configuration_data["Tilt duct"] = {}
 configuration_data["Tilt duct"]["V_{cruise}"] = 150*ureg("mph")
@@ -77,7 +77,7 @@ configuration_data["Coaxial heli"]["L/D"] = 5.5
 configuration_data["Coaxial heli"]["T/A"] = 7*ureg("lbf")/ureg("ft")**2
 configuration_data["Coaxial heli"]["Cl_{mean_{max}}"] = 0.6
 configuration_data["Coaxial heli"]["N"] = 2
-configuration_data["Coaxial heli"]["loiter_type"] = "level_flight"
+configuration_data["Coaxial heli"]["loiter_type"] = "hover"
 
 configuration_data["Lift + cruise"] = {}
 configuration_data["Lift + cruise"]["V_{cruise}"] = 150*ureg("mph")
