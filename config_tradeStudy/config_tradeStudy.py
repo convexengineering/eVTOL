@@ -51,6 +51,9 @@ del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
 
+del configs["Helicopter"]
+del configs["Coaxial heli"]
+
 #Optimize remaining configurations
 for config in configs:
 	
@@ -151,9 +154,8 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 
-
-if reserve_type == "FAA":
-	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
+if (reserve_type == "FAA_day") or (reserve_type == "FAA_night"):
+	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
 	reserve_type_string = " (%0.0f-minute loiter time)" % num
 if reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude

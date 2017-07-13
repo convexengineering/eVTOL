@@ -10,7 +10,7 @@ generic_data["weight_fraction"] = 0.55 #structural mass fraction
 generic_data["C_m"] = 400*ureg.Wh/ureg.kg #battery energy density
 generic_data["n"] = 1.0 #battery discharge parameter
 
-generic_data["reserve_type"] = "Uber" #2-nm diversion
+generic_data["reserve_type"] = "FAA_day" #30-minute loiter
 generic_data["autonomousEnabled"] = True #Vehicle autonomy enabled
 generic_data["charger_power"] = 200*ureg.kW
 

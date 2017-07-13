@@ -126,16 +126,22 @@ for config in configs:
 			[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
 
 		solution = problem.solve(verbosity=0)
-		
+
+		if i == 0:
+			num_segments = len(solution("P_{battery}_OnDemandSizingMission"))
+			configs[config]["P_{battery}"] = np.zeros((np.size(mission_range_array),num_segments))
+
 		configs[config]["MTOW"][i] = solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 		configs[config]["W_{battery}"][i] = solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 		configs[config]["cost_per_seat_mile"][i] = solution("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
 		configs[config]["SPL"][i] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
+		configs[config]["P_{battery}"][i] = solution("P_{battery}_OnDemandSizingMission").to(ureg.kW).magnitude
 		
 	configs[config]["mission_range"] = mission_range_array
 	configs[config]["MTOW"] = configs[config]["MTOW"]*ureg.lbf
 	configs[config]["W_{battery}"] = configs[config]["W_{battery}"]*ureg.lbf
 	configs[config]["cost_per_seat_mile"] = configs[config]["cost_per_seat_mile"]*ureg.mile**-1
+	configs[config]["P_{battery}"] = configs[config]["P_{battery}"]*ureg.kW
 
 
 # Plotting commands
