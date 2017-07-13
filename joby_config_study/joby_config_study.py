@@ -197,23 +197,23 @@ plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
 	loc='lower left', fontsize = 12)
 
 
-if (reserve_type == "FAA_day"):
-	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
-	reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
-elif (reserve_type == "FAA_night"):
-	num = solution["constants"]["t_{loiter}_OnDemandSizingMission"].to(ureg.minute).magnitude
-	reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
+	if reserve_type == "FAA_day":
+		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_night":
+		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
-	reserve_type_string = "Uber (%0.0f-nm diversion distance)" % num
+	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
 if autonomousEnabled:
 	autonomy_string = "autonomy enabled"
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: cruising speed = %0.0f knots; structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
-	% (V_cruise.to(ureg.knot).magnitude, weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
+	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -224,7 +224,7 @@ title_str = "Aircraft parameters: cruising speed = %0.0f knots; structural mass 
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 12)
 
-plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.07,right=0.99,bottom=0.07,top=0.88)#adds space at the top for the title
+plt.suptitle(title_str,fontsize = 13.5)
+plt.tight_layout()
+plt.subplots_adjust(left=0.07,right=0.99,bottom=0.07,top=0.87)
