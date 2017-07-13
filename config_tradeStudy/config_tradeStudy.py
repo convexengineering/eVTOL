@@ -148,16 +148,19 @@ for i, config in enumerate(configs):
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 	color="black", linewidth=3, linestyle="-")
-plt.ylim(ymin = 57, ymax = 75)
+plt.ylim(ymin = 57)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 
-if (reserve_type == "FAA_day") or (reserve_type == "FAA_night"):
+if reserve_type == "FAA_day" or reserve_type == "FAA_night":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	reserve_type_string = " (%0.0f-minute loiter time)" % num
-if reserve_type == "Uber":
+	if reserve_type == "FAA_day":
+		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_night":
+		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
@@ -170,7 +173,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
-	+ reserve_type + reserve_type_string + "\n"\
+	+ reserve_type_string + "\n"\
 	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
 		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
@@ -178,10 +181,10 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 14)
 
+plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
+plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
 
 
 #Additional parameters plot
@@ -251,7 +254,6 @@ for i, config in enumerate(configs):
 			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
-plt.ylim(ymax = 400)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Power Consumption",fontsize = 18)
@@ -282,9 +284,9 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('FOM (dimensionless)', fontsize = 16)
 plt.title("Rotor Figure of Merit",fontsize = 18)
 
-plt.suptitle(title_str,fontsize = 14)
-plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
+plt.suptitle(title_str,fontsize = 13.5)
+plt.tight_layout()
+plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
 
 
 #Cost breakdown plot
@@ -319,6 +321,7 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost ($millions US)', fontsize = 14)
 plt.grid()
+plt.ylim(ymax=1.7)
 plt.title("Acquisition Costs",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
 	loc='upper left', fontsize = 12)
@@ -335,6 +338,7 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per trip ($US)', fontsize = 14)
 plt.grid()
+plt.ylim(ymax=300)
 plt.title("Revenue and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue cost","Deadhead cost"),
 	loc='upper left', fontsize = 12)
@@ -351,6 +355,7 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
+plt.ylim(ymax=250)
 plt.title("Cost breakdown (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
 	loc='upper left', fontsize = 12)
@@ -369,6 +374,7 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
+plt.ylim(ymax=120)
 plt.title("Capital Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
 	loc='upper left', fontsize = 12)
@@ -389,6 +395,7 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
+plt.ylim(ymax=160)
 plt.title("Operating Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
 	loc='upper left', fontsize = 12)
@@ -402,7 +409,7 @@ cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; bat
 
 plt.suptitle(cost_title_str,fontsize = 14)
 plt.tight_layout()
-plt.subplots_adjust(left=0.06,right=0.99,bottom=0.10,top=0.91)#adds space at the top for the title
+plt.subplots_adjust(left=0.06,right=0.99,bottom=0.10,top=0.91)
 
 
 #Rotor data output (to text file)
