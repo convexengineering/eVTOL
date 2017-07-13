@@ -99,6 +99,7 @@ del configs["Multirotor"]
 del configs["Autogyro"]
 del configs["Tilt duct"]
 del configs["Helicopter"]
+del configs["Coaxial heli"]
 
 #Optimize remaining configurations
 for config in configs:
@@ -293,6 +294,16 @@ plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
+if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
+	if reserve_type == "FAA_day":
+		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_night":
+		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+elif reserve_type == "Uber":
+	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
+	reserve_type_string = " (%0.0f-nm diversion distance)" % num
+
 
 if autonomousEnabled:
 	autonomy_string = "autonomy enabled"
@@ -300,9 +311,9 @@ else:
 	autonomy_string = "pilot required"
 
 title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_fraction \
-	+ "Sizing mission: range = %0.0f nm; %0.0f passengers; %0.0fs hover time\n" \
+	+ "Sizing mission: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers,\
-		sizing_t_hover.to(ureg.s).magnitude) \
+		sizing_t_hover.to(ureg.s).magnitude) + reserve_type_string + "\n" \
 	+ "Revenue mission: range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_range.to(ureg.nautical_mile).magnitude, \
 		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
@@ -311,9 +322,8 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_f
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude)
 
 plt.suptitle(title_str,fontsize = 14)
-
-plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.07,right=0.99,bottom=0.10,top=0.88)#adds space at the top for the title
+plt.tight_layout()
+plt.subplots_adjust(left=0.07,right=0.99,bottom=0.10,top=0.88)
 
 
 #Cost breakdown plot
@@ -337,7 +347,7 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($millions US)', fontsize = 16)
-plt.title("Vehicle Acquisition Cost",fontsize = 18)
+plt.title("Acquisition Cost",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
 #Pilot cost per mission
@@ -402,6 +412,5 @@ plt.title("Operating Expenses per Trip",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
 plt.suptitle(title_str,fontsize = 14)
-
-plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.07,right=0.99,bottom=0.10,top=0.88)#adds space at the top for the title
+plt.tight_layout()
+plt.subplots_adjust(left=0.07,right=0.99,bottom=0.10,top=0.88)
