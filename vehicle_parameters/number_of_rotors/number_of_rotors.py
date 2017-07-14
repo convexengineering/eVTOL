@@ -193,8 +193,8 @@ for i, config in enumerate(configs):
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.xlabel('Number of rotors', fontsize = 16)
-plt.ylabel('Rotational Speed (rev/s)', fontsize = 16)
-plt.title("Rotor Rotational Speed",fontsize = 20)
+plt.ylabel('Angular velocity (rev/s)', fontsize = 16)
+plt.title("Rotor Angular Velocity",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 

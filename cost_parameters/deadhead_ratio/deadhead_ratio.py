@@ -164,7 +164,7 @@ plt.grid()
 plt.ylim(ymin=0,ymax=1.5)
 plt.xlabel('Deadhead ratio', fontsize = 16)
 plt.ylabel('Cost ($millions US)', fontsize = 16)
-plt.title("Vehicle Acquisition Cost",fontsize = 20)
+plt.title("Acquisition Cost",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 #Trip cost per passenger
