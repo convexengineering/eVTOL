@@ -48,7 +48,7 @@ deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 
 # Data specific to study
-configs = {}
+configs = OrderedDict()
 time_frame_array = ["Initial","Near term","Long term"]
 
 time_frame_data = {}
@@ -323,7 +323,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_f
 
 plt.suptitle(title_str,fontsize = 14)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.99,bottom=0.10,top=0.88)
+plt.subplots_adjust(left=0.08,right=0.99,bottom=0.10,top=0.88)
 
 
 #Cost breakdown plot
