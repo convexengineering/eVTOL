@@ -158,7 +158,7 @@ plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 
 #Battery weight
@@ -181,7 +181,7 @@ plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 
 #Trip cost per passenger 
@@ -205,7 +205,7 @@ plt.ylim(ymax=240)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 
 #Sound pressure level (in hover) 
@@ -232,7 +232,7 @@ plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 if reserve_type == "FAA_day" or reserve_type == "FAA_night":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude

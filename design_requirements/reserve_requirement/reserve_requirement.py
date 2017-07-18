@@ -12,6 +12,7 @@ from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from copy import deepcopy
+from collections import OrderedDict
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -48,7 +49,7 @@ deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 
 # Data specific to study
-configs = {}
+configs = OrderedDict()
 reserve_type_array = ["Uber","FAA_day","FAA_night"]
 
 for config in configuration_data:
@@ -289,4 +290,4 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 plt.suptitle(title_str,fontsize = 14)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.08,right=0.99,bottom=0.10,top=0.87)#adds space at the top for the title
+plt.subplots_adjust(left=0.08,right=0.96,bottom=0.10,top=0.87)#adds space at the top for the title
