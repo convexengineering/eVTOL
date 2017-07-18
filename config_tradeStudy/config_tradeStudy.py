@@ -226,7 +226,7 @@ plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Energy (kWh)', fontsize = 16)
 plt.title("Energy Use",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 
 #Power consumption by mission segment (sizing mission)
@@ -257,7 +257,7 @@ plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Power Consumption",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 #Rotor tip Mach number 
 plt.subplot(2,2,3)
@@ -324,7 +324,7 @@ plt.grid()
 plt.ylim(ymax=1.7)
 plt.title("Acquisition Costs",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,3)
 for i, config in enumerate(configs):
@@ -341,7 +341,7 @@ plt.grid()
 plt.ylim(ymax=300)
 plt.title("Revenue and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue cost","Deadhead cost"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,4)
 for i, config in enumerate(configs):
@@ -358,7 +358,7 @@ plt.grid()
 plt.ylim(ymax=250)
 plt.title("Cost breakdown (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,5)
 for i, config in enumerate(configs):
@@ -377,7 +377,7 @@ plt.grid()
 plt.ylim(ymax=120)
 plt.title("Capital Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,6)
 for i, config in enumerate(configs):
@@ -398,7 +398,7 @@ plt.grid()
 plt.ylim(ymax=160)
 plt.title("Operating Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; battery cost ratio = \$%0.0f per kWh; %s\n" \
 	% (vehicle_cost_per_weight.to(ureg.lbf**-1).magnitude, \
