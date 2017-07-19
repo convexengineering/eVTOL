@@ -420,8 +420,8 @@ output_data.write("Rotor design data (from sizing mission) \n\n")
 
 output_data.write("Note: T and P are per rotor; SPL is for the entire vehicle.\n\n")
 
-output_data.write("Configuration \tN \tR (ft)\tT (lbf)\tP (hp)\t")
-output_data.write("VT (ft/s)\tomega (rpm)\tMT\tFOM\tSPL (dB)\n")
+output_data.write("Configuration \tN \tR (m)\tT (kN)\tP (kW)\t")
+output_data.write("VT (m/s)\tomega (rpm)\tMT\tFOM\tSPL (dB)\n")
 
 for config in configs:
 	 
@@ -429,10 +429,10 @@ for config in configs:
 	 
 	 output_data.write(config)
 	 output_data.write("\t%0.0f" % sol("N_OnDemandAircraft/Rotors"))
-	 output_data.write("\t%0.2f" % sol("R_OnDemandAircraft/Rotors").to(ureg.ft).magnitude)
-	 output_data.write("\t%0.1f" % sol("T_perRotor_OnDemandSizingMission")[0].to(ureg.lbf).magnitude)
-	 output_data.write("\t%0.1f" % sol("P_perRotor_OnDemandSizingMission")[0].to(ureg.hp).magnitude)
-	 output_data.write("\t%0.1f" % sol("VT_OnDemandSizingMission")[0].to(ureg.ft/ureg.s).magnitude)
+	 output_data.write("\t%0.3f" % sol("R_OnDemandAircraft/Rotors").to(ureg.m).magnitude)
+	 output_data.write("\t%0.2f" % sol("T_perRotor_OnDemandSizingMission")[0].to(ureg.kN).magnitude)
+	 output_data.write("\t%0.1f" % sol("P_perRotor_OnDemandSizingMission")[0].to(ureg.kW).magnitude)
+	 output_data.write("\t%0.1f" % sol("VT_OnDemandSizingMission")[0].to(ureg.m/ureg.s).magnitude)
 	 output_data.write("\t%0.0f" % sol("\omega_OnDemandSizingMission")[0].to(ureg.rpm).magnitude)
 	 output_data.write("\t%0.3f" % sol("MT_OnDemandSizingMission")[0])
 	 output_data.write("\t%0.3f" % sol("FOM_OnDemandSizingMission")[0])
