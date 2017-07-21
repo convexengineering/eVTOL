@@ -147,6 +147,9 @@ labels = [""]*len(configs)
 for i, config in enumerate(configs):
 	labels[i] = config
 
+xmin = np.min(y_pos) - 0.7
+xmax = np.max(y_pos) + 0.7
+
 offset_array = [-0.3,0,0.3]
 width = 0.2
 colors = ["grey", "w", "k"]
@@ -173,6 +176,7 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,MTOW,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.ylim(ymax=14000)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
@@ -202,6 +206,7 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.ylim(ymax=5000)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
@@ -231,6 +236,7 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.ylim(ymax=300)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
@@ -264,6 +270,7 @@ plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 	color="black", linewidth=3, linestyle="-")
 plt.ylim(ymin = 57,ymax = 85)
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)

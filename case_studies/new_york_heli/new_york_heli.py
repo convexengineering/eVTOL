@@ -140,7 +140,8 @@ for config in configs:
 		configs[config][case]["MTOW"] = solution("MTOW_OnDemandAircraft")
 		configs[config][case]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
 		configs[config][case]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-		configs[config][case]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
+		configs[config][case]["SPL_sizing"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
+		configs[config][case]["SPL_revenue"] = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission")[0])
 
 
 
@@ -154,6 +155,9 @@ y_pos = np.arange(len(configs))
 labels = [""]*len(configs)
 for i, config in enumerate(configs):
 	labels[i] = config
+
+xmin = np.min(y_pos) - 0.7
+xmax = np.max(y_pos) + 0.7
 
 offset_array = [-0.3,0,0.3]
 width = 0.2
@@ -186,38 +190,15 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
+plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.25*ymax)
+plt.ylim(ymax = 1.3*ymax)
 plt.title("Maximum Takeoff Weight",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 
 
-#Battery weight
-plt.subplot(2,2,2)
-for i,config in enumerate(configs):
-	for j,case in enumerate(configs[config]):
-		c = configs[config][case]
-		offset = offset_array[j]
-		W_battery = c["W_{battery}"].to(ureg.lbf).magnitude
-
-		if (i == 0):
-			label = legend_labels[j]
-			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j],
-				label=label)
-		else:
-			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j])
-
-plt.grid()
-[ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.2*ymax)
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Battery Weight",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
-
-
 #Trip cost per passenger 
-plt.subplot(2,2,3)
+plt.subplot(2,2,2)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
@@ -232,21 +213,22 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.2*ymax)
+plt.ylim(ymax = 1.3*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 
 
-#Sound pressure level (in hover) 
-plt.subplot(2,2,4)
+#Sound pressure level (in hover, sizing mission) 
+plt.subplot(2,2,3)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
 		offset = offset_array[j]
-		SPL_sizing = c["SPL"]
+		SPL_sizing = c["SPL_sizing"]
 
 		if (i == 0):
 			label = legend_labels[j]
@@ -259,11 +241,39 @@ SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 	color="black", linewidth=3, linestyle="-")
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymin = 57,ymax = ymax + 1)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover",fontsize = 18)
+plt.title("Sound Pressure Level (sizing mission)",fontsize = 18)
+plt.legend(loc='upper left', fontsize = 12)
+
+#Sound pressure level (in hover, sizing mission) 
+plt.subplot(2,2,4)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+		SPL_revenue = c["SPL_revenue"]
+
+		if (i == 0):
+			label = legend_labels[j]
+			plt.bar(i+offset,SPL_revenue,align='center',alpha=1,width=width,color=colors[j],
+				label=label)
+		else:
+			plt.bar(i+offset,SPL_revenue,align='center',alpha=1,width=width,color=colors[j])
+
+SPL_req = 62
+plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
+	color="black", linewidth=3, linestyle="-")
+plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymin = 57,ymax = ymax + 1)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('SPL (dB)', fontsize = 16)
+plt.title("Sound Pressure Level (revenue mission)",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 
 
@@ -296,4 +306,4 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 plt.suptitle(title_str,fontsize = 14)
 
 plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.08,right=0.96,bottom=0.10,top=0.87)#adds space at the top for the title
+plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
