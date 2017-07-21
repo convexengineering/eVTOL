@@ -304,6 +304,6 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 plt.suptitle(title_str,fontsize = 14)
-
-plt.tight_layout()#makes sure subplots are spaced neatly
-plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)#adds space at the top for the title
+plt.tight_layout()
+plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
+plt.savefig('new_york_heli_plot_01.pdf')

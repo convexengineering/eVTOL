@@ -183,8 +183,9 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 
 
 plt.suptitle(title_str,fontsize = 13.5)
-plt.tight_layout()#makes sure subplots are spaced neatly
+plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
+plt.savefig('config_tradeStudy_plot_01.pdf')
 
 
 #Additional parameters plot
@@ -287,6 +288,7 @@ plt.title("Rotor Figure of Merit",fontsize = 18)
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
+plt.savefig('config_tradeStudy_plot_02.pdf')
 
 
 #Cost breakdown plot
@@ -410,6 +412,7 @@ cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; bat
 plt.suptitle(cost_title_str,fontsize = 14)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.99,bottom=0.10,top=0.91)
+plt.savefig('config_tradeStudy_plot_03_costBreakdown.pdf')
 
 
 #Rotor data output (to text file)

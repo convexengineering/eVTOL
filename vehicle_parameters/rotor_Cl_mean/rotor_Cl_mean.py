@@ -219,3 +219,4 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
+plt.savefig('rotor_Cl_mean_plot_01.pdf')

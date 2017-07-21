@@ -271,3 +271,4 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 plt.suptitle(title_str,fontsize = 14)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
+plt.savefig('number_of_passengers_plot_01.pdf')

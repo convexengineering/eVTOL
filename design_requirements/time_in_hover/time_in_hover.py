@@ -175,7 +175,7 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.ylim(ymin=60,ymax = 80)
+plt.ylim(ymin=60,ymax = 85)
 plt.xlabel('Sizing time in hover (seconds)', fontsize = 16)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
@@ -213,3 +213,4 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; %s\n" \
 plt.suptitle(title_str,fontsize = 14)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
+plt.savefig('time_in_hover_plot_01.pdf')

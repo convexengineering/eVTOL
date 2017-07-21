@@ -212,3 +212,4 @@ title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %s\n" \
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
+plt.savefig('structural_fraction_plot_01.pdf')

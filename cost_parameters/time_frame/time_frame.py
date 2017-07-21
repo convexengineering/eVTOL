@@ -331,6 +331,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_f
 plt.suptitle(title_str,fontsize = 14)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.99,bottom=0.10,top=0.88)
+plt.savefig('time_frame_plot_01.pdf')
 
 
 #Cost breakdown plot
@@ -352,6 +353,7 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,purchase_price,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($millions US)', fontsize = 16)
 plt.title("Acquisition Cost",fontsize = 18)
@@ -372,6 +374,7 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,pilot_cost,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Pilot Cost per Trip",fontsize = 18)
@@ -392,6 +395,7 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,amortized_capex,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Capital Expenses per Trip",fontsize = 18)
@@ -413,6 +417,7 @@ for i,config in enumerate(configs):
 			plt.bar(i+offset,amortized_opex,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Operating Expenses per Trip",fontsize = 18)
@@ -421,3 +426,4 @@ plt.legend(loc='upper right', fontsize = 12)
 plt.suptitle(title_str,fontsize = 14)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.99,bottom=0.10,top=0.88)
+plt.savefig('time_frame_plot_02_costBreakdown.pdf')

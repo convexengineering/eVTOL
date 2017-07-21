@@ -244,7 +244,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.99,bottom=0.07,top=0.87)
-
+plt.savefig('joby_config_plot_01.pdf')
 
 #Additional parameters plot
 fig2 = plt.figure(figsize=(12,12), dpi=80)
@@ -313,3 +313,4 @@ plt.title("Rotor Angular Velocity",fontsize = 20)
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.99,bottom=0.07,top=0.87)
+plt.savefig('joby_config_plot_02.pdf')
