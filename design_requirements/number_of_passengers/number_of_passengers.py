@@ -41,7 +41,7 @@ revenue_mission_range = generic_data["revenue_mission"]["range"]
 revenue_t_hover = generic_data["revenue_mission"]["t_{hover}"]
 
 deadhead_mission_type = generic_data["deadhead_mission"]["type"]
-#deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
+deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
 deadhead_mission_range = generic_data["deadhead_mission"]["range"]
 deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
@@ -58,7 +58,6 @@ del configs["Coaxial heli"]
 sizing_N_passengers_array = np.linspace(1,5,3)
 passenger_ratio = 2./3
 revenue_N_passengers_array = passenger_ratio*sizing_N_passengers_array
-deadhead_N_passengers_array = passenger_ratio*sizing_N_passengers_array
 
 
 #Optimize remaining configurations
@@ -82,7 +81,6 @@ for config in configs:
 
 	for i,sizing_N_passengers in enumerate(sizing_N_passengers_array):
 		revenue_N_passengers = revenue_N_passengers_array[i]
-		deadhead_N_passengers = deadhead_N_passengers_array[i]
 
 		Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 			Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -261,12 +259,12 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nm; passenger ratio = %0.1f; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	+ "Revenue mission (%s): range = %0.0f nm; passenger ratio = %0.2f; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
 		passenger_ratio, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nm; passenger ratio = %0.1f; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
-		passenger_ratio, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
+		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 plt.suptitle(title_str,fontsize = 14)
 plt.tight_layout()
