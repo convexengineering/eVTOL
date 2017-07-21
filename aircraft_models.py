@@ -80,7 +80,7 @@ class Rotors(Model):
 		return constraints
 
 class RotorsAero(Model):
-	def setup(self,rotors,flightState,MT_max=0.9,SPL_req=150):
+	def setup(self,rotors,flightState,MT_max=0.9,SPL_req=150,ki=1.13,Cd0=0.01):
 		T = Variable("T","lbf","Total thrust")
 		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading")
@@ -98,8 +98,8 @@ class RotorsAero(Model):
 		Cl_mean = Variable("Cl_mean","-","Mean lift coefficient")
 		FOM = Variable("FOM","-","Figure of merit")
 
-		ki = Variable("ki",1.1,"-","Induced power factor")
-		Cd0 = Variable("Cd0",0.01,"-","Blade two-dimensional zero-lift drag coefficient")
+		ki = Variable("ki",ki,"-","Induced power factor")
+		Cd0 = Variable("Cd0",Cd0,"-","Blade two-dimensional zero-lift drag coefficient")
 
 		p_ratio = Variable("p_{ratio}","-","Sound pressure ratio (p/p_{ref})")
 		p_ratio_max = Variable("p_{ratio_max}",10**(SPL_req/20.),"-","Max allowed sound pressure ratio")
