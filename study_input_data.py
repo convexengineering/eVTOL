@@ -47,7 +47,7 @@ configs_OutOfOrder["Multirotor"]["V_{cruise}"] = 50*ureg("mph")
 configs_OutOfOrder["Multirotor"]["L/D"] = 1.5
 configs_OutOfOrder["Multirotor"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Multirotor"]["Cl_{mean_{max}}"] = 0.6
-configs_OutOfOrder["Multirotor"]["N"] = 4
+configs_OutOfOrder["Multirotor"]["N"] = 8
 configs_OutOfOrder["Multirotor"]["loiter_type"] = "hover"
 
 configs_OutOfOrder["Autogyro"] = {}
