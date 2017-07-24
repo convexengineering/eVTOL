@@ -69,6 +69,7 @@ del configs["Autogyro"]["Case 1"]
 del configs["Autogyro"]["Case 2"]
 del configs["Autogyro"]["Case 3"]
 
+del configs["Helicopter"]["Case 1"]
 del configs["Helicopter"]["Case 2"]
 del configs["Helicopter"]["Case 3"]
 
