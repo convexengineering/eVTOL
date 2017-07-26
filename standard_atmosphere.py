@@ -3,8 +3,7 @@
 
 import numpy as np
 import scipy.interpolate as interp
-import pint 
-ureg = pint.UnitRegistry()
+from gpkit import ureg
 import os
 import sys
 
