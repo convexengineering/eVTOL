@@ -128,19 +128,23 @@ for i, config in enumerate(configs):
 	
 	ax = []
 	ax.append(plt.subplot(2,2,i+1))
-	plt.plot(f_spectrum,SPL_spectrum,'k-',linewidth=2,label="Vortex noise")
+	lns1 = plt.plot(f_spectrum,SPL_spectrum,'k-',linewidth=2,label="Vortex noise")
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.xlabel('Frequency (Hz)', fontsize = 16)
+	ymax = np.max(SPL_spectrum) + 5
+	plt.ylim(ymax=ymax)
 
 	ax.append(ax[0].twinx())
-	plt.plot(f_dBA_offset,dBA_offset,'k--',linewidth=2,label="A-weighting offset")
+	lns2 = plt.plot(f_dBA_offset,dBA_offset,'k--',linewidth=2,label="A-weighting offset")
 	plt.ylabel('SPL offset (dBA)', fontsize = 16)
 	
 	plt.xscale('log')
 	plt.grid()
 	plt.title(config, fontsize = 18)
-	plt.legend()
 
+	lns = lns1+lns2
+	labels = [l.get_label() for l in lns]
+	plt.legend(lns, labels)
 
 
 if reserve_type == "FAA_day" or reserve_type == "FAA_night":
