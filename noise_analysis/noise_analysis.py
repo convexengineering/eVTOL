@@ -97,6 +97,19 @@ for config in configs:
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
 
+	MTOW = solution("MTOW")
+	A = solution("A")
+	VT = solution("VT_OnDemandSizingMission")[0]
+	s = solution("s")
+	Cl_mean = solution("Cl_{mean_{max}}")
+	N = solution("N")
+
+	f_peak_Hz, SPL, spectrum = vortex_noise(T_total=MTOW,A=A,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
+		x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
+
+	configs[config]["f_peak_Hz"] = f_peak_Hz
+	configs[config]["spectrum"] = spectrum
+
 
 # Plotting commands
 plt.ion()
@@ -104,56 +117,31 @@ fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
-y_pos = np.arange(len(configs))
-labels = [""]*len(configs)
 for i, config in enumerate(configs):
-	labels[i] = config
+	c = configs[config]
+
+	
+	
+	f_spectrum = c["spectrum"]["f_Hz"].to(ureg.Hz).magnitude
+	SPL_spectrum = c["spectrum"]["SPL"]
+
+	f_dBA_offset = np.linspace(np.min(f_spectrum),np.max(f_spectrum),100)*ureg.Hz
+	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
+
+	ax = []
+	ax.append(plt.subplot(2,2,i+1))
+	plt.plot(f_spectrum,SPL_spectrum,'k-',linewidth=2,label="Vortex noise")
+	ax.append(ax[0].twinx())
+	plt.plot(f_dBA_offset,dBA_offset,'k--',linewidth=2,label="A-weighting offset")
+	plt.xscale('log')
+
+	plt.grid()
+	plt.xlabel('Frequency (Hz)', fontsize = 16)
+	plt.ylabel('SPL (dB)', fontsize = 16)
+	plt.title(config, fontsize = 18)
+	plt.legend()
 
 
-#Maximum takeoff weight
-plt.subplot(2,2,1)
-for i, config in enumerate(configs):
-	MTOW = configs[config]["solution"]("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
-	plt.bar(i,MTOW,align='center',alpha=1,color='k')
-plt.grid()
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Maximum Takeoff Weight",fontsize = 18)
-
-#Battery weight
-plt.subplot(2,2,2)
-for i, config in enumerate(configs):
-	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
-	plt.bar(i,W_battery,align='center',alpha=1,color='k')
-plt.grid()
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Battery Weight",fontsize = 18)
-
-#Trip cost per passenger 
-plt.subplot(2,2,3)
-for i, config in enumerate(configs):
-	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
-	plt.bar(i,cptpp,align='center',alpha=1,color='k')
-plt.grid()
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('Cost ($US)', fontsize = 16)
-plt.title("Cost per Trip, per Passenger",fontsize = 18)
-
-#Sound pressure level (in hover) 
-plt.subplot(2,2,4)
-for i, config in enumerate(configs):
-	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission")[0])
-	plt.bar(i,SPL_sizing,align='center',alpha=1,color='k')
-
-SPL_req = 62
-plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
-	color="black", linewidth=3, linestyle="-")
-plt.ylim(ymin = 57)
-plt.grid()
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover",fontsize = 18)
 
 if reserve_type == "FAA_day" or reserve_type == "FAA_night":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
@@ -182,8 +170,9 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-
+'''
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
-plt.savefig('config_tradeStudy_plot_01.pdf')
+plt.savefig('noise_analysis_plot_01.pdf')
+'''
