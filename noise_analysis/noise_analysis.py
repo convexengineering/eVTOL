@@ -118,26 +118,26 @@ plt.rc('axes', axisbelow=True)
 plt.show()
 
 for i, config in enumerate(configs):
+	
 	c = configs[config]
-
-	
-	
 	f_spectrum = c["spectrum"]["f_Hz"].to(ureg.Hz).magnitude
 	SPL_spectrum = c["spectrum"]["SPL"]
 
 	f_dBA_offset = np.linspace(np.min(f_spectrum),np.max(f_spectrum),100)*ureg.Hz
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
-
+	
 	ax = []
 	ax.append(plt.subplot(2,2,i+1))
 	plt.plot(f_spectrum,SPL_spectrum,'k-',linewidth=2,label="Vortex noise")
+	plt.ylabel('SPL (dB)', fontsize = 16)
+	plt.xlabel('Frequency (Hz)', fontsize = 16)
+
 	ax.append(ax[0].twinx())
 	plt.plot(f_dBA_offset,dBA_offset,'k--',linewidth=2,label="A-weighting offset")
+	plt.ylabel('SPL offset (dBA)', fontsize = 16)
+	
 	plt.xscale('log')
-
 	plt.grid()
-	plt.xlabel('Frequency (Hz)', fontsize = 16)
-	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.title(config, fontsize = 18)
 	plt.legend()
 
@@ -170,9 +170,8 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-'''
+
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
+plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('noise_analysis_plot_01.pdf')
-'''

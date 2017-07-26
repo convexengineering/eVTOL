@@ -43,7 +43,7 @@ def noise_weighting(f,SPL,type="A"):
 		numerator = 12194**2*f**4
 		denominator = (f**2+20.6**2)*(f**2+12194**2)*np.sqrt((f**2+107.7**2)*(f**2+737.9**2))
 		R = numerator/denominator
-		A = 20*np.log10(R) + 2
+		A = 20*np.log10(R) + 2.00
 
 	dBA = SPL + A
 	return dBA
