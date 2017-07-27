@@ -12,7 +12,7 @@ from standard_atmosphere import stdatmo
 from study_input_data import generic_data, configuration_data
 
 
-def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,x=500*ureg.ft,h=0*ureg.ft,
+def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_S=500*ureg.ft,h=0*ureg.ft,
 	t_c=0.12,num_harmonics=20):
 
 	pi = math.pi
@@ -42,9 +42,9 @@ def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,x=500*
 		bessel_term = jv(m*B,bessel_argument)
 
 		#RMS acoustic pressures
-		P_mL = ((m*B*omega)/(2*np.sqrt(2)*pi*a*x))*(T_perRotor*np.cos(theta) \
+		P_mL = ((m*B*omega)/(2*np.sqrt(2)*pi*a*delta_S))*(T_perRotor*np.cos(theta) \
 			- Q_perRotor*a/(omega*R_eff**2))*bessel_term #loading
-		P_mT = ((-rho*((m*B*omega)**2)*B)/(3*np.sqrt(2)*pi*x))*c*t*R_eff*bessel_term #thickness
+		P_mT = ((-rho*((m*B*omega)**2)*B)/(3*np.sqrt(2)*pi*delta_S))*c*t*R_eff*bessel_term #thickness
 
 		p_ratio = np.sqrt(N)*np.abs(P_mL + P_mT)/P0
 		p_ratio_squared = p_ratio_squared + p_ratio**2
@@ -185,15 +185,14 @@ if __name__=="__main__":
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
 	theta = 175*ureg.degree
-
-
+	
 	noise = {}
 	noise["periodic"] = {}
 	noise["vortex"] = {}
 
 	noise["periodic"]["f_fund"], noise["periodic"]["SPL"], noise["periodic"]["spectrum"]\
-		= periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,x=500*ureg.ft,h=0*ureg.ft,
-			t_c=0.12,num_harmonics=20)
+		= periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,delta_S=500*ureg.ft,
+			h=0*ureg.ft,t_c=0.12,num_harmonics=20)
 
 	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
 		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,x=500*ureg.ft,
@@ -201,7 +200,6 @@ if __name__=="__main__":
 
 	noise["periodic"]["dBA_offset"] = noise_weighting(noise["periodic"]["f_fund"],0)
 	noise["vortex"]["dBA_offset"] = noise_weighting(noise["vortex"]["f_peak"],0)
-
 
 	print "Noise Type \t\tPeriodic \tVortex"
 	print "Peak Frequency (Hz)\t%0.1f\t\t%0.1f" % \

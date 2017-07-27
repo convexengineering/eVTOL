@@ -11,7 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
-from noise_models import vortex_noise, noise_weighting
+from noise_models import periodic_noise, vortex_noise, noise_weighting
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -19,6 +19,7 @@ eta_electric = generic_data["\eta_{electric}"]
 weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
+B = generic_data["B"]
 
 reserve_type = generic_data["reserve_type"]
 autonomousEnabled = generic_data["autonomousEnabled"]
@@ -99,17 +100,47 @@ for config in configs:
 
 	MTOW = solution("MTOW")
 	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+	Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
 	R = solution("R")
 	VT = solution("VT_OnDemandSizingMission")[0]
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
+	
+	configs[config]["vortex"] = {}
 
-	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
-		x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
+		N=N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
+	configs[config]["vortex"]["f_peak"] = f_peak
+	configs[config]["vortex"]["SPL"] = SPL
+	configs[config]["vortex"]["spectrum"] = spectrum
 
-	configs[config]["f_peak"] = f_peak
-	configs[config]["spectrum"] = spectrum
+#Computations for periodic noise (varying theta)
+theta_array = np.linspace(5,89,50)*ureg.degree
+
+
+for config in configs:
+
+	configs[config]["periodic"] = {}
+	configs[config]["periodic"]["f_fund"] = np.zeros(np.size(theta_array))*ureg.turn/ureg.s
+	configs[config]["periodic"]["SPL"] = np.zeros(np.size(theta_array))
+	configs[config]["periodic"]["spectrum"] = [{} for i in range(np.size(theta_array))]
+
+	T_perRotor = configs[config]["solution"]("T_perRotor_OnDemandSizingMission")[0]
+	Q_perRotor = configs[config]["solution"]("Q_perRotor_OnDemandSizingMission")[0]
+	R = configs[config]["solution"]("R")
+	VT = configs[config]["solution"]("VT_OnDemandSizingMission")[0]
+	s = configs[config]["solution"]("s")
+	N = configs[config]["solution"]("N")	
+
+	for i,theta in enumerate(theta_array):
+		
+		f_peak, SPL, spectrum = periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
+			delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,num_harmonics=20)
+
+		configs[config]["periodic"]["f_fund"][i] = f_peak
+		configs[config]["periodic"]["SPL"][i] = SPL
+		configs[config]["periodic"]["spectrum"][i] = spectrum
 
 
 # Plotting commands
@@ -121,8 +152,8 @@ plt.show()
 for i, config in enumerate(configs):
 	
 	c = configs[config]
-	f_spectrum = c["spectrum"]["f"].to(ureg.turn/ureg.s).magnitude
-	SPL_spectrum = c["spectrum"]["SPL"]
+	f_spectrum = c["vortex"]["spectrum"]["f"].to(ureg.turn/ureg.s).magnitude
+	SPL_spectrum = c["vortex"]["spectrum"]["SPL"]
 
 	f_dBA_offset = np.linspace(np.min(f_spectrum),np.max(f_spectrum),100)*ureg.turn/ureg.s
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
@@ -163,8 +194,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
+title_str = "Aircraft parameters: %0.0f blades; structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
+	% (B, weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -180,3 +211,31 @@ plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('noise_analysis_plot_01.pdf')
+
+
+fig2 = plt.figure(figsize=(12,12), dpi=80)
+plt.show()
+
+for i, config in enumerate(configs):
+	
+	c = configs[config]
+
+	f_fund = c["periodic"]["f_fund"][0]
+	SPL_periodic = c["periodic"]["SPL"]
+	SPL_vortex = c["vortex"]["SPL"]*np.ones(np.size(theta_array))
+	
+	plt.subplot(2,2,i+1)
+	plt.plot(theta_array.to(ureg.degree).magnitude,SPL_periodic,'k-',linewidth=3,
+		label="Periodic noise")
+	plt.plot(theta_array.to(ureg.degree).magnitude,SPL_vortex,'k--',linewidth=3,
+		label="Vortex noise")
+	plt.grid()
+	plt.xlabel('$\Theta$ (degrees)', fontsize = 16)
+	plt.ylabel('SPL (dB)', fontsize = 16)
+	plt.title(config, fontsize = 18)
+	plt.legend(loc="lower right")
+
+plt.suptitle(title_str,fontsize = 13.5)
+plt.tight_layout()
+plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
+plt.savefig('noise_analysis_plot_02.pdf')
