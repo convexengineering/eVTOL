@@ -10,7 +10,7 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from standard_atmosphere import stdatmo
 from study_input_data import generic_data, configuration_data
 
-def vortex_noise(T_total,A,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
+def vortex_noise(T_perRotor,A,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
 	
 	k2 = 1.206e-2 * ureg.s**3/ureg.ft**3
 	pi = math.pi
@@ -18,8 +18,8 @@ def vortex_noise(T_total,A,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=
 	atmospheric_data = stdatmo(h)
 	rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
 	
-	T = T_total/N
-	p_ratio = k2*(VT/(rho*x))*np.sqrt((T_total/s)*(T/A))
+	T_total = T_perRotor*N
+	p_ratio = k2*(VT/(rho*x))*np.sqrt((T_total/s)*(T_perRotor/A))
 	SPL = 20*np.log10(p_ratio)
 
 	V_07 = 0.7*VT
@@ -126,15 +126,15 @@ if __name__=="__main__":
 	solution = problem.solve(verbosity=0)
 	SPL_solution = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
 
-	MTOW = solution("MTOW")
+	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
 	A = solution("A")
 	VT = solution("VT_OnDemandSizingMission")[0]
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
 
-	f_peak_Hz, SPL, spectrum = vortex_noise(T_total=MTOW,A=A,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
-		x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
+	f_peak_Hz, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,A=A,VT=VT,s=s,
+		Cl_mean=Cl_mean,N=N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
 
 	dBA_offset = noise_weighting(f_peak_Hz,0)
 
