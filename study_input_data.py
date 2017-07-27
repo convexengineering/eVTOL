@@ -12,6 +12,7 @@ generic_data["\eta_{electric}"] = 0.9 #electrical system efficiency
 generic_data["weight_fraction"] = 0.55 #structural mass fraction
 generic_data["C_m"] = 400*ureg.Wh/ureg.kg #battery energy density
 generic_data["n"] = 1.0 #battery discharge parameter
+generic_data["B"] = 5 #number of propeller blades
 
 generic_data["reserve_type"] = "FAA_day" #30-minute loiter
 generic_data["autonomousEnabled"] = True #Vehicle autonomy enabled

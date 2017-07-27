@@ -105,10 +105,10 @@ for config in configs:
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
 
-	f_peak_Hz, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
 		x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
 
-	configs[config]["f_peak_Hz"] = f_peak_Hz
+	configs[config]["f_peak"] = f_peak
 	configs[config]["spectrum"] = spectrum
 
 
@@ -121,10 +121,10 @@ plt.show()
 for i, config in enumerate(configs):
 	
 	c = configs[config]
-	f_spectrum = c["spectrum"]["f_Hz"].to(ureg.Hz).magnitude
+	f_spectrum = c["spectrum"]["f"].to(ureg.turn/ureg.s).magnitude
 	SPL_spectrum = c["spectrum"]["SPL"]
 
-	f_dBA_offset = np.linspace(np.min(f_spectrum),np.max(f_spectrum),100)*ureg.Hz
+	f_dBA_offset = np.linspace(np.min(f_spectrum),np.max(f_spectrum),100)*ureg.turn/ureg.s
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
 	
 	ax = []

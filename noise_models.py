@@ -2,6 +2,7 @@
 
 import math
 import numpy as np
+from scipy.special import jv
 from gpkit import Model, ureg
 from matplotlib import pyplot as plt
 from aircraft_models import OnDemandAircraft 
@@ -9,6 +10,53 @@ from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from standard_atmosphere import stdatmo
 from study_input_data import generic_data, configuration_data
+
+
+def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,x=500*ureg.ft,h=0*ureg.ft,
+	t_c=0.12,num_harmonics=20):
+
+	pi = math.pi
+	P0 = (2e-5)*ureg.Pa
+
+	atmospheric_data = stdatmo(h)
+	rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
+	a = atmospheric_data["a"].to(ureg.m/ureg.s)
+
+	R_eff = 0.8*R #Effective rotor radius
+	A = pi*(R**2) #rotor disk area
+	c = (pi*s*R)/N #Rotor blade chord
+	omega = (VT/R).to(ureg.rad/ureg.s)#blade angular velocity (rad/s)
+	t = t_c*c #blade thickness
+
+	spectrum = {}
+	spectrum["m"] = range(1,num_harmonics+1,1)
+	spectrum["f"] = np.zeros(num_harmonics)*ureg.rad/ureg.s
+	spectrum["SPL"] = np.zeros(num_harmonics)
+
+	p_ratio_squared = 0
+
+	for i, m in enumerate(spectrum["m"]):
+		spectrum["f"][i] = m*B*omega
+		
+		bessel_argument = (m*B*omega/a)*R_eff*np.sin(theta)
+		bessel_term = jv(m*B,bessel_argument)
+
+		#RMS acoustic pressures
+		P_mL = ((m*B*omega)/(2*np.sqrt(2)*pi*a*x))*(T_perRotor*np.cos(theta) \
+			- Q_perRotor*a/(omega*R_eff**2))*bessel_term #loading
+		P_mT = ((-rho*((m*B*omega)**2)*B)/(3*np.sqrt(2)*pi*x))*c*t*R_eff*bessel_term #thickness
+
+		p_ratio = np.sqrt(N)*np.abs(P_mL + P_mT)/P0
+		p_ratio_squared = p_ratio_squared + p_ratio**2
+
+		spectrum["SPL"][i] = 20*np.log10(p_ratio)
+
+	SPL = 10*np.log10(p_ratio_squared)
+	f_fundamental = spectrum["f"][0]
+
+	return f_fundamental, SPL, spectrum
+
+
 
 def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
 	
@@ -19,9 +67,11 @@ def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,
 	A = pi*(R**2) #rotor disk area
 	c = (pi*s*R)/N #Rotor blade chord
 	alpha = Cl_mean/(2*pi) #Angle of attack (average)
-	t = t_c*c*np.cos(alpha) + c*np.sin(alpha) #blade projected thickness
-	f_peak_Hz = St*V_07/t #peak frequency (Hz)
+	t_proj = t_c*c*np.cos(alpha) + c*np.sin(alpha) #blade projected thickness
 	
+	f_peak = (St*V_07/t_proj)*ureg.turn #peak frequency 
+	f_peak = f_peak.to(ureg.rad/ureg.s) #convert to rad/s
+
 	atmospheric_data = stdatmo(h)
 	rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
 	
@@ -30,16 +80,16 @@ def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,
 	SPL = 20*np.log10(p_ratio)
 
 	spectrum = {}
-	spectrum["f_Hz"] = f_peak_Hz*[0.5,1,2,4,8,16]
+	spectrum["f"] = f_peak*[0.5,1,2,4,8,16]
 	offsets_dB = [7.92,4.17,8.33,8.75,12.92,13.33]
 	spectrum["SPL"] = SPL*np.ones(np.shape(offsets_dB)) - offsets_dB
 
-	return f_peak_Hz, SPL, spectrum
+	return f_peak, SPL, spectrum
 
 def noise_weighting(f,SPL,type="A"):
 	#Noise weighting function. Currently, only A-weighting is implemented.
 	if type == "A":
-		f = f.to(ureg.Hz).magnitude
+		f = f.to(ureg.turn/ureg.s).magnitude
 		numerator = 12194**2*f**4
 		denominator = (f**2+20.6**2)*(f**2+12194**2)*np.sqrt((f**2+107.7**2)*(f**2+737.9**2))
 		R = numerator/denominator
@@ -62,6 +112,7 @@ if __name__=="__main__":
 	weight_fraction = generic_data["weight_fraction"]
 	C_m = generic_data["C_m"]
 	n = generic_data["n"]
+	B = generic_data["B"]
 
 	reserve_type = generic_data["reserve_type"]
 	autonomousEnabled = generic_data["autonomousEnabled"]
@@ -127,19 +178,35 @@ if __name__=="__main__":
 	SPL_solution = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
 
 	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+	Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
 	R = solution("R")
 	VT = solution("VT_OnDemandSizingMission")[0]
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
-
-	f_peak_Hz, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-		Cl_mean=Cl_mean,N=N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
-
-	dBA_offset = noise_weighting(f_peak_Hz,0)
-
-	print "Vortex noise SPL: %0.1f dB" % SPL
-	print "Peak frequency: %0.1f Hz" % f_peak_Hz.to(ureg.Hz).magnitude
-	print "dBA offset at peak: %0.1f dB" % dBA_offset
+	theta = 175*ureg.degree
 
 
+	noise = {}
+	noise["periodic"] = {}
+	noise["vortex"] = {}
+
+	noise["periodic"]["f_fund"], noise["periodic"]["SPL"], noise["periodic"]["spectrum"]\
+		= periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,x=500*ureg.ft,h=0*ureg.ft,
+			t_c=0.12,num_harmonics=20)
+
+	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
+		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,x=500*ureg.ft,
+			h=0*ureg.ft,t_c=0.12,St=0.28)
+
+	noise["periodic"]["dBA_offset"] = noise_weighting(noise["periodic"]["f_fund"],0)
+	noise["vortex"]["dBA_offset"] = noise_weighting(noise["vortex"]["f_peak"],0)
+
+
+	print "Noise Type \t\tPeriodic \tVortex"
+	print "Peak Frequency (Hz)\t%0.1f\t\t%0.1f" % \
+		(noise["periodic"]["f_fund"].to(ureg.turn/ureg.s).magnitude,noise["vortex"]["f_peak"].to(ureg.turn/ureg.s).magnitude)
+	print "SPL (dB)\t\t%0.1f\t\t%0.1f" % \
+		(noise["periodic"]["SPL"],noise["vortex"]["SPL"])
+	print "dBA offset at peak:\t%0.1f\t\t%0.1f" % \
+		(noise["periodic"]["dBA_offset"],noise["vortex"]["dBA_offset"])
