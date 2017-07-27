@@ -10,10 +10,17 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from standard_atmosphere import stdatmo
 from study_input_data import generic_data, configuration_data
 
-def vortex_noise(T_perRotor,A,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
+def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
 	
 	k2 = 1.206e-2 * ureg.s**3/ureg.ft**3
 	pi = math.pi
+
+	V_07 = 0.7*VT
+	A = pi*(R**2) #rotor disk area
+	c = (pi*s*R)/N #Rotor blade chord
+	alpha = Cl_mean/(2*pi) #Angle of attack (average)
+	t = t_c*c*np.cos(alpha) + c*np.sin(alpha) #blade projected thickness
+	f_peak_Hz = St*V_07/t #peak frequency (Hz)
 	
 	atmospheric_data = stdatmo(h)
 	rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
@@ -21,13 +28,6 @@ def vortex_noise(T_perRotor,A,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,
 	T_total = T_perRotor*N
 	p_ratio = k2*(VT/(rho*x))*np.sqrt((T_total/s)*(T_perRotor/A))
 	SPL = 20*np.log10(p_ratio)
-
-	V_07 = 0.7*VT
-	R = np.sqrt(A/pi) #rotor radius
-	c = (pi*s*R)/N #Rotor blade chord
-	alpha = Cl_mean/(2*pi) #Angle of attack (average)
-	h = t_c*c*np.cos(alpha) + c*np.sin(alpha) #blade projected thickness
-	f_peak_Hz = St*V_07/h #peak frequency (Hz)
 
 	spectrum = {}
 	spectrum["f_Hz"] = f_peak_Hz*[0.5,1,2,4,8,16]
@@ -127,17 +127,16 @@ if __name__=="__main__":
 	SPL_solution = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
 
 	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
-	A = solution("A")
+	R = solution("R")
 	VT = solution("VT_OnDemandSizingMission")[0]
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
 
-	f_peak_Hz, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,A=A,VT=VT,s=s,
+	f_peak_Hz, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
 		Cl_mean=Cl_mean,N=N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
 
 	dBA_offset = noise_weighting(f_peak_Hz,0)
-
 
 	print "Vortex noise SPL: %0.1f dB" % SPL
 	print "Peak frequency: %0.1f Hz" % f_peak_Hz.to(ureg.Hz).magnitude

@@ -99,13 +99,13 @@ for config in configs:
 
 	MTOW = solution("MTOW")
 	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
-	A = solution("A")
+	R = solution("R")
 	VT = solution("VT_OnDemandSizingMission")[0]
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
 
-	f_peak_Hz, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,A=A,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
+	f_peak_Hz, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
 		x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
 
 	configs[config]["f_peak_Hz"] = f_peak_Hz
