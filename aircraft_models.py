@@ -84,6 +84,7 @@ class RotorsAero(Model):
 		T = Variable("T","lbf","Total thrust")
 		T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading")
+		Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per rotor")
 		P = Variable("P","kW","Total power")
 		P_perRotor = Variable("P_perRotor","kW","Power per rotor")
 		VT = Variable("VT","ft/s","Propeller tip speed")
@@ -92,6 +93,7 @@ class RotorsAero(Model):
 		MT_max = Variable("MT_max",MT_max,"-","Maximum allowed tip Mach number")
 
 		CT = Variable("CT","-","Thrust coefficient")
+		CQ = Variable("CQ","-","Torque coefficient")
 		CP = Variable("CP","-","Power coefficient")
 		CPi = Variable("CPi","-","Induced (ideal) power coefficient")
 		CPp = Variable("CP","-","Profile power coefficient")
@@ -124,6 +126,10 @@ class RotorsAero(Model):
 		constraints += [T_perRotor == 0.5*rho*(VT**2)*A*CT,
 			P_perRotor == 0.5*rho*(VT**3)*A*CP]
 		constraints += [T_A == T/A_total]
+
+		#Torque 
+		constraints += [CQ == CP]
+		constraints += [Q_perRotor == 0.5*rho*(VT**2)*A*R*CQ]
 
 		#Performance model
 		constraints += [CPi == 0.5*CT**1.5,
@@ -421,6 +427,7 @@ class OnDemandSizingMission(Model):
 
 		#Data from hover segments
 		with Vectorize(len(self.hover_segments)):
+			Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per rotor")
 			T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
 			P = Variable("P","kW","Total power supplied to all rotors")
 			P_perRotor = Variable("P_perRotor","kW","Power per rotor")
@@ -447,6 +454,7 @@ class OnDemandSizingMission(Model):
 		constraints += [P_battery[i] == segment.topvar("P_{battery}") for i,segment in enumerate(self.flight_segments)]
 		constraints += [E[i] == segment.topvar("E") for i,segment in enumerate(self.flight_segments)]
 
+		constraints += [Q_perRotor[i] == segment.rotorPerf.topvar("Q_perRotor") for i,segment in enumerate(self.hover_segments)]
 		constraints += [T_perRotor[i] == segment.rotorPerf.topvar("T_perRotor") for i,segment in enumerate(self.hover_segments)]
 		constraints += [P[i] == segment.rotorPerf.topvar("P") for i,segment in enumerate(self.hover_segments)]
 		constraints += [P_perRotor[i] == segment.rotorPerf.topvar("P_perRotor") for i,segment in enumerate(self.hover_segments)]
@@ -501,6 +509,7 @@ class OnDemandRevenueMission(Model):
         #Data from hover segments
         numHoverSegments = len(self.hover_segments)
         with Vectorize(numHoverSegments):
+        	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per rotor")
         	T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
         	P = Variable("P","kW","Total power supplied to all rotors")
         	P_perRotor = Variable("P_perRotor","kW","Power per rotor")
@@ -533,6 +542,7 @@ class OnDemandRevenueMission(Model):
         constraints += [P_battery[i] == segment.topvar("P_{battery}") for i,segment in enumerate(self.flight_segments)]
         constraints += [E[i] == segment.topvar("E") for i,segment in enumerate(self.flight_segments)]
 
+        constraints += [Q_perRotor[i] == segment.rotorPerf.topvar("Q_perRotor") for i,segment in enumerate(self.hover_segments)]
         constraints += [T_perRotor[i] == segment.rotorPerf.topvar("T_perRotor") for i,segment in enumerate(self.hover_segments)]
         constraints += [P[i] == segment.rotorPerf.topvar("P") for i,segment in enumerate(self.hover_segments)]
         constraints += [P_perRotor[i] == segment.rotorPerf.topvar("P_perRotor") for i,segment in enumerate(self.hover_segments)]
@@ -587,6 +597,7 @@ class OnDemandDeadheadMission(Model):
         #Data from hover segments
         numHoverSegments = len(self.hover_segments)
         with Vectorize(numHoverSegments):
+         	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per rotor")
          	T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
          	P = Variable("P","kW","Total power supplied to all rotors")
          	P_perRotor = Variable("P_perRotor","kW","Power per rotor")
@@ -618,6 +629,7 @@ class OnDemandDeadheadMission(Model):
         constraints += [P_battery[i] == segment.topvar("P_{battery}") for i,segment in enumerate(self.flight_segments)]
         constraints += [E[i] == segment.topvar("E") for i,segment in enumerate(self.flight_segments)]
 
+        constraints += [Q_perRotor[i] == segment.rotorPerf.topvar("Q_perRotor") for i,segment in enumerate(self.hover_segments)]
         constraints += [T_perRotor[i] == segment.rotorPerf.topvar("T_perRotor") for i,segment in enumerate(self.hover_segments)]
         constraints += [P[i] == segment.rotorPerf.topvar("P") for i,segment in enumerate(self.hover_segments)]
         constraints += [P_perRotor[i] == segment.rotorPerf.topvar("P_perRotor") for i,segment in enumerate(self.hover_segments)]
