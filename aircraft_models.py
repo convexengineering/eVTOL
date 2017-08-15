@@ -59,8 +59,8 @@ class Structure(Model):
 
 class Rotors(Model):
 
-	def performance(self,flightState,MT_max=0.9,SPL_req=100):
-		return RotorsAero(self,flightState,MT_max,SPL_req)
+	def performance(self,flightState,MT_max=0.9,SPL_req=100,ki=1.13,Cd0=0.01):
+		return RotorsAero(self,flightState,MT_max,SPL_req,ki=ki,Cd0=Cd0)
 
 	def setup(self,N=1,s=0.1,Cl_mean_max=1.0):
 		R = Variable("R","ft","Propeller radius")
@@ -96,7 +96,7 @@ class RotorsAero(Model):
 		CQ = Variable("CQ","-","Torque coefficient")
 		CP = Variable("CP","-","Power coefficient")
 		CPi = Variable("CPi","-","Induced (ideal) power coefficient")
-		CPp = Variable("CP","-","Profile power coefficient")
+		CPp = Variable("CPp","-","Profile power coefficient")
 		Cl_mean = Variable("Cl_mean","-","Mean lift coefficient")
 		FOM = Variable("FOM","-","Figure of merit")
 
