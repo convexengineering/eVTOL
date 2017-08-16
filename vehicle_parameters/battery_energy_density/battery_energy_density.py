@@ -60,19 +60,23 @@ for config in configs:
 	num_pts_short = 3
 	num_pts_long = 9
 	if config == "Helicopter":
-		C_m = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Coaxial heli":
-		C_m = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Lift + cruise":
-		C_m = np.linspace(340,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(340,600,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Compound heli":
-		C_m = np.linspace(320,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(320,600,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Tilt rotor":
-		C_m = np.linspace(270,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(270,600,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Tilt wing":
-		C_m = np.linspace(300,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(300,600,num_pts_long)*ureg.Wh/ureg.kg
 
-	C_m = ("sweep",C_m)
+	configs[config]["C_m_array"] = C_m_array
+	configs[config]["MTOW"] = np.zeros(np.size(C_m_array))
+	configs[config]["W_{battery}"] = np.zeros(np.size(C_m_array))
+	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(C_m_array))
+	configs[config]["SPL"] = np.zeros(np.size(C_m_array))
 
 	c = configs[config]
 
@@ -83,42 +87,43 @@ for config in configs:
 	N = c["N"]
 	loiter_type = c["loiter_type"]
 
-	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
-		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
-		autonomousEnabled=autonomousEnabled)
+	for i,C_m in enumerate(C_m_array):
 
-	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
-	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
+		Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
+			Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
+			cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
+			autonomousEnabled=autonomousEnabled)
 
-	RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
-		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-		charger_power=charger_power,mission_type=revenue_mission_type)
+		SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
+			V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
+			reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
+		SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 
-	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
-		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-		charger_power=charger_power,mission_type=deadhead_mission_type)
+		RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
+			V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
+			charger_power=charger_power,mission_type=revenue_mission_type)
 
-	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
-		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,\
-		deadhead_ratio=deadhead_ratio)
+		DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
+			V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
+			charger_power=charger_power,mission_type=deadhead_mission_type)
 
-	problem = Model(MissionCost["cost_per_trip"],
-		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+		MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
+			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,\
+			deadhead_ratio=deadhead_ratio)
 
-	solution = problem.solve(verbosity=0)
+		problem = Model(MissionCost["cost_per_trip"],
+			[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
 
-	configs[config]["solution"] = solution
+		solution = problem.solve(verbosity=0)
 
-	configs[config]["C_m_array"] = solution("C_m_OnDemandAircraft/Battery")
+		configs[config]["MTOW"][i] = solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
+		configs[config]["W_{battery}"][i] = solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
+		configs[config]["cost_per_trip_per_passenger"][i] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
+		configs[config]["SPL"][i] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
 
-	configs[config]["MTOW"] = solution("MTOW_OnDemandAircraft")
-	configs[config]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
-	configs[config]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-	configs[config]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[:,0])
-		
+	configs[config]["MTOW"] = configs[config]["MTOW"]*ureg.lbf
+	configs[config]["W_{battery}"] = configs[config]["W_{battery}"]*ureg.lbf
+
 
 # Plotting commands
 plt.ion()
@@ -131,7 +136,6 @@ style["marker"] = ["s","o","^","v","s","o","^","v"]
 style["fillstyle"] = ["full","full","full","full","none","none","none","none"]
 style["markersize"] = 10
 
-C_m = C_m[1] #convert back to array from tuple
 
 #Maximum takeoff weight
 plt.subplot(2,2,1)
@@ -191,13 +195,13 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 
 if reserve_type == "FAA_day" or reserve_type == "FAA_night":
-	num = solution("t_{loiter}_OnDemandSizingMission")[0].to(ureg.minute).magnitude
+	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
 	if reserve_type == "FAA_day":
 		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
 	elif reserve_type == "FAA_night":
 		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
-	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
+	num = solution("R_{divert}_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
 if autonomousEnabled:

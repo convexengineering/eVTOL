@@ -161,7 +161,9 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.ylim(ymin=0)
+axes = plt.gca()
+[ymin,ymax] = axes.get_ylim()
+plt.ylim(ymin=0,ymax=1.1*ymax)
 plt.xlabel('Number of rotors', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)

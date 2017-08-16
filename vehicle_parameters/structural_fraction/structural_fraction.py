@@ -70,7 +70,7 @@ for config in configs:
 
 	#Data specific to study
 	if config == "Helicopter" or config == "Coaxial heli":
-		weight_fraction = np.linspace(0.4,0.42,2)
+		weight_fraction = np.linspace(0.4,0.41,2)
 	else:
 		weight_fraction = np.linspace(0.4,0.6,10)
 

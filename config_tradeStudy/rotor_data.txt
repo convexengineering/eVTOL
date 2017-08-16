@@ -3,7 +3,7 @@ Rotor design data (from sizing mission)
 Note: T and P are per rotor; SPL is for the entire vehicle.
 
 Configuration 	N 	R (m)	T (N)	P (W)	VT (m/s)	omega (rpm)	MT	FOM	SPL (dB)
-Lift + cruise	8	1.201	3.257e+03	6.759e+04	187.6	1491	0.551	0.825	75.3
-Compound heli	1	5.853	2.319e+04	2.707e+05	114.9	187	0.338	0.803	65.4
-Tilt wing	8	1.065	2.558e+03	5.310e+04	187.6	1682	0.551	0.825	74.3
-Tilt rotor	12	0.810	1.479e+03	3.070e+04	187.6	2212	0.551	0.825	73.7
+Lift + cruise	8	1.226	3.394e+03	7.450e+04	187.6	1460	0.551	0.780	75.5
+Compound heli	1	5.911	2.365e+04	2.916e+05	114.9	186	0.338	0.761	65.4
+Tilt wing	8	1.082	2.642e+03	5.800e+04	187.6	1655	0.551	0.780	74.4
+Tilt rotor	12	0.821	1.521e+03	3.339e+04	187.6	2182	0.551	0.780	73.8

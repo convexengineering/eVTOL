@@ -66,11 +66,11 @@ for config in configs:
 	num_pts_long = 9
 	
 	if (config == "Multirotor"):
-		mission_range_array = np.linspace(1,8.5,num_pts_short)
+		mission_range_array = np.linspace(1,8,num_pts_short)
 	elif (config == "Helicopter"):
-		mission_range_array = np.linspace(2,20,num_pts_short)
+		mission_range_array = np.linspace(2,17,num_pts_short)
 	elif (config == "Coaxial heli"):
-		mission_range_array = np.linspace(2,9,num_pts_short)
+		mission_range_array = np.linspace(1,5,num_pts_short)
 	elif (config == "Compound heli"):
 		mission_range_array = np.linspace(10,75,num_pts_long)
 	elif (config == "Lift + cruise"):
