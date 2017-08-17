@@ -20,6 +20,7 @@ weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
+x = 500*ureg.ft
 
 reserve_type = generic_data["reserve_type"]
 autonomousEnabled = generic_data["autonomousEnabled"]
@@ -97,77 +98,144 @@ for config in configs:
 	
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
-
-	MTOW = solution("MTOW")
-	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
-	Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
-	R = solution("R")
-	VT = solution("VT_OnDemandSizingMission")[0]
-	s = solution("s")
-	Cl_mean = solution("Cl_{mean_{max}}")
-	N = solution("N")
 	
-	configs[config]["vortex"] = {}
 
-	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-		N=N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
-	configs[config]["vortex"]["f_peak"] = f_peak
-	configs[config]["vortex"]["SPL"] = SPL
-	configs[config]["vortex"]["spectrum"] = spectrum
-
-#Computations for periodic noise (varying theta)
+#Noise computations for varying theta (delta-S = constant)
 theta_array = np.linspace(5,89,50)*ureg.degree
-
 
 for config in configs:
 
-	configs[config]["periodic"] = {}
-	configs[config]["periodic"]["f_fund"] = np.zeros(np.size(theta_array))*ureg.turn/ureg.s
-	configs[config]["periodic"]["SPL"] = np.zeros(np.size(theta_array))
-	configs[config]["periodic"]["spectrum"] = [{} for i in range(np.size(theta_array))]
+	configs[config]["theta"] = {}
+	
+	configs[config]["theta"]["periodic"] = {}
+	configs[config]["theta"]["periodic"]["f_fund"] = np.zeros(np.size(theta_array))*ureg.turn/ureg.s
+	configs[config]["theta"]["periodic"]["SPL"] = np.zeros(np.size(theta_array))
+	configs[config]["theta"]["periodic"]["spectrum"] = [{} for i in range(np.size(theta_array))]
+
 
 	T_perRotor = configs[config]["solution"]("T_perRotor_OnDemandSizingMission")[0]
 	Q_perRotor = configs[config]["solution"]("Q_perRotor_OnDemandSizingMission")[0]
 	R = configs[config]["solution"]("R")
 	VT = configs[config]["solution"]("VT_OnDemandSizingMission")[0]
 	s = configs[config]["solution"]("s")
-	N = configs[config]["solution"]("N")	
+	Cl_mean = solution("Cl_{mean_{max}}")
+	N = configs[config]["solution"]("N")
 
+	#Periodic noise calculations
 	for i,theta in enumerate(theta_array):
 		
 		f_peak, SPL, spectrum = periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
-			delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,num_harmonics=20)
+			delta_S=x,h=0*ureg.ft,t_c=0.12,num_harmonics=20)
 
-		configs[config]["periodic"]["f_fund"][i] = f_peak
-		configs[config]["periodic"]["SPL"][i] = SPL
-		configs[config]["periodic"]["spectrum"][i] = spectrum
+		configs[config]["theta"]["periodic"]["f_fund"][i] = f_peak
+		configs[config]["theta"]["periodic"]["SPL"][i] = SPL
+		configs[config]["theta"]["periodic"]["spectrum"][i] = spectrum
 
+	#Vortex noise computations
+	configs[config]["theta"]["vortex"] = {}
+
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
+		N=N,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28)
+
+	configs[config]["theta"]["vortex"]["f_peak"] = f_peak
+	configs[config]["theta"]["vortex"]["SPL"] = SPL
+	configs[config]["theta"]["vortex"]["spectrum"] = spectrum
+
+
+#Computations for varying y (delta-S is not constant)
+y_array = np.linspace(50,5000,50)*ureg.ft
+
+for config in configs:
+
+	configs[config]["y"] = {}
+	
+	configs[config]["y"]["periodic"] = {}
+	configs[config]["y"]["periodic"]["f_fund"] = np.zeros(np.size(y_array))*ureg.turn/ureg.s
+	configs[config]["y"]["periodic"]["SPL"] = np.zeros(np.size(y_array))
+	configs[config]["y"]["periodic"]["spectrum"] = [{} for i in range(np.size(y_array))]
+
+	configs[config]["y"]["vortex"] = {}
+	configs[config]["y"]["vortex"]["f_peak"] = np.zeros(np.size(y_array))*ureg.turn/ureg.s
+	configs[config]["y"]["vortex"]["SPL"] = np.zeros(np.size(y_array))
+	configs[config]["y"]["vortex"]["spectrum"] = [{} for i in range(np.size(y_array))]
+
+	T_perRotor = configs[config]["solution"]("T_perRotor_OnDemandSizingMission")[0]
+	Q_perRotor = configs[config]["solution"]("Q_perRotor_OnDemandSizingMission")[0]
+	R = configs[config]["solution"]("R")
+	VT = configs[config]["solution"]("VT_OnDemandSizingMission")[0]
+	s = configs[config]["solution"]("s")
+	Cl_mean = solution("Cl_{mean_{max}}")
+	N = configs[config]["solution"]("N")
+
+	#Noise calculations
+	for i,y in enumerate(y_array):
+
+		theta = 180*ureg.degree - (np.arctan(y/x)*ureg.radian).to(ureg.degree)
+		delta_S = np.sqrt(x**2 + y**2)
+
+		#Periodic noise
+		f_peak, SPL, spectrum = periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
+			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,num_harmonics=20)
+		configs[config]["y"]["periodic"]["f_fund"][i] = f_peak
+		configs[config]["y"]["periodic"]["SPL"][i] = SPL
+		configs[config]["y"]["periodic"]["spectrum"][i] = spectrum
+
+		#Vortex noise
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28)
+		configs[config]["y"]["vortex"]["f_peak"][i] = f_peak
+		configs[config]["y"]["vortex"]["SPL"][i] = SPL
+		configs[config]["y"]["vortex"]["spectrum"][i] = spectrum
 
 # Plotting commands
 plt.ion()
+
+
+#Plot showing noise spectra (both periodic & vortex) for a sample value of y
 fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
+#Find value of y closest to that desired
+y_desired = 200*ureg.feet
+idx = (np.abs(y_array - y_desired)).argmin()
+y_selected = y_array[idx]
+
 for i, config in enumerate(configs):
 	
 	c = configs[config]
-	f_spectrum = c["vortex"]["spectrum"]["f"].to(ureg.turn/ureg.s).magnitude
-	SPL_spectrum = c["vortex"]["spectrum"]["SPL"]
+	
+	#Periodic noise
+	periodic_f_spectrum = c["y"]["periodic"]["spectrum"][idx]["f"][0:3]
+	periodic_SPL_spectrum = c["y"]["periodic"]["spectrum"][idx]["SPL"][0:3]
 
-	f_dBA_offset = np.linspace(np.min(f_spectrum),np.max(f_spectrum),100)*ureg.turn/ureg.s
+	#Vortex noise
+	vortex_f_spectrum = c["y"]["vortex"]["spectrum"][idx]["f"]
+	vortex_SPL_spectrum = c["y"]["vortex"]["spectrum"][idx]["SPL"]
+
+	#A-weighting spectrum
+	f_min_rev_per_s = np.min(periodic_f_spectrum.to(ureg.turn/ureg.s).magnitude)
+	f_max_rev_per_s = np.max(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude)
+	f_dBA_offset = np.linspace(f_min_rev_per_s,f_max_rev_per_s,100)*ureg.turn/ureg.s
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
 	
 	ax = []
 	ax.append(plt.subplot(2,2,i+1))
-	lns1 = plt.plot(f_spectrum,SPL_spectrum,'k-',linewidth=2,label="Vortex noise")
+	lns1 = plt.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum,
+		'k-',linewidth=2,label="Vortex noise")
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.xlabel('Frequency (Hz)', fontsize = 16)
-	ymax = np.max(SPL_spectrum) + 5
-	plt.ylim(ymax=ymax)
+
+	for i,SPL in enumerate(periodic_SPL_spectrum):
+		f = periodic_f_spectrum[i].to(ureg.turn/ureg.s).magnitude
+		plt.bar(f,SPL,align='center',alpha=1)
+	
+	#ymax = np.max(SPL_spectrum) + 5
+	#plt.ylim(ymax=ymax)
 
 	ax.append(ax[0].twinx())
-	lns2 = plt.plot(f_dBA_offset,dBA_offset,'k--',linewidth=2,label="A-weighting offset")
+	lns2 = plt.plot(f_dBA_offset.to(ureg.turn/ureg.s).magnitude,dBA_offset,'k--',linewidth=2,
+		label="A-weighting offset")
 	plt.ylabel('SPL offset (dBA)', fontsize = 16)
 	
 	plt.xscale('log')
@@ -220,9 +288,9 @@ for i, config in enumerate(configs):
 	
 	c = configs[config]
 
-	f_fund = c["periodic"]["f_fund"][0]
-	SPL_periodic = c["periodic"]["SPL"]
-	SPL_vortex = c["vortex"]["SPL"]*np.ones(np.size(theta_array))
+	f_fund = c["theta"]["periodic"]["f_fund"][0]
+	SPL_periodic = c["theta"]["periodic"]["SPL"]
+	SPL_vortex = c["theta"]["vortex"]["SPL"]*np.ones(np.size(theta_array))
 	
 	plt.subplot(2,2,i+1)
 	plt.plot(theta_array.to(ureg.degree).magnitude,SPL_periodic,'k-',linewidth=3,
@@ -239,3 +307,31 @@ plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('noise_analysis_plot_02.pdf')
+
+
+fig3 = plt.figure(figsize=(12,12), dpi=80)
+plt.show()
+
+for i, config in enumerate(configs):
+	
+	c = configs[config]
+
+	f_fund = c["y"]["periodic"]["f_fund"][0]
+	SPL_periodic = c["y"]["periodic"]["SPL"]
+	SPL_vortex = c["y"]["vortex"]["SPL"]*np.ones(np.size(theta_array))
+	
+	plt.subplot(2,2,i+1)
+	plt.plot(y_array.to(ureg.ft).magnitude,SPL_periodic,'k-',linewidth=3,
+		label="Periodic noise")
+	plt.plot(y_array.to(ureg.ft).magnitude,SPL_vortex,'k--',linewidth=3,
+		label="Vortex noise")
+	plt.grid()
+	plt.xlabel('y (feet)', fontsize = 16)
+	plt.ylabel('SPL (dB)', fontsize = 16)
+	plt.title(config, fontsize = 18)
+	plt.legend(loc="lower right")
+
+plt.suptitle(title_str,fontsize = 13.5)
+plt.tight_layout()
+plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
+plt.savefig('noise_analysis_plot_03.pdf')

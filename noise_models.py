@@ -58,7 +58,7 @@ def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_
 
 
 
-def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
+def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
 	
 	k2 = 1.206e-2 * ureg.s**3/ureg.ft**3
 	pi = math.pi
@@ -76,7 +76,7 @@ def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,x=500*ureg.ft,h=0*ureg.ft,t_c=0.12,
 	rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
 	
 	T_total = T_perRotor*N
-	p_ratio = k2*(VT/(rho*x))*np.sqrt((T_total/s)*(T_perRotor/A))
+	p_ratio = k2*(VT/(rho*delta_S))*np.sqrt((T_total/s)*(T_perRotor/A))
 	SPL = 20*np.log10(p_ratio)
 
 	spectrum = {}
@@ -195,8 +195,8 @@ if __name__=="__main__":
 			h=0*ureg.ft,t_c=0.12,num_harmonics=20)
 
 	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
-		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,x=500*ureg.ft,
-			h=0*ureg.ft,t_c=0.12,St=0.28)
+		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
+			delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
 
 	noise["periodic"]["dBA_offset"] = noise_weighting(noise["periodic"]["f_fund"],0)
 	noise["vortex"]["dBA_offset"] = noise_weighting(noise["vortex"]["f_peak"],0)
