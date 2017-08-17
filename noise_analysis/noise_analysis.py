@@ -101,7 +101,7 @@ for config in configs:
 	
 
 #Noise computations for varying theta (delta-S = constant)
-theta_array = np.linspace(5,89,50)*ureg.degree
+theta_array = np.linspace(91,175,50)*ureg.degree
 
 for config in configs:
 
@@ -118,7 +118,7 @@ for config in configs:
 	R = configs[config]["solution"]("R")
 	VT = configs[config]["solution"]("VT_OnDemandSizingMission")[0]
 	s = configs[config]["solution"]("s")
-	Cl_mean = solution("Cl_{mean_{max}}")
+	Cl_mean = configs[config]["solution"]("Cl_{mean_{max}}")
 	N = configs[config]["solution"]("N")
 
 	#Periodic noise calculations
@@ -143,7 +143,7 @@ for config in configs:
 
 
 #Computations for varying y (delta-S is not constant)
-y_array = np.linspace(50,5000,50)*ureg.ft
+y_array = np.linspace(50,3000,50)*ureg.ft
 
 for config in configs:
 
@@ -164,7 +164,7 @@ for config in configs:
 	R = configs[config]["solution"]("R")
 	VT = configs[config]["solution"]("VT_OnDemandSizingMission")[0]
 	s = configs[config]["solution"]("s")
-	Cl_mean = solution("Cl_{mean_{max}}")
+	Cl_mean = configs[config]["solution"]("Cl_{mean_{max}}")
 	N = configs[config]["solution"]("N")
 
 	#Noise calculations
@@ -190,24 +190,23 @@ for config in configs:
 # Plotting commands
 plt.ion()
 
-
 #Plot showing noise spectra (both periodic & vortex) for a sample value of y
 fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
 #Find value of y closest to that desired
-y_desired = 200*ureg.feet
+y_desired = 150*ureg.feet
 idx = (np.abs(y_array - y_desired)).argmin()
 y_selected = y_array[idx]
 
 for i, config in enumerate(configs):
 	
-	c = configs[config]
+	c = configs[config]	
 	
-	#Periodic noise
-	periodic_f_spectrum = c["y"]["periodic"]["spectrum"][idx]["f"][0:3]
-	periodic_SPL_spectrum = c["y"]["periodic"]["spectrum"][idx]["SPL"][0:3]
+	#Periodic noise (1st harmonic only)
+	periodic_f_spectrum = c["y"]["periodic"]["spectrum"][idx]["f"][0:2]
+	periodic_SPL_spectrum = c["y"]["periodic"]["spectrum"][idx]["SPL"][0:2]
 
 	#Vortex noise
 	vortex_f_spectrum = c["y"]["vortex"]["spectrum"][idx]["f"]
@@ -219,22 +218,28 @@ for i, config in enumerate(configs):
 	f_dBA_offset = np.linspace(f_min_rev_per_s,f_max_rev_per_s,100)*ureg.turn/ureg.s
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
 	
-	ax = []
-	ax.append(plt.subplot(2,2,i+1))
-	lns1 = plt.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum,
-		'k-',linewidth=2,label="Vortex noise")
-	plt.ylabel('SPL (dB)', fontsize = 16)
-	plt.xlabel('Frequency (Hz)', fontsize = 16)
+	ax = fig1.add_subplot(2,2,i+1)
 
-	for i,SPL in enumerate(periodic_SPL_spectrum):
-		f = periodic_f_spectrum[i].to(ureg.turn/ureg.s).magnitude
-		plt.bar(f,SPL,align='center',alpha=1)
+	periodic_label = "Periodic noise (y = %0.0f ft)" % y_selected.to(ureg.foot).magnitude
+	vortex_label = "Vortex noise (y = %0.0f ft)" % y_selected.to(ureg.foot).magnitude
+	
+	for j,SPL in enumerate(periodic_SPL_spectrum):
+		f = periodic_f_spectrum[j].to(ureg.turn/ureg.s).magnitude
+		if j == 0:
+			ax.bar(f,SPL,width=0.2*f,align="center",color='k',label=periodic_label)
+		else:
+			ax.bar(f,SPL,width=0.2*f,align="center",color='k')
+	
+	ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum,
+		'k-',linewidth=2,label=vortex_label)
+	plt.xlabel('Frequency (Hz)', fontsize = 16)
+	plt.ylabel('SPL (dB)', fontsize = 16)
 	
 	#ymax = np.max(SPL_spectrum) + 5
 	#plt.ylim(ymax=ymax)
 
-	ax.append(ax[0].twinx())
-	lns2 = plt.plot(f_dBA_offset.to(ureg.turn/ureg.s).magnitude,dBA_offset,'k--',linewidth=2,
+	ax2 = ax.twinx()
+	ax2.plot(f_dBA_offset.to(ureg.turn/ureg.s).magnitude,dBA_offset,'k--',linewidth=2,
 		label="A-weighting offset")
 	plt.ylabel('SPL offset (dBA)', fontsize = 16)
 	
@@ -242,9 +247,9 @@ for i, config in enumerate(configs):
 	plt.grid()
 	plt.title(config, fontsize = 18)
 
-	lns = lns1+lns2
-	labels = [l.get_label() for l in lns]
-	plt.legend(lns, labels)
+	lines, labels = ax.get_legend_handles_labels()
+	lines2, labels2 = ax2.get_legend_handles_labels()
+	ax2.legend(lines + lines2, labels + labels2, fontsize=13,loc="lower right")
 
 
 if reserve_type == "FAA_day" or reserve_type == "FAA_night":
@@ -301,7 +306,7 @@ for i, config in enumerate(configs):
 	plt.xlabel('$\Theta$ (degrees)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.title(config, fontsize = 18)
-	plt.legend(loc="lower right")
+	plt.legend(loc="lower left")
 
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
