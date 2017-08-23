@@ -101,7 +101,7 @@ for config in configs:
 	
 
 #Noise computations for varying theta (delta-S = constant)
-theta_array = np.linspace(91,175,50)*ureg.degree
+theta_array = np.linspace(91,175,30)*ureg.degree
 
 for config in configs:
 
@@ -285,7 +285,7 @@ plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('noise_analysis_plot_01.pdf')
 
-
+#Plot of SPL vs. theta
 fig2 = plt.figure(figsize=(12,12), dpi=80)
 plt.show()
 
@@ -296,10 +296,17 @@ for i, config in enumerate(configs):
 	f_fund = c["theta"]["periodic"]["f_fund"][0]
 	SPL_periodic = c["theta"]["periodic"]["SPL"]
 	SPL_vortex = c["theta"]["vortex"]["SPL"]*np.ones(np.size(theta_array))
+
+	#SPL from first harmonic only
+	SPL_periodic_m1 = np.zeros(np.size(c["theta"]["periodic"]["spectrum"]))
+	for j,spectrum in enumerate(c["theta"]["periodic"]["spectrum"]):
+		SPL_periodic_m1[j] = spectrum["SPL"][0]
 	
 	plt.subplot(2,2,i+1)
 	plt.plot(theta_array.to(ureg.degree).magnitude,SPL_periodic,'k-',linewidth=3,
 		label="Periodic noise")
+	plt.plot(theta_array.to(ureg.degree).magnitude,SPL_periodic_m1,color="k",linestyle="none",
+		marker="o",fillstyle="full",markersize=10,label="Periodic noise (m=1 only)")
 	plt.plot(theta_array.to(ureg.degree).magnitude,SPL_vortex,'k--',linewidth=3,
 		label="Vortex noise")
 	plt.grid()
@@ -323,7 +330,7 @@ for i, config in enumerate(configs):
 
 	f_fund = c["y"]["periodic"]["f_fund"][0]
 	SPL_periodic = c["y"]["periodic"]["SPL"]
-	SPL_vortex = c["y"]["vortex"]["SPL"]*np.ones(np.size(theta_array))
+	SPL_vortex = c["y"]["vortex"]["SPL"]
 	
 	plt.subplot(2,2,i+1)
 	plt.plot(y_array.to(ureg.ft).magnitude,SPL_periodic,'k-',linewidth=3,
@@ -360,7 +367,7 @@ for i, theta_desired in enumerate(theta_plot_values):
 	periodic_SPL_spectrum = c["theta"]["periodic"]["spectrum"][theta_idx]["SPL"]
 	
 	SPL_min = np.min(periodic_SPL_spectrum) - 10
-	SPL_min = np.max([SPL_min,50])#Only show SPL values above this
+	SPL_min = np.max([SPL_min,20])#Only show SPL values above this
 
 	plt.subplot(2,2,i+1)
 

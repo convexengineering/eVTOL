@@ -39,6 +39,7 @@ def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_
 		spectrum["f"][i] = m*B*omega
 		
 		bessel_argument = (m*B*omega/a)*R_eff*np.sin(theta)
+		bessel_argument = bessel_argument.to(ureg.dimensionless)
 		bessel_term = jv(m*B,bessel_argument)
 
 		#RMS acoustic pressures
@@ -102,7 +103,7 @@ def noise_weighting(f,SPL,type="A"):
 if __name__=="__main__":
 	
 	configs = configuration_data.copy()
-	config = "Tilt rotor"
+	config = "Lift + cruise"
 
 	print "Solving configuration: " + config
 
@@ -184,7 +185,7 @@ if __name__=="__main__":
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
-	theta = 175*ureg.degree
+	theta = 99.6*ureg.degree
 	
 	noise = {}
 	noise["periodic"] = {}
