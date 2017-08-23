@@ -340,3 +340,43 @@ plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('noise_analysis_plot_03.pdf')
+
+
+#Display noise spectrum for different values of theta
+fig4 = plt.figure(figsize=(12,12), dpi=80)
+plt.show()
+
+config = "Lift + cruise"
+c = configs[config]
+
+theta_plot_values = np.linspace(100,160,4)*ureg.degree #desired angles
+
+for i, theta_desired in enumerate(theta_plot_values):
+	
+	theta_idx = (np.abs(theta_array - theta_desired)).argmin()
+	theta = theta_array[theta_idx]
+
+	periodic_f_spectrum = c["theta"]["periodic"]["spectrum"][theta_idx]["f"]
+	periodic_SPL_spectrum = c["theta"]["periodic"]["spectrum"][theta_idx]["SPL"]
+	
+	SPL_min = np.min(periodic_SPL_spectrum) - 10
+	SPL_min = np.max([SPL_min,50])#Only show SPL values above this
+
+	plt.subplot(2,2,i+1)
+
+	for j,SPL in enumerate(periodic_SPL_spectrum):
+		f = periodic_f_spectrum[j].to(ureg.turn/ureg.s).magnitude
+		plt.bar(f,SPL,width=50,align="center",color='k')
+
+	plt.grid()
+	plt.ylim(ymin=SPL_min)
+	plt.xlabel('f (Hz)', fontsize = 16)
+	plt.ylabel('SPL (dB)', fontsize = 16)
+	subtitle_str = config + " ($\Theta$ = %0.1f$^\circ$)" % theta.to(ureg.degree).magnitude
+	plt.title(subtitle_str, fontsize = 18)
+	plt.legend(loc="lower right")
+
+plt.suptitle(title_str,fontsize = 13.5)
+plt.tight_layout()
+plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
+plt.savefig('noise_analysis_plot_04.pdf')
