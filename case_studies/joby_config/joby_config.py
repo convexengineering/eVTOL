@@ -76,6 +76,8 @@ for config in configs:
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 	N = c["N"]
 	loiter_type = c["loiter_type"]
+	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
+	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
 
 	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -84,16 +86,22 @@ for config in configs:
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
+		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 	
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
 		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-		charger_power=charger_power,mission_type=revenue_mission_type)
+		charger_power=charger_power,mission_type=revenue_mission_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
 		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-		charger_power=charger_power,mission_type=deadhead_mission_type)
+		charger_power=charger_power,mission_type=deadhead_mission_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
 		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
@@ -131,7 +139,7 @@ for i, config in enumerate(configs):
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Weight (lbf)', fontsize = 14)
+plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 16)
 
 #Battery weight
@@ -142,7 +150,7 @@ for i, config in enumerate(configs):
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Weight (lbf)', fontsize = 14)
+plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 16)
 
 #Energy use by mission segment (sizing mission)
@@ -243,7 +251,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.99,bottom=0.07,top=0.87)
+plt.subplots_adjust(left=0.08,right=0.99,bottom=0.07,top=0.87)
 plt.savefig('joby_config_plot_01.pdf')
 
 #Additional parameters plot
@@ -258,7 +266,7 @@ for i, config in enumerate(configs):
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Cost ($US)', fontsize = 14)
+plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 16)
 
 #Cost per mission
@@ -271,7 +279,7 @@ for i, config in enumerate(configs):
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Cost per mission ($US)', fontsize = 14)
+plt.ylabel('Cost per mission ($US)', fontsize = 16)
 plt.grid()
 plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
@@ -292,7 +300,7 @@ plt.ylim(ymin = 57)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('SPL (dB)', fontsize = 14)
+plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 16)
 
 
@@ -312,5 +320,5 @@ plt.title("Rotor Angular Velocity",fontsize = 20)
 
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.99,bottom=0.07,top=0.87)
+plt.subplots_adjust(left=0.08,right=0.99,bottom=0.07,top=0.87)
 plt.savefig('joby_config_plot_02.pdf')

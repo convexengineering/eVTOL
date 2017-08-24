@@ -66,6 +66,8 @@ for config in configs:
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 	N = c["N"]
 	loiter_type = c["loiter_type"]
+	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
+	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
 	
 	#Parameter of interest
 	if (config == "Helicopter") or (config == "Coaxial heli") \
@@ -89,16 +91,22 @@ for config in configs:
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
+		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
 		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-		charger_power=charger_power,mission_type=revenue_mission_type)
+		charger_power=charger_power,mission_type=revenue_mission_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
 		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-		charger_power=charger_power,mission_type=deadhead_mission_type)
+		charger_power=charger_power,mission_type=deadhead_mission_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
 		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
@@ -230,6 +238,6 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
-plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
+plt.subplots_adjust(left=0.07,right=0.98,bottom=0.05,top=0.87)
 plt.savefig('number_of_rotors_plot_01.pdf')
 

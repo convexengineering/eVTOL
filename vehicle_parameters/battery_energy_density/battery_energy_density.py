@@ -60,17 +60,17 @@ for config in configs:
 	num_pts_short = 3
 	num_pts_long = 9
 	if config == "Helicopter":
-		C_m_array = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(640,700,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Coaxial heli":
-		C_m_array = np.linspace(550,600,num_pts_short)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(570,700,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Lift + cruise":
-		C_m_array = np.linspace(340,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(350,700,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Compound heli":
-		C_m_array = np.linspace(320,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(360,700,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Tilt rotor":
-		C_m_array = np.linspace(270,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(280,700,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Tilt wing":
-		C_m_array = np.linspace(300,600,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(310,700,num_pts_long)*ureg.Wh/ureg.kg
 
 	configs[config]["C_m_array"] = C_m_array
 	configs[config]["MTOW"] = np.zeros(np.size(C_m_array))
@@ -86,6 +86,8 @@ for config in configs:
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 	N = c["N"]
 	loiter_type = c["loiter_type"]
+	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
+	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
 
 	for i,C_m in enumerate(C_m_array):
 
@@ -96,16 +98,22 @@ for config in configs:
 
 		SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 			V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-			reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
+			reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type,
+			tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+			tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 		SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 
 		RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
 			V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-			charger_power=charger_power,mission_type=revenue_mission_type)
+			charger_power=charger_power,mission_type=revenue_mission_type,
+			tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+			tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 		DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
 			V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-			charger_power=charger_power,mission_type=deadhead_mission_type)
+			charger_power=charger_power,mission_type=deadhead_mission_type,
+			tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+			tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 		MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
 			pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,\

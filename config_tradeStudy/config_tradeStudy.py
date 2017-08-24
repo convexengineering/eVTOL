@@ -331,7 +331,8 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost ($millions US)', fontsize = 14)
 plt.grid()
-plt.ylim(ymax=1.7)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.3*ymax)
 plt.title("Acquisition Costs",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
 	loc='upper right', fontsize = 12)
@@ -348,7 +349,8 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per trip ($US)', fontsize = 14)
 plt.grid()
-plt.ylim(ymax=300)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.3*ymax)
 plt.title("Revenue and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue cost","Deadhead cost"),
 	loc='upper right', fontsize = 12)
@@ -365,7 +367,8 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
-plt.ylim(ymax=250)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.35*ymax)
 plt.title("Cost breakdown (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
 	loc='upper right', fontsize = 12)
@@ -384,7 +387,8 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
-plt.ylim(ymax=120)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.1*ymax)
 plt.title("Capital Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
 	loc='upper right', fontsize = 12)
@@ -405,7 +409,8 @@ for i, config in enumerate(configs):
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
-plt.ylim(ymax=160)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.3*ymax)
 plt.title("Operating Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
 	loc='upper right', fontsize = 12)

@@ -50,8 +50,8 @@ configs = configuration_data.copy()
 del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
-#del configs["Helicopter"]
-#del configs["Coaxial heli"]
+del configs["Helicopter"]
+del configs["Coaxial heli"]
 
 
 #Optimize remaining configurations
@@ -67,6 +67,8 @@ for config in configs:
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 	N = c["N"]
 	loiter_type = c["loiter_type"]
+	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
+	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
 
 	#Data specific to study
 	if config == "Helicopter" or config == "Coaxial heli":
@@ -82,16 +84,22 @@ for config in configs:
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
+		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
 
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
 		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-		charger_power=charger_power,mission_type=revenue_mission_type)
+		charger_power=charger_power,mission_type=revenue_mission_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
 		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-		charger_power=charger_power,mission_type=deadhead_mission_type)
+		charger_power=charger_power,mission_type=deadhead_mission_type,
+		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
+		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 
 	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
 		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
@@ -136,7 +144,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Structural mass fraction', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
+plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
 #Battery weight
 plt.subplot(2,2,2)
@@ -150,7 +158,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Structural mass fraction', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
+plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
 
 #Trip cost per passenger
@@ -165,7 +173,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Structural mass fraction', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
+plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
 
 #Sound pressure level (in hover)
