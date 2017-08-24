@@ -13,7 +13,7 @@ from study_input_data import generic_data, configuration_data
 
 
 def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_S=500*ureg.ft,h=0*ureg.ft,
-	t_c=0.12,num_harmonics=20):
+	t_c=0.12,num_harmonics=10):
 
 	pi = math.pi
 	P0 = (2e-5)*ureg.Pa
@@ -24,7 +24,7 @@ def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_
 
 	R_eff = 0.8*R #Effective rotor radius
 	A = pi*(R**2) #rotor disk area
-	c = (pi*s*R)/N #Rotor blade chord
+	c = (pi*s*R)/B #Rotor blade chord
 	omega = (VT/R).to(ureg.rad/ureg.s)#blade angular velocity (rad/s)
 	t = t_c*c #blade thickness
 
@@ -114,6 +114,7 @@ if __name__=="__main__":
 	C_m = generic_data["C_m"]
 	n = generic_data["n"]
 	B = generic_data["B"]
+	B = 6
 
 	reserve_type = generic_data["reserve_type"]
 	autonomousEnabled = generic_data["autonomousEnabled"]
@@ -185,23 +186,26 @@ if __name__=="__main__":
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
-	theta = 99.6*ureg.degree
+	theta = 91.*ureg.degree
+	delta_S = 500*ureg.ft
 	
 	noise = {}
 	noise["periodic"] = {}
 	noise["vortex"] = {}
 
 	noise["periodic"]["f_fund"], noise["periodic"]["SPL"], noise["periodic"]["spectrum"]\
-		= periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,delta_S=500*ureg.ft,
+		= periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,delta_S=delta_S,
 			h=0*ureg.ft,t_c=0.12,num_harmonics=20)
 
 	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
 		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
-			delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28)
+			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28)
 
 	noise["periodic"]["dBA_offset"] = noise_weighting(noise["periodic"]["f_fund"],0)
 	noise["vortex"]["dBA_offset"] = noise_weighting(noise["vortex"]["f_peak"],0)
 
+	print "%0.0f blades; theta = %0.1f degrees" % (B,theta.to(ureg.degree).magnitude)
+	print 
 	print "Noise Type \t\tPeriodic \tVortex"
 	print "Peak Frequency (Hz)\t%0.1f\t\t%0.1f" % \
 		(noise["periodic"]["f_fund"].to(ureg.turn/ureg.s).magnitude,noise["vortex"]["f_peak"].to(ureg.turn/ureg.s).magnitude)
