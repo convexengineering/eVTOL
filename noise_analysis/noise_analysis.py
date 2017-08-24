@@ -207,24 +207,33 @@ for i, config in enumerate(configs):
 	#Periodic noise (1st harmonic only)
 	periodic_f = c["y"]["periodic"]["spectrum"][idx]["f"][0]
 	periodic_SPL = c["y"]["periodic"]["spectrum"][idx]["SPL"][0]
+	periodic_SPL_A = noise_weighting(periodic_f,periodic_SPL)
 
 	#Vortex noise
 	vortex_f_spectrum = c["y"]["vortex"]["spectrum"][idx]["f"]
 	vortex_SPL_spectrum = c["y"]["vortex"]["spectrum"][idx]["SPL"]
+	vortex_SPL_A_spectrum = noise_weighting(vortex_f_spectrum,vortex_SPL_spectrum)
 
 	#A-weighting spectrum
-	f_min_rev_per_s = np.min(periodic_f_spectrum.to(ureg.turn/ureg.s).magnitude)
+	f_min_rev_per_s = periodic_f.to(ureg.turn/ureg.s).magnitude
 	f_max_rev_per_s = np.max(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude)
 	f_dBA_offset = np.linspace(f_min_rev_per_s,f_max_rev_per_s,100)*ureg.turn/ureg.s
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
 	
 	ax = fig1.add_subplot(2,2,i+1)
-	
-	ax.bar(periodic_f.to(ureg.turn/ureg.s).magnitude,periodic_SPL,align="center",color='k',
-		width=0.2*periodic_f.to(ureg.turn/ureg.s).magnitude,label="Periodic noise")
+
+	ax.bar(periodic_f.to(ureg.turn/ureg.s).magnitude,periodic_SPL,align="center",
+		color='k',width=0.2*periodic_f.to(ureg.turn/ureg.s).magnitude,
+		label="Periodic noise")
+	'''ax.bar(1.15*periodic_f.to(ureg.turn/ureg.s).magnitude,periodic_SPL_A,align="center",
+		color='grey',width=0.3*periodic_f.to(ureg.turn/ureg.s).magnitude,
+		label="A-weighted periodic noise")'''
 	
 	ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum,
 		'k-',linewidth=2,label="Vortex noise")
+	'''ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_A_spectrum,
+		'k-.',linewidth=2,label="A-weighted vortex noise")'''
+
 	plt.xlabel('Frequency (Hz)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	
