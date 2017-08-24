@@ -280,10 +280,14 @@ class FlightState(Model):
 
 class Hover(Model):
 	#t should be set via substitution
-	def setup(self,mission,aircraft,state):
+	def setup(self,mission,aircraft,state,tailRotor_power_fraction=0.0001):
 		E = Variable("E","kWh","Electrical energy used during hover segment")
 		P_battery = Variable("P_{battery}","kW","Power drawn (from batteries) during hover segment")
-		P_rotors  = Variable("P_{rotors}","kW","Power used (by rotors) during hover segment")
+		P_rotors  = Variable("P_{rotors}","kW","Power used (by lifting rotors) during hover segment")
+		P_tailRotor = Variable("P_{tailRotor}","kW","Power used (by tail rotor) during hover segment")
+		tailRotor_power_fraction = Variable("tailRotor_power_fraction",tailRotor_power_fraction,
+			"-","Tail-rotor power as a fraction of lifting-rotors power")
+
 		T = Variable("T","lbf","Total thrust (from rotors) during hover segment")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading during hover segment")
 		t = Variable("t","s","Time in hover segment")
@@ -298,20 +302,26 @@ class Hover(Model):
 		
 		constraints += [P_rotors==self.rotorPerf.topvar("P"),T==self.rotorPerf.topvar("T"),
 			T_A==self.rotorPerf.topvar("T/A")]
-		constraints += [P_battery == self.electricalSystemPerf.topvar("P_{in}"),
-			P_rotors == self.electricalSystemPerf.topvar("P_{out}")]
-		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"), 
-			t==self.batteryPerf.topvar("t")]
-		constraints += [T==W]
+		constraints += [self.electricalSystemPerf.topvar("P_{in}") == P_battery,
+			self.electricalSystemPerf.topvar("P_{out}") >= P_rotors + P_tailRotor]
+		constraints += [E==self.batteryPerf.topvar("E"),t==self.batteryPerf.topvar("t"),
+			P_battery==self.batteryPerf.topvar("P")]
+		constraints += [T == W]
+
+		constraints += [P_tailRotor == tailRotor_power_fraction*P_rotors]
 		
 		return constraints
 
 class LevelFlight(Model):
 	#Substitution required for either segment_range  or t (loiter time).
-	def setup(self,mission,aircraft,V=150*ureg.mph,segment_type="cruise"):
+	def setup(self,mission,aircraft,V=150*ureg.mph,segment_type="cruise",
+		tailRotor_power_fraction=0.0001):
 		E = Variable("E","kWh","Electrical energy used during level-flight segment")
 		P_battery = Variable("P_{battery}","kW","Power drawn (from batteries) during segment")
 		P_cruise  = Variable("P_{cruise}","kW","Power used (by propulsion system) during cruise segment")
+		P_tailRotor = Variable("P_{tailRotor}","kW","Power used (by tail rotor) during hover segment")
+		tailRotor_power_fraction = Variable("tailRotor_power_fraction",tailRotor_power_fraction,
+			"-","Tail-rotor power as a fraction of cruise power")
 		T = Variable("T","lbf","Thrust during level-flight  segment")
 		D = Variable("D","lbf","Drag during level-flight segment")
 		t = Variable("t","s","Time in level-flight segment")
@@ -337,9 +347,11 @@ class LevelFlight(Model):
 
 		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"),
 			t==self.batteryPerf.topvar("t")]
-		constraints += [P_battery == self.electricalSystemPerf.topvar("P_{in}"),
-			P_cruise == self.electricalSystemPerf.topvar("P_{out}")]
+		constraints += [self.electricalSystemPerf.topvar("P_{in}") == P_battery,
+			self.electricalSystemPerf.topvar("P_{out}") >= P_cruise + P_tailRotor]
 		constraints += [segment_range==V*t,eta_cruise*P_cruise==T*V,T==D,W==L_D*D]
+
+		constraints += [P_tailRotor == tailRotor_power_fraction*P_cruise]
 
 		return constraints
 
@@ -366,7 +378,8 @@ class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,
 		V_cruise=150*ureg.mph,N_passengers=1,t_hover=120*ureg.s,
-		reserve_type="Uber",mission_type="piloted",loiter_type="level_flight"):
+		reserve_type="Uber",mission_type="piloted",loiter_type="level_flight",
+		tailRotor_power_fraction_hover=0.0001,tailRotor_power_fraction_levelFlight=0.0001):
 		
 		if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
 			raise ValueError("Autonomy is not enabled for Aircraft() model.")
@@ -387,10 +400,14 @@ class OnDemandSizingMission(Model):
 		
 		constraints = []
 		
-		self.fs0 = Hover(self,aircraft,hoverState)#takeoff
-		self.fs1 = LevelFlight(self,aircraft,V=V_cruise)#fly to destination
-		self.fs2 = Hover(self,aircraft,hoverState)#landing
-		self.fs3 = Hover(self,aircraft,hoverState)#take off again
+		self.fs0 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#takeoff
+		self.fs1 = LevelFlight(self,aircraft,V=V_cruise,
+			tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#fly to destination
+		self.fs2 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing
+		self.fs3 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#take off again
 		
 		if reserve_type == "FAA_day" or reserve_type == "FAA_night":
 			V_reserve = ((1/3.)**(1/4.))*V_cruise #Approximation for max-endurance speed
@@ -403,19 +420,23 @@ class OnDemandSizingMission(Model):
 				t_loiter = Variable("t_{loiter}",45,"minutes","Loiter time")
 
 			if loiter_type == "level_flight":#loiter segment is a level-flight segment
-				self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter")
+				self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter",
+					tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)
 			elif loiter_type == "hover":#loiter segment is a hover segment
-				self.fs4 = Hover(self,aircraft,hoverState)
+				self.fs4 = Hover(self,aircraft,hoverState,
+					tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)
 
 			constraints += [t_loiter == self.fs4.topvar("t")]
 
 		if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
 			V_reserve = V_cruise
 			R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
-			self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="cruise")#reserve segment
+			self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="cruise",
+				tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#reserve segment
 			constraints += [R_divert == self.fs4.topvar("segment_range")]
 		
-		self.fs5 = Hover(self,aircraft,hoverState)#landing again
+		self.fs5 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing again
 
 		self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
 		self.hover_segments  = [self.fs0, self.fs2, self.fs3, self.fs5] #not including loiter
@@ -429,10 +450,10 @@ class OnDemandSizingMission(Model):
 		with Vectorize(len(self.hover_segments)):
 			CT = Variable("CT","-","Thrust coefficient")
 			CP = Variable("CP","-","Power coefficient")
-			Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per rotor")
-			T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
-			P = Variable("P","kW","Total power supplied to all rotors")
-			P_perRotor = Variable("P_perRotor","kW","Power per rotor")
+			Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per lifting rotor")
+			T_perRotor = Variable("T_perRotor","lbf","Thrust per lifting rotor")
+			P = Variable("P","kW","Total power supplied to all lifting rotors")
+			P_perRotor = Variable("P_perRotor","kW","Power per lifting rotor")
 			VT = Variable("VT","ft/s","Propeller tip speed")
 			omega = Variable("\omega","rpm","Propeller angular velocity")
 			MT = Variable("MT","-","Propeller tip Mach number")
@@ -473,7 +494,8 @@ class OnDemandSizingMission(Model):
 class OnDemandRevenueMission(Model):
 	#Revenue-generating mission. Exactly the same code as OnDemandDeadheadMission.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	N_passengers=1,t_hover=30*ureg.s,charger_power=200*ureg.kW,mission_type="piloted"):
+    	N_passengers=1,t_hover=30*ureg.s,charger_power=200*ureg.kW,mission_type="piloted",
+		tailRotor_power_fraction_hover=0.0001,tailRotor_power_fraction_levelFlight=0.0001):
 
     	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
     		raise ValueError("Autonomy is not enabled for Aircraft() model.")
@@ -496,9 +518,12 @@ class OnDemandRevenueMission(Model):
         
         hoverState = FlightState(h=0*ureg.ft)
 
-        self.fs0 = Hover(self,aircraft,hoverState)#takeoff
-        self.fs1 = LevelFlight(self,aircraft,V=V_cruise)#fly to destination
-        self.fs2 = Hover(self,aircraft,hoverState)#landing
+        self.fs0 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#takeoff
+        self.fs1 = LevelFlight(self,aircraft,V=V_cruise,
+			tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#fly to destination
+        self.fs2 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing
         self.time_on_ground = TimeOnGround(self,charger_power=charger_power)
 
         self.segments = [self.fs0, self.fs1, self.fs2, self.time_on_ground]
@@ -515,10 +540,10 @@ class OnDemandRevenueMission(Model):
         with Vectorize(numHoverSegments):
         	CT = Variable("CT","-","Thrust coefficient")
         	CP = Variable("CP","-","Power coefficient")
-        	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per rotor")
-        	T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
-        	P = Variable("P","kW","Total power supplied to all rotors")
-        	P_perRotor = Variable("P_perRotor","kW","Power per rotor")
+        	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per lifting rotor")
+        	T_perRotor = Variable("T_perRotor","lbf","Thrust per lifting rotor")
+        	P = Variable("P","kW","Total power supplied to all lifting rotors")
+        	P_perRotor = Variable("P_perRotor","kW","Power per lifting rotor")
         	VT = Variable("VT","ft/s","Propeller tip speed")
         	omega = Variable("\omega","rpm","Propeller angular velocity")
         	MT = Variable("MT","-","Propeller tip Mach number")
@@ -565,7 +590,8 @@ class OnDemandRevenueMission(Model):
 class OnDemandDeadheadMission(Model):
 	#Deadhead mission. Exactly the same code as OnDemandRevenueMission.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	N_passengers=1,t_hover=30*ureg.s,charger_power=200*ureg.kW,mission_type="piloted"):
+    	N_passengers=1,t_hover=30*ureg.s,charger_power=200*ureg.kW,mission_type="piloted",
+		tailRotor_power_fraction_hover=0.0001,tailRotor_power_fraction_levelFlight=0.0001):
 
     	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
     		raise ValueError("Autonomy is not enabled for Aircraft() model.")
@@ -588,9 +614,12 @@ class OnDemandDeadheadMission(Model):
         
         hoverState = FlightState(h=0*ureg.ft)
 
-        self.fs0 = Hover(self,aircraft,hoverState)#takeoff
-        self.fs1 = LevelFlight(self,aircraft,V=V_cruise)#fly to destination
-        self.fs2 = Hover(self,aircraft,hoverState)#landing
+        self.fs0 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#takeoff
+        self.fs1 = LevelFlight(self,aircraft,V=V_cruise,
+			tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#fly to destination
+        self.fs2 = Hover(self,aircraft,hoverState,
+			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing
         self.time_on_ground = TimeOnGround(self,charger_power=charger_power)
 
         self.segments = [self.fs0, self.fs1, self.fs2, self.time_on_ground]
@@ -607,10 +636,10 @@ class OnDemandDeadheadMission(Model):
         with Vectorize(numHoverSegments):
          	CT = Variable("CT","-","Thrust coefficient")
          	CP = Variable("CP","-","Power coefficient")
-         	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per rotor")
-         	T_perRotor = Variable("T_perRotor","lbf","Thrust per rotor")
-         	P = Variable("P","kW","Total power supplied to all rotors")
-         	P_perRotor = Variable("P_perRotor","kW","Power per rotor")
+         	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per lifting rotor")
+         	T_perRotor = Variable("T_perRotor","lbf","Thrust per lifting rotor")
+         	P = Variable("P","kW","Total power supplied to all lifting rotors")
+         	P_perRotor = Variable("P_perRotor","kW","Power per lifting rotor")
          	VT = Variable("VT","ft/s","Propeller tip speed")
          	omega = Variable("\omega","rpm","Propeller angular velocity")
          	MT = Variable("MT","-","Propeller tip Mach number")
