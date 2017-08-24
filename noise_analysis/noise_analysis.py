@@ -101,7 +101,7 @@ for config in configs:
 	
 
 #Noise computations for varying theta (delta-S = constant)
-theta_array = np.linspace(91,175,30)*ureg.degree
+theta_array = np.linspace(91,175,20)*ureg.degree
 
 for config in configs:
 
@@ -125,7 +125,7 @@ for config in configs:
 	for i,theta in enumerate(theta_array):
 		
 		f_peak, SPL, spectrum = periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
-			delta_S=x,h=0*ureg.ft,t_c=0.12,num_harmonics=20)
+			delta_S=x,h=0*ureg.ft,t_c=0.12,num_harmonics=10)
 
 		configs[config]["theta"]["periodic"]["f_fund"][i] = f_peak
 		configs[config]["theta"]["periodic"]["SPL"][i] = SPL
@@ -196,7 +196,7 @@ plt.rc('axes', axisbelow=True)
 plt.show()
 
 #Find value of y closest to that desired
-y_desired = 150*ureg.feet
+y_desired = 1000*ureg.feet
 idx = (np.abs(y_array - y_desired)).argmin()
 y_selected = y_array[idx]
 
@@ -205,8 +205,8 @@ for i, config in enumerate(configs):
 	c = configs[config]	
 	
 	#Periodic noise (1st harmonic only)
-	periodic_f_spectrum = c["y"]["periodic"]["spectrum"][idx]["f"][0:2]
-	periodic_SPL_spectrum = c["y"]["periodic"]["spectrum"][idx]["SPL"][0:2]
+	periodic_f = c["y"]["periodic"]["spectrum"][idx]["f"][0]
+	periodic_SPL = c["y"]["periodic"]["spectrum"][idx]["SPL"][0]
 
 	#Vortex noise
 	vortex_f_spectrum = c["y"]["vortex"]["spectrum"][idx]["f"]
@@ -219,19 +219,12 @@ for i, config in enumerate(configs):
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
 	
 	ax = fig1.add_subplot(2,2,i+1)
-
-	periodic_label = "Periodic noise (y = %0.0f ft)" % y_selected.to(ureg.foot).magnitude
-	vortex_label = "Vortex noise (y = %0.0f ft)" % y_selected.to(ureg.foot).magnitude
 	
-	for j,SPL in enumerate(periodic_SPL_spectrum):
-		f = periodic_f_spectrum[j].to(ureg.turn/ureg.s).magnitude
-		if j == 0:
-			ax.bar(f,SPL,width=0.2*f,align="center",color='k',label=periodic_label)
-		else:
-			ax.bar(f,SPL,width=0.2*f,align="center",color='k')
+	ax.bar(periodic_f.to(ureg.turn/ureg.s).magnitude,periodic_SPL,align="center",color='k',
+		width=0.2*periodic_f.to(ureg.turn/ureg.s).magnitude,label="Periodic noise")
 	
 	ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum,
-		'k-',linewidth=2,label=vortex_label)
+		'k-',linewidth=2,label="Vortex noise")
 	plt.xlabel('Frequency (Hz)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	
@@ -245,7 +238,8 @@ for i, config in enumerate(configs):
 	
 	plt.xscale('log')
 	plt.grid()
-	plt.title(config, fontsize = 18)
+	subtitle_str = config + " (y = %0.0f ft)" % y_selected.to(ureg.ft).magnitude
+	plt.title(subtitle_str, fontsize = 18)
 
 	lines, labels = ax.get_legend_handles_labels()
 	lines2, labels2 = ax2.get_legend_handles_labels()
@@ -363,11 +357,11 @@ for i, theta_desired in enumerate(theta_plot_values):
 	theta_idx = (np.abs(theta_array - theta_desired)).argmin()
 	theta = theta_array[theta_idx]
 
-	periodic_f_spectrum = c["theta"]["periodic"]["spectrum"][theta_idx]["f"]
-	periodic_SPL_spectrum = c["theta"]["periodic"]["spectrum"][theta_idx]["SPL"]
+	periodic_f_spectrum = c["theta"]["periodic"]["spectrum"][theta_idx]["f"][0:5]
+	periodic_SPL_spectrum = c["theta"]["periodic"]["spectrum"][theta_idx]["SPL"][0:5]
 	
 	SPL_min = np.min(periodic_SPL_spectrum) - 10
-	SPL_min = np.max([SPL_min,20])#Only show SPL values above this
+	SPL_min = np.max([SPL_min,0])#Only show SPL values above this
 
 	plt.subplot(2,2,i+1)
 
@@ -381,7 +375,6 @@ for i, theta_desired in enumerate(theta_plot_values):
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	subtitle_str = config + " ($\Theta$ = %0.1f$^\circ$)" % theta.to(ureg.degree).magnitude
 	plt.title(subtitle_str, fontsize = 18)
-	plt.legend(loc="lower right")
 
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
