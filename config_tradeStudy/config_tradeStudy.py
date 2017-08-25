@@ -122,6 +122,7 @@ for config in configs:
 		Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 		weighting="None")
 	configs[config]["SPL"] = SPL
+	configs[config]["f_{peak}"] = f_peak
 
 	#A-weighted
 	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
@@ -241,7 +242,7 @@ width = 0.2
 colors = ["grey", "w", "k"]
 
 #Energy use by mission segment (sizing mission)
-plt.subplot(2,2,1)
+plt.subplot(3,2,1)
 for i, config in enumerate(configs):
 	sol = configs[config]["solution"]
 
@@ -275,7 +276,7 @@ plt.legend(loc='upper right', fontsize = 12)
 
 
 #Power consumption by mission segment (sizing mission)
-plt.subplot(2,2,2)
+plt.subplot(3,2,2)
 for i, config in enumerate(configs):
 	sol = configs[config]["solution"]
 
@@ -298,14 +299,29 @@ for i, config in enumerate(configs):
 		else:
 			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j])
 
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.2*ymax)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Power Consumption",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
+#Rotor tip speed 
+plt.subplot(3,2,3)
+for i, config in enumerate(configs):
+	sol = configs[config]["solution"]
+	VT = sol("VT_OnDemandSizingMission")[0].to(ureg.ft/ureg.s).magnitude
+	plt.bar(i,VT,align='center',alpha=1,color='k')
+
+plt.grid()
+#plt.ylim(ymin=0.2)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Tip speed (ft/s)', fontsize = 16)
+plt.title("Rotor Tip Speed",fontsize = 18)
+
 #Rotor tip Mach number 
-plt.subplot(2,2,3)
+plt.subplot(3,2,4)
 for i, config in enumerate(configs):
 	sol = configs[config]["solution"]
 	MT = sol("MT_OnDemandSizingMission")[0]
@@ -317,8 +333,19 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Tip Mach number', fontsize = 16)
 plt.title("Rotor Tip Mach Number",fontsize = 18)
 
+#Vortex-noise peak frequency
+plt.subplot(3,2,5)
+for i, config in enumerate(configs):
+	f_peak = configs[config]["f_{peak}"].to(ureg.turn/ureg.s).magnitude
+	plt.bar(i,f_peak,align='center',alpha=1,color='k')
+plt.grid()
+plt.yscale('log')
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Peak frequency (Hz)', fontsize = 16)
+plt.title("Vortex-Noise Peak Frequency",fontsize = 18)
+
 #Rotor figure of merit 
-plt.subplot(2,2,4)
+plt.subplot(3,2,6)
 for i, config in enumerate(configs):
 	sol = configs[config]["solution"]
 	FOM = sol("FOM_OnDemandSizingMission")[0]
