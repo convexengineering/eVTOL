@@ -92,6 +92,7 @@ def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,delta_S=500*ureg.ft,h=0*ureg.ft,t_c
 	spectrum = {}
 	spectrum["f"] = f_peak*[0.5,1,2,4,8,16]
 	offsets_dB = [7.92,4.17,8.33,8.75,12.92,13.33]
+
 	spectrum["SPL"] = SPL*np.ones(np.shape(offsets_dB)) - offsets_dB
 
 	if weighting == "A":
@@ -221,7 +222,7 @@ if __name__=="__main__":
 	N = solution("N")
 	theta = 91.*ureg.degree
 	delta_S = 500*ureg.ft
-	weighting = "None"
+	weighting = "A"
 	
 	noise = {}
 	noise["periodic"] = {}
