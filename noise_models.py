@@ -13,7 +13,7 @@ from study_input_data import generic_data, configuration_data
 
 
 def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_S=500*ureg.ft,h=0*ureg.ft,
-	t_c=0.12,num_harmonics=10):
+	t_c=0.12,num_harmonics=10,weighting="None"):
 
 	pi = math.pi
 	P0 = (2e-5)*ureg.Pa
@@ -55,11 +55,20 @@ def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_
 	SPL = 10*np.log10(p_ratio_squared)
 	f_fundamental = spectrum["f"][0]
 
+	if weighting == "A":
+		spectrum["SPL"] = noise_weighting(spectrum["f"],spectrum["SPL"],type="A")
+		
+		p_ratio_squared = 0
+		for i,SPL in enumerate(spectrum["SPL"]):
+			p_ratio_squared += 10**(SPL/10)
+
+		SPL = 10*np.log10(p_ratio_squared)
+
 	return f_fundamental, SPL, spectrum
 
 
-
-def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28):
+def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28,
+	weighting="None"):
 	
 	k2 = 1.206e-2 * ureg.s**3/ureg.ft**3
 	pi = math.pi
@@ -84,6 +93,30 @@ def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,delta_S=500*ureg.ft,h=0*ureg.ft,t_c
 	spectrum["f"] = f_peak*[0.5,1,2,4,8,16]
 	offsets_dB = [7.92,4.17,8.33,8.75,12.92,13.33]
 	spectrum["SPL"] = SPL*np.ones(np.shape(offsets_dB)) - offsets_dB
+
+	if weighting == "A":
+		
+		#Apply A-weighting to the spectrum
+		spectrum["SPL"] = noise_weighting(spectrum["f"],spectrum["SPL"],type="A")
+
+		fr = (spectrum["f"]/f_peak).to(ureg.dimensionless) #frequency ratio array
+		
+		weighted_p_ratio_squared = 0
+		for i in range(0,np.size(fr)-1):
+			fr1 = fr[i]
+			fr2 = fr[i+1]
+			SPL1 = spectrum["SPL"][i]
+			SPL2 = spectrum["SPL"][i+1]
+
+			a = (SPL2-SPL1)/(np.log10(fr2)-np.log10(fr1))
+			b = SPL2 - a*np.log10(fr2)
+
+			leading_term = (10**(b/10))/((a/10) + 1)
+			fr_term = fr2**((a/10) + 1) - fr1**((a/10) + 1)
+
+			weighted_p_ratio_squared += leading_term*fr_term
+
+		SPL = 10*np.log10(weighted_p_ratio_squared)
 
 	return f_peak, SPL, spectrum
 
@@ -188,6 +221,7 @@ if __name__=="__main__":
 	N = solution("N")
 	theta = 91.*ureg.degree
 	delta_S = 500*ureg.ft
+	weighting = "None"
 	
 	noise = {}
 	noise["periodic"] = {}
@@ -195,16 +229,17 @@ if __name__=="__main__":
 
 	noise["periodic"]["f_fund"], noise["periodic"]["SPL"], noise["periodic"]["spectrum"]\
 		= periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,delta_S=delta_S,
-			h=0*ureg.ft,t_c=0.12,num_harmonics=20)
+			h=0*ureg.ft,t_c=0.12,num_harmonics=20,weighting=weighting)
 
 	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
 		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
-			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28)
+			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting=weighting)
 
 	noise["periodic"]["dBA_offset"] = noise_weighting(noise["periodic"]["f_fund"],0)
 	noise["vortex"]["dBA_offset"] = noise_weighting(noise["vortex"]["f_peak"],0)
 
-	print "%0.0f blades; theta = %0.1f degrees" % (B,theta.to(ureg.degree).magnitude)
+	print "%0.0f blades; theta = %0.1f degrees; weighting = %s" \
+		% (B, theta.to(ureg.degree).magnitude, weighting)
 	print 
 	print "Noise Type \t\tPeriodic \tVortex"
 	print "Peak Frequency (Hz)\t%0.1f\t\t%0.1f" % \
