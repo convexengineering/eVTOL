@@ -974,6 +974,8 @@ class OperatingExpenses(Model):
 
 
 if __name__=="__main__":
+
+	from noise_models import periodic_noise, vortex_noise, noise_weighting
 	
 	#Joby S2 representative analysis (applies to tilt-rotors in general)
 	
@@ -988,6 +990,8 @@ if __name__=="__main__":
 	n=1.0#battery discharge parameter
 	reserve_type = "FAA_night"
 	loiter_type = "level_flight"
+	delta_S = 500*ureg.ft
+	noise_weighting = "A"
 
 	V_cruise = 200*ureg.mph
 
@@ -1042,11 +1046,26 @@ if __name__=="__main__":
 	problem = Model(testMissionCost["cost_per_trip"],
 		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission, testMissionCost])
 	
-	solution = problem.solve(verbosity=0)	
+	solution = problem.solve(verbosity=0)
 
-	SPL_sizing  = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
-	SPL_revenue = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission")[0])
-	SPL_deadhead = 20*np.log10(solution("p_{ratio}_OnDemandDeadheadMission")[0])
+	SPL_dict = {}
+	missions = ["Sizing","Revenue","Deadhead"]
+
+	for mission in missions:
+		mission_name = "OnDemand" + mission + "Mission"
+		
+		T_perRotor = solution("T_perRotor_" + mission_name)[0]
+		R = solution("R")
+		VT = solution("VT_" + mission_name)[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting=noise_weighting)
+
+		SPL_dict[mission] = SPL
 
 	if (reserve_type == "FAA_day") or (reserve_type == "FAA_night"):
 		num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
@@ -1065,6 +1084,8 @@ if __name__=="__main__":
 	print "Rotor maximum mean lift coefficient: %0.2f" % Cl_mean_max
 	print "Cruise propulsive efficiency: %0.2f" % eta_cruise
 	print "Electrical system efficiency: %0.2f" % eta_electric
+	print "Observer distance: %0.0f ft" % delta_S.to(ureg.ft).magnitude
+	print "Noise weighting type: %s" % noise_weighting
 	print
 	print "Sizing Mission (%s)" % sizing_mission_type
 	print "Mission range: %0.0f nm" % \
@@ -1074,7 +1095,7 @@ if __name__=="__main__":
 	print "Reserve type: " + reserve_type + reserve_type_string
 	print "Vehicle weight during mission: %0.0f lbf" % \
 		solution("W_{mission}_OnDemandSizingMission").to(ureg.lbf).magnitude
-	print "SPL in hover: %0.1f dB" % SPL_sizing
+	print "SPL in hover: %0.1f dB" % SPL_dict["Sizing"]
 	print
 	print "Revenue-Generating Mission (%s)" % revenue_mission_type
 	print "Mission range: %0.0f nm" % \
@@ -1089,7 +1110,7 @@ if __name__=="__main__":
 		solution("t_{flight}_OnDemandRevenueMission").to(ureg.minute).magnitude
 	print "Time on ground: %0.1f minutes" % \
 		solution("t_OnDemandRevenueMission/TimeOnGround").to(ureg.minute).magnitude
-	print "SPL in hover: %0.1f dB" % SPL_revenue
+	print "SPL in hover: %0.1f dB" % SPL_dict["Revenue"]
 	print
 	print "Deadhead Mission (%s)" % deadhead_mission_type
 	print "Mission range: %0.0f nm" % \
@@ -1104,7 +1125,7 @@ if __name__=="__main__":
 		solution("t_{flight}_OnDemandDeadheadMission").to(ureg.minute).magnitude
 	print "Time on ground: %0.1f minutes" % \
 		solution("t_OnDemandDeadheadMission/TimeOnGround").to(ureg.minute).magnitude
-	print "SPL in hover: %0.1f dB" % SPL_deadhead
+	print "SPL in hover: %0.1f dB" % SPL_dict["Deadhead"]
 	print
 	
 	print "Maximum takeoff weight: %0.0f lbs" % \
