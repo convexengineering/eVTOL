@@ -25,6 +25,9 @@ generic_data["mechanic_wrap_rate"] = 60*ureg.hr**-1
 generic_data["MMH_FH"] = 0.6
 generic_data["deadhead_ratio"] = 0.2
 
+generic_data["delta_S"] = 500*ureg.ft
+generic_data["noise_weighting"] = "A"
+
 generic_data["sizing_mission"] = {}
 generic_data["sizing_mission"]["type"] = "piloted"
 generic_data["sizing_mission"]["N_passengers"] = 3
