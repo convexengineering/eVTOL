@@ -78,7 +78,9 @@ for config in configs:
 	configs[config]["MTOW"] = np.zeros(np.size(n_array))
 	configs[config]["W_{battery}"] = np.zeros(np.size(n_array))
 	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(n_array))
+	
 	configs[config]["SPL_A"] = np.zeros(np.size(n_array))
+	configs[config]["f_{peak}"] = np.zeros(np.size(n_array))
 	
 	for i,n in enumerate(n_array):
 
@@ -135,6 +137,9 @@ for config in configs:
 			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 			weighting="A")
 		configs[config]["SPL_A"][i] = SPL
+		configs[config]["f_{peak}"][i] = f_peak.to(ureg.turn/ureg.s).magnitude
+
+	configs[config]["f_{peak}"] = configs[config]["f_{peak}"]*ureg.turn/ureg.s
 	
 	configs[config]["MTOW"] = configs[config]["MTOW"]*ureg.lbf
 	configs[config]["W_{battery}"] = configs[config]["W_{battery}"]*ureg.lbf
@@ -160,41 +165,42 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
+plt.xlim(xmin=np.min(n_array))
 plt.ylim(ymin=0)
 plt.xlabel('Battery discharge parameter', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
-#Battery weight
-plt.subplot(2,2,2)
-for i, config in enumerate(configs):
-	c = configs[config]
-	plt.plot(n_array,c["W_{battery}"].to(ureg.lbf).magnitude,
-		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
-		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
-plt.grid()
-plt.ylim(ymin=0)
-plt.xlabel('Battery discharge parameter', fontsize = 16)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Battery Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
-
-
 #Trip cost per passenger
-plt.subplot(2,2,3)
+plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	c = configs[config]
 	plt.plot(n_array,c["cost_per_trip_per_passenger"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
+plt.xlim(xmin=np.min(n_array))
 plt.ylim(ymin=0)
 plt.xlabel('Battery discharge parameter', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
+#Vortex-noise peak frequency
+plt.subplot(2,2,3)
+for i, config in enumerate(configs):
+	c = configs[config]
+	plt.plot(n_array,c["f_{peak}"].to(ureg.turn/ureg.s).magnitude,
+		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
+		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
+plt.grid()
+plt.yscale('log')
+plt.xlim(xmin=np.min(n_array))
+plt.xlabel('Battery discharge parameter', fontsize = 16)
+plt.ylabel('Peak Frequency (Hz)', fontsize = 16)
+plt.title("Vortex-Noise Peak Frequency",fontsize = 20)
+plt.legend(numpoints = 1,loc='right', fontsize = 12)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
@@ -204,7 +210,9 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.ylim(ymax=82)
+plt.xlim(xmin=np.min(n_array))
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymin=ymin-2,ymax=ymax+2)
 plt.xlabel('Battery discharge parameter', fontsize = 16)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
