@@ -244,6 +244,7 @@ plt.ylabel('Peak Frequency (Hz)', fontsize = 16)
 plt.title("Vortex-Noise Peak Frequency",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
+
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):

@@ -11,6 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
+from noise_models import vortex_noise
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -29,6 +30,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -75,7 +78,7 @@ for config in configs:
 	configs[config]["MTOW"] = np.zeros(np.size(n_array))
 	configs[config]["W_{battery}"] = np.zeros(np.size(n_array))
 	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(n_array))
-	configs[config]["SPL"] = np.zeros(np.size(n_array))
+	configs[config]["SPL_A"] = np.zeros(np.size(n_array))
 	
 	for i,n in enumerate(n_array):
 
@@ -117,7 +120,21 @@ for config in configs:
 		configs[config]["MTOW"][i] = solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 		configs[config]["W_{battery}"][i] = solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 		configs[config]["cost_per_trip_per_passenger"][i] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-		configs[config]["SPL"][i] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
+		
+		#Noise computations
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
+		R = solution("R")
+		VT = solution("VT_OnDemandSizingMission")[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config]["SPL_A"][i] = SPL
 	
 	configs[config]["MTOW"] = configs[config]["MTOW"]*ureg.lbf
 	configs[config]["W_{battery}"] = configs[config]["W_{battery}"]*ureg.lbf
@@ -183,13 +200,13 @@ plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(n_array,c["SPL"],
+	plt.plot(n_array,c["SPL_A"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymax=82)
 plt.xlabel('Battery discharge parameter', fontsize = 16)
-plt.ylabel('SPL (dB)', fontsize = 16)
+plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 

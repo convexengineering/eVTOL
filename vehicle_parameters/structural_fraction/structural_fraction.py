@@ -11,6 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
+from noise_models import vortex_noise
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -29,6 +30,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -117,7 +120,28 @@ for config in configs:
 	configs[config]["MTOW"] = solution("MTOW_OnDemandAircraft")
 	configs[config]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
 	configs[config]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-	configs[config]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[:,0])
+	
+	configs[config]["SPL_A"] = np.zeros(np.size(configs[config]["weight_fraction"]))
+	configs[config]["f_{peak}"] = np.zeros(np.size(configs[config]["weight_fraction"]))
+
+	#Noise computations
+	for j in range(np.size(configs[config]["weight_fraction"])):
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[j,0]
+		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[j,0]
+		R = solution("R")[j]
+		VT = solution("VT_OnDemandSizingMission")[j,0]
+		s = solution("s")[j]
+		Cl_mean = solution("Cl_{mean_{max}}")[j]
+		N = solution("N")[j]
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config]["f_{peak}"][j] = f_peak.to(ureg.turn/ureg.s).magnitude
+		configs[config]["SPL_A"][j] = SPL
+	
+	configs[config]["f_{peak}"] = configs[config]["f_{peak}"]*ureg.turn/ureg.s
 
 
 # Plotting commands
@@ -146,23 +170,8 @@ plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
-#Battery weight
-plt.subplot(2,2,2)
-for i, config in enumerate(configs):
-	c = configs[config]
-	plt.plot(c["weight_fraction"],c["W_{battery}"].to(ureg.lbf).magnitude,
-		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
-		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
-plt.grid()
-plt.ylim(ymin=0)
-plt.xlabel('Structural mass fraction', fontsize = 16)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Battery Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
-
-
 #Trip cost per passenger
-plt.subplot(2,2,3)
+plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	c = configs[config]
 	plt.plot(c["weight_fraction"],c["cost_per_trip_per_passenger"],
@@ -175,18 +184,31 @@ plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
+#Vortex-noise peak frequency
+plt.subplot(2,2,3)
+for i, config in enumerate(configs):
+	c = configs[config]
+	plt.plot(c["weight_fraction"],c["f_{peak}"].to(ureg.turn/ureg.s).magnitude,
+		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
+		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
+plt.grid()
+plt.yscale('log')
+plt.xlabel('Structural mass fraction', fontsize = 16)
+plt.ylabel('Peak Frequency (Hz)', fontsize = 16)
+plt.title("Vortex-Noise Peak Frequency",fontsize = 20)
+plt.legend(numpoints = 1,loc='right', fontsize = 12)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["weight_fraction"],c["SPL"],
+	plt.plot(c["weight_fraction"],c["SPL_A"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymax=85)
 plt.xlabel('Structural mass fraction', fontsize = 16)
-plt.ylabel('SPL (dB)', fontsize = 16)
+plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
