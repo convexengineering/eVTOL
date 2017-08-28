@@ -12,6 +12,7 @@ from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from collections import OrderedDict
+from noise_models import vortex_noise
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -30,6 +31,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 #deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 #sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -196,6 +199,30 @@ for config in configs:
 		configs[config][time_frame]["amortized_opex_deadhead"] = amortized_opex_deadhead
 		configs[config][time_frame]["amortized_opex"] = amortized_opex_revenue + amortized_opex_deadhead
 
+		#Noise computations
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
+		R = solution("R")
+		VT = solution("VT_OnDemandSizingMission")[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		#Unweighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="None")
+		configs[config][time_frame]["SPL"] = SPL
+		configs[config][time_frame]["f_{peak}"] = f_peak
+		configs[config][time_frame]["spectrum"] = spectrum
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config][time_frame]["SPL_A"] = SPL
+		configs[config][time_frame]["spectrum_A"] = spectrum
+
 
 # Plotting commands
 plt.ion()
@@ -290,14 +317,14 @@ for i,config in enumerate(configs):
 	for j,time_frame in enumerate(configs[config]):
 		c = configs[config][time_frame]
 		offset = offset_array[j]
-		SPL_sizing = c["SPL"]
+		SPL_sizing_A = c["SPL_A"]
 
 		if (i == 0):
 			label = time_frame
-			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j],
+			plt.bar(i+offset,SPL_sizing_A,align='center',alpha=1,width=width,color=colors[j],
 				label=label)
 		else:
-			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j])
+			plt.bar(i+offset,SPL_sizing_A,align='center',alpha=1,width=width,color=colors[j])
 
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
@@ -306,7 +333,7 @@ plt.ylim(ymin = 57,ymax = 85)
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('SPL (dB)', fontsize = 16)
+plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 

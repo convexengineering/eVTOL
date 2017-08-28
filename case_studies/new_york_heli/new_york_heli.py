@@ -13,6 +13,8 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from copy import deepcopy
 from collections import OrderedDict
+from noise_models import vortex_noise
+
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -31,6 +33,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -149,9 +153,40 @@ for config in configs:
 		configs[config][case]["MTOW"] = solution("MTOW_OnDemandAircraft")
 		configs[config][case]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
 		configs[config][case]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-		configs[config][case]["SPL_sizing"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
-		configs[config][case]["SPL_revenue"] = 20*np.log10(solution("p_{ratio}_OnDemandRevenueMission")[0])
 
+		#Noise computations (sizing mission)
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
+		R = solution("R")
+		VT = solution("VT_OnDemandSizingMission")[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config][case]["SPL_sizing_A"] = SPL
+		configs[config][case]["f_{peak}"] = f_peak
+		configs[config][case]["spectrum_sizing_A"] = spectrum
+
+		#Noise computations (revenue mission)
+		T_perRotor = solution("T_perRotor_OnDemandRevenueMission")[0]
+		Q_perRotor = solution("Q_perRotor_OnDemandRevenueMission")[0]
+		R = solution("R")
+		VT = solution("VT_OnDemandRevenueMission")[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config][case]["SPL_revenue_A"] = SPL
+		configs[config][case]["f_{peak}"] = f_peak
+		configs[config][case]["spectrum_revenue_A"] = spectrum
 
 
 # Plotting commands
@@ -237,7 +272,7 @@ for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
 		offset = offset_array[j]
-		SPL_sizing = c["SPL_sizing"]
+		SPL_sizing = c["SPL_sizing_A"]
 
 		if (i == 0):
 			label = legend_labels[j]
@@ -254,17 +289,17 @@ plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymin = 57,ymax = ymax + 1)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('SPL (dB)', fontsize = 16)
+plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level (sizing mission)",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 
-#Sound pressure level (in hover, sizing mission) 
+#Sound pressure level (in hover, revenue mission) 
 plt.subplot(2,2,4)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
 		offset = offset_array[j]
-		SPL_revenue = c["SPL_revenue"]
+		SPL_revenue = c["SPL_revenue_A"]
 
 		if (i == 0):
 			label = legend_labels[j]
@@ -281,7 +316,7 @@ plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymin = 57,ymax = ymax + 1)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('SPL (dB)', fontsize = 16)
+plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level (revenue mission)",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 

@@ -11,6 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
+from noise_models import vortex_noise
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -29,6 +30,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -112,6 +115,30 @@ for config in configs:
 	
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
+
+	#Noise computations
+	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+	Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
+	R = solution("R")
+	VT = solution("VT_OnDemandSizingMission")[0]
+	s = solution("s")
+	Cl_mean = solution("Cl_{mean_{max}}")
+	N = solution("N")
+
+	#Unweighted
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+		Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+		weighting="None")
+	configs[config]["SPL"] = SPL
+	configs[config]["f_{peak}"] = f_peak
+	configs[config]["spectrum"] = spectrum
+
+	#A-weighted
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+		Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+		weighting="A")
+	configs[config]["SPL_A"] = SPL
+	configs[config]["spectrum_A"] = spectrum
 
 
 # Plotting commands
@@ -285,12 +312,34 @@ plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
 	loc='upper right', fontsize = 12)
 
-
-#Sound pressure level in hover
+#Vortex-noise peak frequency
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
-	SPL_sizing  = 20*np.log10(configs[config]["solution"]("p_{ratio}_OnDemandSizingMission")[0])
-	plt.bar(i,SPL_sizing,align='center',alpha=1,width=long_width,color='k')
+	f_peak = configs[config]["f_{peak}"].to(ureg.turn/ureg.s).magnitude
+	plt.bar(i,f_peak,bottom=0,align='center',alpha=1,width=long_width,color='k')
+plt.grid()
+#plt.yscale('log')
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
+plt.ylabel('Peak frequency (Hz)', fontsize = 16)
+plt.title("Vortex-Noise Peak Frequency",fontsize = 18)
+
+
+#Sound pressure level in hover
+plt.subplot(2,2,4)
+for i, config in enumerate(configs):
+
+	SPL_sizing  = configs[config]["SPL"]
+	SPL_sizing_A  = configs[config]["SPL_A"]
+
+	if i == 0:
+		plt.bar(i-0.2,SPL_sizing,width=0.3,align='center',alpha=1,color='grey',
+			label="Unweighted")
+		plt.bar(i+0.2,SPL_sizing_A,width=0.3,align='center',alpha=1,color='k',
+			label="A-weighted")
+	else:
+		plt.bar(i-0.2,SPL_sizing,width=0.3,align='center',alpha=1,color='grey')
+		plt.bar(i+0.2,SPL_sizing_A,width=0.3,align='center',alpha=1,color='k')
 
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
@@ -302,20 +351,7 @@ plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 16)
-
-
-#Rotor rotational speed (rpm)
-plt.subplot(2,2,4)
-for i, config in enumerate(configs):
-	sol = configs[config]["solution"]
-	omega = sol("\omega_OnDemandSizingMission")[0].to(ureg.Hz).magnitude
-	plt.bar(i,omega,bottom=0,align='center',alpha=1,width=long_width,color="k")
-
-plt.grid()
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
-plt.ylabel('Angular velocity (rev/s)', fontsize = 16)
-plt.title("Rotor Angular Velocity",fontsize = 20)
+plt.legend(loc="upper right")
 
 
 plt.suptitle(title_str,fontsize = 13.5)
