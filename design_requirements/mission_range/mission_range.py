@@ -12,6 +12,7 @@ from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from collections import OrderedDict
+from noise_models import vortex_noise
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -30,6 +31,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -54,7 +57,6 @@ del configs["Autogyro"]
 #Put multirotor at the end
 del configs["Multirotor"]
 configs["Multirotor"] = configuration_data["Multirotor"].copy()
-
 
 #Optimize remaining configurations
 for config in configs:
@@ -96,7 +98,7 @@ for config in configs:
 	configs[config]["MTOW"] = np.zeros(np.size(mission_range_array))
 	configs[config]["W_{battery}"] = np.zeros(np.size(mission_range_array))
 	configs[config]["cost_per_seat_mile"] = np.zeros(np.size(mission_range_array))
-	configs[config]["SPL"] = np.zeros(np.size(mission_range_array))
+	configs[config]["SPL_A"] = np.zeros(np.size(mission_range_array))
 
 	for i,mission_range in enumerate(mission_range_array):
 		
@@ -144,8 +146,22 @@ for config in configs:
 		configs[config]["MTOW"][i] = solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 		configs[config]["W_{battery}"][i] = solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 		configs[config]["cost_per_seat_mile"][i] = solution("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
-		configs[config]["SPL"][i] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
 		configs[config]["P_{battery}"][i] = solution("P_{battery}_OnDemandSizingMission").to(ureg.kW).magnitude
+
+		#Noise computations
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
+		R = solution("R")
+		VT = solution("VT_OnDemandSizingMission")[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config]["SPL_A"][i] = SPL
 		
 	configs[config]["mission_range"] = mission_range_array
 	configs[config]["MTOW"] = configs[config]["MTOW"]*ureg.lbf
@@ -212,13 +228,13 @@ plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["mission_range"].to(ureg.nautical_mile).magnitude,c["SPL"],
+	plt.plot(c["mission_range"].to(ureg.nautical_mile).magnitude,c["SPL_A"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.ylim(ymin=55)
 plt.xlabel('Mission range (nm)', fontsize = 16)
-plt.ylabel('SPL (dB)', fontsize = 16)
+plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 

@@ -11,6 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
+from noise_models import vortex_noise
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -29,6 +30,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -64,7 +67,6 @@ for config in configs:
 	L_D_cruise = c["L/D"]
 	T_A = c["T/A"]
 	Cl_mean_max = c["Cl_{mean_{max}}"]
-	N = c["N"]
 	loiter_type = c["loiter_type"]
 	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
@@ -72,19 +74,19 @@ for config in configs:
 	#Parameter of interest
 	if (config == "Helicopter") or (config == "Coaxial heli") \
 	or (config == "Compound heli"):
-		N = c["N"]
+		N_values = c["N"]
 	elif (config == "Autogyro"):
-		N = np.array([1,2])
+		N_values = np.array([1,2])
 	elif (config == "Tilt wing") or (config == "Tilt rotor") \
 	or (config == "Lift + cruise") or (config == "Multirotor"):
-		N = np.linspace(2,16,8)
+		N_values = np.linspace(2,16,8)
 	elif (config == "Tilt duct"):
-		N = np.linspace(20,40,11)
+		N_values = np.linspace(20,40,11)
 		
-	if (np.size(N) != 1):
-		N = ("sweep",N)
+	if (np.size(N_values) != 1):
+		N_values = ("sweep",N_values)
 
-	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
+	Aircraft = OnDemandAircraft(N=N_values,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,
 		eta_electric=eta_electric,cost_per_weight=vehicle_cost_per_weight,
 		cost_per_C=battery_cost_per_C,autonomousEnabled=autonomousEnabled)
@@ -125,12 +127,61 @@ for config in configs:
 	configs[config]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
 	configs[config]["\omega"] = solution("\omega_OnDemandSizingMission")
 	
-	if type(N) == tuple:
-		configs[config]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[:,0])
-		configs[config]["\omega"] = solution("\omega_OnDemandSizingMission")[:,0]
-	else:
-		configs[config]["SPL"] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
-		configs[config]["\omega"] = solution("\omega_OnDemandSizingMission")[0]
+	if type(N_values) == tuple:
+		configs[config]["SPL"] = np.zeros(np.size(N_values[1]))
+		configs[config]["SPL_A"] = np.zeros(np.size(N_values[1]))
+		configs[config]["f_{peak}"] = np.zeros(np.size(N_values[1]))
+
+		#Noise computations
+		for j,N in enumerate(N_values[1]):
+
+			T_perRotor = solution("T_perRotor_OnDemandSizingMission")[j,0]
+			Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[j,0]
+			R = solution("R")[j]
+			VT = solution("VT_OnDemandSizingMission")[j,0]
+			s = solution("s")[j]
+			Cl_mean = solution("Cl_{mean_{max}}")[j]
+			N = solution("N")[j]
+
+			#Unweighted
+			f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+				Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+				weighting="None")
+			configs[config]["f_{peak}"][j] = f_peak.to(ureg.turn/ureg.s).magnitude
+			configs[config]["SPL"][j] = SPL
+
+			#A-weighted
+			f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+				Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+				weighting="A")
+			configs[config]["SPL_A"][j] = SPL
+
+		configs[config]["f_{peak}"] = configs[config]["f_{peak}"]*ureg.turn/ureg.s
+
+	elif type(N_values) == int:
+
+		#Noise computations
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
+		R = solution("R")
+		VT = solution("VT_OnDemandSizingMission")[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		#Unweighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="None")
+		configs[config]["SPL"] = SPL
+		configs[config]["f_{peak}"] = f_peak
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config]["SPL_A"] = SPL
+
 
 # Plotting commands
 plt.ion()
@@ -178,33 +229,33 @@ plt.title("Cost per Trip, per Passenger",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 
-#Sound pressure level (in hover)
+#Vortex-noise peak frequency
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	c = configs[config]
 	N = c["solution"]("N_OnDemandAircraft/Rotors")
-	plt.plot(N,c["SPL"],
+	plt.plot(N,c["f_{peak}"].to(ureg.turn/ureg.s).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
+plt.yscale('log')
 plt.xlabel('Number of rotors', fontsize = 16)
-plt.ylabel('SPL (dB)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover",fontsize = 20)
+plt.ylabel('Peak Frequency (Hz)', fontsize = 16)
+plt.title("Vortex-Noise Peak Frequency",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
-
-#Rotor rotational speed (rpm)
+#Sound pressure level (in hover)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
 	N = c["solution"]("N_OnDemandAircraft/Rotors")
-	plt.plot(N,c["\omega"].to(ureg.Hz).magnitude,
+	plt.plot(N,c["SPL_A"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.xlabel('Number of rotors', fontsize = 16)
-plt.ylabel('Angular velocity (rev/s)', fontsize = 16)
-plt.title("Rotor Angular Velocity",fontsize = 20)
+plt.ylabel('SPL (dBA)', fontsize = 16)
+plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 

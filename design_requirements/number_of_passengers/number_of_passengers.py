@@ -11,6 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
+from noise_models import vortex_noise
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -29,6 +30,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 #sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -79,7 +82,7 @@ for config in configs:
 	configs[config]["MTOW"] = np.zeros(np.size(sizing_N_passengers_array))
 	configs[config]["W_{battery}"] = np.zeros(np.size(sizing_N_passengers_array))
 	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(sizing_N_passengers_array))
-	configs[config]["SPL"] = np.zeros(np.size(sizing_N_passengers_array))
+	configs[config]["SPL_A"] = np.zeros(np.size(sizing_N_passengers_array))
 
 	for i,sizing_N_passengers in enumerate(sizing_N_passengers_array):
 		revenue_N_passengers = revenue_N_passengers_array[i]
@@ -120,7 +123,21 @@ for config in configs:
 		configs[config]["MTOW"][i] = solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 		configs[config]["W_{battery}"][i] = solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
 		configs[config]["cost_per_trip_per_passenger"][i] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-		configs[config]["SPL"][i] = 20*np.log10(solution("p_{ratio}_OnDemandSizingMission")[0])
+
+		#Noise computations
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
+		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
+		R = solution("R")
+		VT = solution("VT_OnDemandSizingMission")[0]
+		s = solution("s")
+		Cl_mean = solution("Cl_{mean_{max}}")
+		N = solution("N")
+
+		#A-weighted
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			weighting="A")
+		configs[config]["SPL_A"][i] = SPL
 
 	configs[config]["MTOW"] = configs[config]["MTOW"]*ureg.lbf
 	configs[config]["W_{battery}"] = configs[config]["W_{battery}"]*ureg.lbf
@@ -225,7 +242,7 @@ plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
 	for j,offset in enumerate(offset_array):
-		SPL_sizing = c["SPL"][j]
+		SPL_sizing = c["SPL_A"][j]
 		if (i == 0):
 			if (sizing_N_passengers_array[j] == 1):
 				label = "%0.0f passenger" % sizing_N_passengers_array[j]
@@ -243,7 +260,7 @@ plt.ylim(ymin = 57,ymax = 83)
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('SPL (dB)', fontsize = 16)
+plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 

@@ -21,7 +21,6 @@ weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 #B = generic_data["B"]
-x = 500*ureg.ft
 
 reserve_type = generic_data["reserve_type"]
 autonomousEnabled = generic_data["autonomousEnabled"]
@@ -33,6 +32,8 @@ pilot_wrap_rate = generic_data["pilot_wrap_rate"]
 mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
 MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
+
+delta_S = generic_data["delta_S"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -119,7 +120,7 @@ for config in configs:
 	
 	configs[config]["theta"]["periodic"] = {}
 	configs[config]["theta"]["periodic"]["f_fund"] = np.zeros([np.size(B_array),np.size(theta_array)])*ureg.turn/ureg.s
-	configs[config]["theta"]["periodic"]["SPL"] = np.zeros([np.size(B_array),np.size(theta_array)])
+	configs[config]["theta"]["periodic"]["SPL_A"] = np.zeros([np.size(B_array),np.size(theta_array)])
 	
 	T_perRotor = configs[config]["solution"]("T_perRotor_OnDemandSizingMission")[0]
 	Q_perRotor = configs[config]["solution"]("Q_perRotor_OnDemandSizingMission")[0]
@@ -129,24 +130,25 @@ for config in configs:
 	Cl_mean = configs[config]["solution"]("Cl_{mean_{max}}")
 	N = configs[config]["solution"]("N")
 
-	#Periodic noise calculations
+	#Periodic noise calculations (A-weighted)
 	for i,B in enumerate(B_array):
 		for j,theta in enumerate(theta_array):
 
 			f_peak, SPL, spectrum = periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,
-				theta=theta,delta_S=x,h=0*ureg.ft,t_c=0.12,num_harmonics=5)
+				theta=theta,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,num_harmonics=10,
+				weighting="A")
 
 			configs[config]["theta"]["periodic"]["f_fund"][i,j] = f_peak
-			configs[config]["theta"]["periodic"]["SPL"][i,j] = SPL
+			configs[config]["theta"]["periodic"]["SPL_A"][i,j] = SPL
 
-	#Vortex noise computations
+	#Vortex noise computations (A-weighted)
 	configs[config]["theta"]["vortex"] = {}
 
 	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-		N=N,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28)
+		N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
 
 	configs[config]["theta"]["vortex"]["f_peak"] = f_peak
-	configs[config]["theta"]["vortex"]["SPL"] = SPL
+	configs[config]["theta"]["vortex"]["SPL_A"] = SPL
 	configs[config]["theta"]["vortex"]["spectrum"] = spectrum
 
 
@@ -195,12 +197,12 @@ for i, config in enumerate(configs):
 	
 	c = configs[config]
 	
-	SPL_vortex = c["theta"]["vortex"]["SPL"]*np.ones(np.size(theta_array))
+	SPL_vortex = c["theta"]["vortex"]["SPL_A"]*np.ones(np.size(theta_array))
 	
 	plt.subplot(2,2,i+1)
 
 	for j,B in enumerate(B_array):
-		SPL_periodic = c["theta"]["periodic"]["SPL"][j,:]
+		SPL_periodic = c["theta"]["periodic"]["SPL_A"][j,:]
 		periodic_label = "Periodic noise (%0.0f blades)" % B
 		plt.plot(theta_array.to(ureg.degree).magnitude,SPL_periodic,color="black",
 			linewidth=1.5,linestyle=style["linestyle"][j],marker=style["marker"][j],
@@ -212,7 +214,7 @@ for i, config in enumerate(configs):
 	plt.ylim(ymin=0)
 	plt.grid()
 	plt.xlabel('$\Theta$ (degrees)', fontsize = 16)
-	plt.ylabel('SPL (dB)', fontsize = 16)
+	plt.ylabel('SPL (dBA)', fontsize = 16)
 	plt.title(config, fontsize = 18)
 	plt.legend(loc="lower left")
 
