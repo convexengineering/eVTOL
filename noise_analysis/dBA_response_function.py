@@ -1,4 +1,4 @@
-#Draw A-weighting spectrum
+#Plot A-weighting response function
 
 import os
 import sys
@@ -29,6 +29,6 @@ plt.xscale("log")
 plt.grid()
 plt.xlabel('Frequency (Hz)', fontsize = 16)
 plt.ylabel('Relative response (dB)', fontsize = 16)
-plt.title("A-Weighting Spectrum", fontsize = 24)
+plt.title("A-Weighting Response Function", fontsize = 24)
 plt.tight_layout()
-plt.savefig('dBA_spectrum.pdf')
+plt.savefig('dBA_response_function.pdf')

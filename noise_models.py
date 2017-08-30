@@ -12,7 +12,7 @@ from standard_atmosphere import stdatmo
 from study_input_data import generic_data, configuration_data
 
 
-def periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_S=500*ureg.ft,h=0*ureg.ft,
+def rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delta_S=500*ureg.ft,h=0*ureg.ft,
 	t_c=0.12,num_harmonics=10,weighting="None"):
 
 	pi = math.pi
@@ -225,27 +225,27 @@ if __name__=="__main__":
 	weighting = "A"
 	
 	noise = {}
-	noise["periodic"] = {}
+	noise["rotational"] = {}
 	noise["vortex"] = {}
 
-	noise["periodic"]["f_fund"], noise["periodic"]["SPL"], noise["periodic"]["spectrum"]\
-		= periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,delta_S=delta_S,
+	noise["rotational"]["f_fund"], noise["rotational"]["SPL"], noise["rotational"]["spectrum"]\
+		= rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,delta_S=delta_S,
 			h=0*ureg.ft,t_c=0.12,num_harmonics=20,weighting=weighting)
 
 	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
 		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
 			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting=weighting)
 
-	noise["periodic"]["dBA_offset"] = noise_weighting(noise["periodic"]["f_fund"],0)
+	noise["rotational"]["dBA_offset"] = noise_weighting(noise["rotational"]["f_fund"],0)
 	noise["vortex"]["dBA_offset"] = noise_weighting(noise["vortex"]["f_peak"],0)
 
 	print "%0.0f blades; theta = %0.1f degrees; weighting = %s" \
 		% (B, theta.to(ureg.degree).magnitude, weighting)
 	print 
-	print "Noise Type \t\tPeriodic \tVortex"
+	print "Noise Type \t\tRotational \tVortex"
 	print "Peak Frequency (Hz)\t%0.1f\t\t%0.1f" % \
-		(noise["periodic"]["f_fund"].to(ureg.turn/ureg.s).magnitude,noise["vortex"]["f_peak"].to(ureg.turn/ureg.s).magnitude)
+		(noise["rotational"]["f_fund"].to(ureg.turn/ureg.s).magnitude,noise["vortex"]["f_peak"].to(ureg.turn/ureg.s).magnitude)
 	print "SPL (dB)\t\t%0.1f\t\t%0.1f" % \
-		(noise["periodic"]["SPL"],noise["vortex"]["SPL"])
+		(noise["rotational"]["SPL"],noise["vortex"]["SPL"])
 	print "dBA offset at peak:\t%0.1f\t\t%0.1f" % \
-		(noise["periodic"]["dBA_offset"],noise["vortex"]["dBA_offset"])
+		(noise["rotational"]["dBA_offset"],noise["vortex"]["dBA_offset"])
