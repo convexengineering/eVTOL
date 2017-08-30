@@ -86,10 +86,10 @@ plt.plot(test_data["CT"],test_data["FOM"],color="black",marker='o',linestyle="no
 plt.grid()
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
-plt.xlabel('Thrust coefficient', fontsize = 16)
-plt.ylabel('Figure of merit', fontsize = 16)
-plt.title("Figure of Merit",fontsize = 20)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 15)
+plt.xlabel('Thrust coefficient', fontsize = 20)
+plt.ylabel('Figure of merit', fontsize = 20)
+plt.title("Figure of Merit",fontsize = 24)
+plt.legend(numpoints = 1,loc='lower right', fontsize = 18)
 
 
 plt.subplot(1,2,2)
@@ -104,15 +104,15 @@ plt.plot(test_data["CT"],test_data["CP"],color="black",marker='o',linestyle="non
 plt.grid()
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
-plt.xlabel('Thrust coefficient', fontsize = 16)
-plt.ylabel('Power coefficient', fontsize = 16)
-plt.title("Power Coefficient",fontsize = 20)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 15)
+plt.xlabel('Thrust coefficient', fontsize = 20)
+plt.ylabel('Power coefficient', fontsize = 20)
+plt.title("Power Coefficient",fontsize = 24)
+plt.legend(numpoints = 1,loc='lower right', fontsize = 18)
 
 
 title_str = "Rotor Aerodynamic Model Validation (s = %0.1f; $C_{d_0}$ = %0.2f)"\
 	% (gp_model_data["s"], gp_model_data["Cd0"])
-plt.suptitle(title_str,fontsize = 22)
+plt.suptitle(title_str,fontsize = 26)
 plt.tight_layout()
-plt.subplots_adjust(left=0.06,right=0.98,bottom=0.1,top=0.87)
+plt.subplots_adjust(left=0.06,right=0.98,bottom=0.1,top=0.86)
 plt.savefig('rotor_validation_plot_01.pdf')
