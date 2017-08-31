@@ -2,7 +2,7 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
 
 import numpy as np
 from gpkit import Model, ureg
@@ -157,14 +157,14 @@ for config in configs:
 
 	#Unweighted
 	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-		N=N,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="None")
+		N=N,B=B,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="None")
 	configs[config]["theta"]["vortex"]["f_peak"] = f_peak
 	configs[config]["theta"]["vortex"]["SPL"] = SPL
 	configs[config]["theta"]["vortex"]["spectrum"] = spectrum
 
 	#A-weighted
 	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-		N=N,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
+		N=N,B=B,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
 	configs[config]["theta"]["vortex_A"]["f_peak"] = f_peak
 	configs[config]["theta"]["vortex_A"]["SPL"] = SPL
 	configs[config]["theta"]["vortex_A"]["spectrum"] = spectrum
@@ -232,14 +232,14 @@ for config in configs:
 
 		#Vortex noise (unweighted)
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="None")
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="None")
 		configs[config]["y"]["vortex"]["f_peak"][i] = f_peak
 		configs[config]["y"]["vortex"]["SPL"][i] = SPL
 		configs[config]["y"]["vortex"]["spectrum"][i] = spectrum
 
 		#Vortex noise (A-weighted)
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
 		configs[config]["y"]["vortex_A"]["f_peak"][i] = f_peak
 		configs[config]["y"]["vortex_A"]["SPL"][i] = SPL
 		configs[config]["y"]["vortex_A"]["spectrum"][i] = spectrum
@@ -337,8 +337,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: %0.0f blades; structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
-	% (B, weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -353,7 +353,7 @@ title_str = "Aircraft parameters: %0.0f blades; structural mass fraction = %0.2f
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
-plt.savefig('noise_analysis_plot_01.pdf')
+plt.savefig('config_tradeStudy_noise_analysis_plot_01.pdf')
 
 #Plot of SPL vs. theta
 fig2 = plt.figure(figsize=(12,12), dpi=80)
@@ -402,7 +402,7 @@ for i, config in enumerate(configs):
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
-plt.savefig('noise_analysis_plot_02.pdf')
+plt.savefig('config_tradeStudy_noise_analysis_plot_02.pdf')
 
 
 fig3 = plt.figure(figsize=(12,12), dpi=80)
@@ -438,7 +438,7 @@ for i, config in enumerate(configs):
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
-plt.savefig('noise_analysis_plot_03.pdf')
+plt.savefig('config_tradeStudy_noise_analysis_plot_03.pdf')
 
 
 #Display noise spectrum for different values of theta
@@ -477,4 +477,4 @@ for i, theta_desired in enumerate(theta_plot_values):
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
-plt.savefig('noise_analysis_plot_04.pdf')
+plt.savefig('config_tradeStudy_noise_analysis_plot_04.pdf')

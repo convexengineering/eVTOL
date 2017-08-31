@@ -19,6 +19,7 @@ eta_electric = generic_data["\eta_{electric}"]
 weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
+B = generic_data["B"]
 
 reserve_type = generic_data["reserve_type"]
 autonomousEnabled = generic_data["autonomousEnabled"]
@@ -32,7 +33,6 @@ MMH_FH = generic_data["MMH_FH"]
 deadhead_ratio = generic_data["deadhead_ratio"]
 
 delta_S = generic_data["delta_S"]
-noise_weighting = generic_data["noise_weighting"]
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -119,14 +119,14 @@ for config in configs:
 
 	#Unweighted
 	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-		Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+		Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 		weighting="None")
 	configs[config]["SPL"] = SPL
 	configs[config]["f_{peak}"] = f_peak
 
 	#A-weighted
 	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-		Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+		Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 		weighting="A")
 	configs[config]["SPL_A"] = SPL
 
@@ -214,8 +214,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -227,7 +227,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('config_tradeStudy_plot_01.pdf')
@@ -356,7 +356,7 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('FOM (dimensionless)', fontsize = 16)
 plt.title("Rotor Figure of Merit",fontsize = 18)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('config_tradeStudy_plot_02.pdf')

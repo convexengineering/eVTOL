@@ -975,7 +975,7 @@ class OperatingExpenses(Model):
 
 if __name__=="__main__":
 
-	from noise_models import periodic_noise, vortex_noise, noise_weighting
+	from noise_models import rotational_noise, vortex_noise, noise_weighting
 	
 	#Joby S2 representative analysis (applies to tilt-rotors in general)
 	
@@ -992,6 +992,7 @@ if __name__=="__main__":
 	loiter_type = "level_flight"
 	delta_S = 500*ureg.ft
 	noise_weighting = "A"
+	B = 5
 
 	V_cruise = 200*ureg.mph
 
@@ -1062,7 +1063,7 @@ if __name__=="__main__":
 		N = solution("N")
 
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 			weighting=noise_weighting)
 
 		SPL_dict[mission] = SPL
