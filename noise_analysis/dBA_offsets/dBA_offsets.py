@@ -1,8 +1,8 @@
-#Plot dBA offset as a function of vortex-noise peak frequency
+#Plot A-weighting response function, and dBA offset as a function of vortex-noise peak frequency
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
 
 import numpy as np
 from gpkit import ureg
@@ -10,9 +10,12 @@ from matplotlib import pyplot as plt
 from noise_models import noise_weighting
 
 #Computations
-f_peak_array = np.logspace(np.log10(10),np.log10(40000),100)*ureg.turn/ureg.s
+f_peak_array = np.logspace(np.log10(100),np.log10(40000),100)*ureg.turn/ureg.s
+A_weighting_response_function = np.zeros(np.size(f_peak_array))
 vortex_dBA_offset = np.zeros(np.size(f_peak_array))
 
+A_weighting_response_function = noise_weighting(f_peak_array,
+	A_weighting_response_function,type="A")
 
 for i,f_peak in enumerate(f_peak_array):
 	
@@ -49,14 +52,19 @@ fig1 = plt.figure(figsize=(12,6), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
-plt.plot(f_peak_array.to(ureg.turn/ureg.s).magnitude,vortex_dBA_offset,'k-',linewidth=3)
+
+plt.plot(f_peak_array.to(ureg.turn/ureg.s).magnitude,vortex_dBA_offset,
+	'k-',linewidth=3,label="$A(f)$")
+plt.plot(f_peak_array.to(ureg.turn/ureg.s).magnitude,A_weighting_response_function,
+	'k--',linewidth=3,label="$A(f_{peak}, vortex)$")
 
 plt.xlim(xmin=np.min(f_peak_array.to(ureg.turn/ureg.s).magnitude),
 	xmax=np.max(f_peak_array.to(ureg.turn/ureg.s).magnitude))
 plt.xscale("log")
 plt.grid()
-plt.xlabel('Peak frequency (Hz)', fontsize = 16)
-plt.ylabel('Relative response (dB)', fontsize = 16)
-plt.title("Vortex Noise A-Weighting Response", fontsize = 24)
+plt.xlabel('Frequency (Hz)', fontsize = 20)
+plt.ylabel('Relative response (dB)', fontsize = 20)
+plt.legend(fontsize = 20, loc="lower center")
+plt.title("A-Weighting Response", fontsize = 26)
 plt.tight_layout()
-plt.savefig('vortex_noise_dBA_effect.pdf')
+plt.savefig('dBA_offsets.pdf')

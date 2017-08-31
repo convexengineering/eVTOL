@@ -201,7 +201,7 @@ plt.xlim(xmin=np.min(n_array))
 plt.xlabel('Battery discharge parameter', fontsize = 16)
 plt.ylabel('Peak Frequency (Hz)', fontsize = 16)
 plt.title("Vortex-Noise Peak Frequency",fontsize = 20)
-plt.legend(numpoints = 1,loc='right', fontsize = 12)
+plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
