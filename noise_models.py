@@ -85,8 +85,7 @@ def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,B,delta_S=500*ureg.ft,h=0*ureg.ft,t
 	atmospheric_data = stdatmo(h)
 	rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
 	
-	T_total = T_perRotor*N
-	p_ratio = k2*(VT/(rho*delta_S))*np.sqrt((T_total/s)*(T_perRotor/A))
+	p_ratio = k2*(VT/(rho*delta_S))*np.sqrt((T_perRotor*N/s)*(T_perRotor/A))
 	SPL = 20*np.log10(p_ratio)
 
 	spectrum = {}
@@ -229,7 +228,7 @@ if __name__=="__main__":
 
 	noise["rotational"]["f_fund"], noise["rotational"]["SPL"], noise["rotational"]["spectrum"]\
 		= rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,delta_S=delta_S,
-			h=0*ureg.ft,t_c=0.12,num_harmonics=20,weighting=weighting)
+			h=0*ureg.ft,t_c=0.12,num_harmonics=10,weighting=weighting)
 
 	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
 		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,B=B,
