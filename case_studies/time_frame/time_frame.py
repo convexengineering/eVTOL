@@ -20,6 +20,7 @@ eta_electric = generic_data["\eta_{electric}"]
 weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
+B = generic_data["B"]
 
 reserve_type = generic_data["reserve_type"]
 #autonomousEnabled = generic_data["autonomousEnabled"]
@@ -210,7 +211,7 @@ for config in configs:
 
 		#Unweighted
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 			weighting="None")
 		configs[config][time_frame]["SPL"] = SPL
 		configs[config][time_frame]["f_{peak}"] = f_peak
@@ -218,7 +219,7 @@ for config in configs:
 
 		#A-weighted
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 			weighting="A")
 		configs[config][time_frame]["SPL_A"] = SPL
 		configs[config][time_frame]["spectrum_A"] = spectrum
@@ -353,7 +354,7 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f\n" % weight_fraction \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; %0.0f rotor blades\n" % (weight_fraction,B) \
 	+ "Sizing mission: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers,\
 		sizing_t_hover.to(ureg.s).magnitude) + reserve_type_string + "\n" \

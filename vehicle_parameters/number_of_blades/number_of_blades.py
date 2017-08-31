@@ -1,5 +1,5 @@
 #Sensitivity study to number of propeller blades. 
-#Only affects periodic noise, since solidity is constant.
+#Only affects rotational noise, since solidity is constant.
 
 import os
 import sys
@@ -12,7 +12,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
-from noise_models import periodic_noise, vortex_noise, noise_weighting
+from noise_models import rotational_noise, vortex_noise, noise_weighting
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -20,7 +20,7 @@ eta_electric = generic_data["\eta_{electric}"]
 weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
-#B = generic_data["B"]
+B = generic_data["B"]
 
 reserve_type = generic_data["reserve_type"]
 autonomousEnabled = generic_data["autonomousEnabled"]
@@ -118,9 +118,9 @@ for config in configs:
 
 	configs[config]["theta"] = {}
 	
-	configs[config]["theta"]["periodic"] = {}
-	configs[config]["theta"]["periodic"]["f_fund"] = np.zeros([np.size(B_array),np.size(theta_array)])*ureg.turn/ureg.s
-	configs[config]["theta"]["periodic"]["SPL_A"] = np.zeros([np.size(B_array),np.size(theta_array)])
+	configs[config]["theta"]["rotational"] = {}
+	configs[config]["theta"]["rotational"]["f_fund"] = np.zeros([np.size(B_array),np.size(theta_array)])*ureg.turn/ureg.s
+	configs[config]["theta"]["rotational"]["SPL_A"] = np.zeros([np.size(B_array),np.size(theta_array)])
 	
 	T_perRotor = configs[config]["solution"]("T_perRotor_OnDemandSizingMission")[0]
 	Q_perRotor = configs[config]["solution"]("Q_perRotor_OnDemandSizingMission")[0]
@@ -130,16 +130,16 @@ for config in configs:
 	Cl_mean = configs[config]["solution"]("Cl_{mean_{max}}")
 	N = configs[config]["solution"]("N")
 
-	#Periodic noise calculations (A-weighted)
+	#Rotational noise calculations (A-weighted)
 	for i,B in enumerate(B_array):
 		for j,theta in enumerate(theta_array):
 
-			f_peak, SPL, spectrum = periodic_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,
+			f_peak, SPL, spectrum = rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N=N,B=B,
 				theta=theta,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,num_harmonics=10,
 				weighting="A")
 
-			configs[config]["theta"]["periodic"]["f_fund"][i,j] = f_peak
-			configs[config]["theta"]["periodic"]["SPL_A"][i,j] = SPL
+			configs[config]["theta"]["rotational"]["f_fund"][i,j] = f_peak
+			configs[config]["theta"]["rotational"]["SPL_A"][i,j] = SPL
 
 	#Vortex noise computations (A-weighted)
 	configs[config]["theta"]["vortex"] = {}
@@ -202,12 +202,12 @@ for i, config in enumerate(configs):
 	plt.subplot(2,2,i+1)
 
 	for j,B in enumerate(B_array):
-		SPL_periodic = c["theta"]["periodic"]["SPL_A"][j,:]
-		periodic_label = "Periodic noise (%0.0f blades)" % B
-		plt.plot(theta_array.to(ureg.degree).magnitude,SPL_periodic,color="black",
+		SPL_rotational = c["theta"]["rotational"]["SPL_A"][j,:]
+		rotational_label = "Rotational noise (%0.0f blades)" % B
+		plt.plot(theta_array.to(ureg.degree).magnitude,SPL_rotational,color="black",
 			linewidth=1.5,linestyle=style["linestyle"][j],marker=style["marker"][j],
 			markersize=style["markersize"],fillstyle=style["fillstyle"][j],
-			label=periodic_label)
+			label=rotational_label)
 	
 	plt.plot(theta_array.to(ureg.degree).magnitude,SPL_vortex,'k--',linewidth=3,
 		label="Vortex noise")

@@ -19,6 +19,7 @@ eta_electric = generic_data["\eta_{electric}"]
 weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
+B = generic_data["B"]
 
 reserve_type = generic_data["reserve_type"]
 autonomousEnabled = generic_data["autonomousEnabled"]
@@ -131,7 +132,7 @@ for config in configs:
 
 		#A-weighted
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 			weighting="A")
 		configs[config]["SPL_A"][i] = SPL
 
@@ -223,8 +224,8 @@ else:
 	autonomy_string = "pilot required"
 
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; %s\n" \
-	% (weight_fraction, autonomy_string) \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers) \
 	+ reserve_type_string + "\n"\
