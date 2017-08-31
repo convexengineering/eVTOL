@@ -67,7 +67,7 @@ def rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delt
 	return f_fundamental, SPL, spectrum
 
 
-def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28,
+def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,B,delta_S=500*ureg.ft,h=0*ureg.ft,t_c=0.12,St=0.28,
 	weighting="None"):
 	
 	k2 = 1.206e-2 * ureg.s**3/ureg.ft**3
@@ -75,7 +75,7 @@ def vortex_noise(T_perRotor,R,VT,s,Cl_mean,N,delta_S=500*ureg.ft,h=0*ureg.ft,t_c
 
 	V_07 = 0.7*VT
 	A = pi*(R**2) #rotor disk area
-	c = (pi*s*R)/N #Rotor blade chord
+	c = (pi*s*R)/B #Rotor blade chord
 	alpha = Cl_mean/(2*pi) #Angle of attack (average)
 	t_proj = t_c*c*np.cos(alpha) + c*np.sin(alpha) #blade projected thickness
 	
@@ -148,7 +148,6 @@ if __name__=="__main__":
 	C_m = generic_data["C_m"]
 	n = generic_data["n"]
 	B = generic_data["B"]
-	B = 6
 
 	reserve_type = generic_data["reserve_type"]
 	autonomousEnabled = generic_data["autonomousEnabled"]
@@ -233,7 +232,7 @@ if __name__=="__main__":
 			h=0*ureg.ft,t_c=0.12,num_harmonics=20,weighting=weighting)
 
 	noise["vortex"]["f_peak"], noise["vortex"]["SPL"], noise["vortex"]["spectrum"]\
-		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,
+		= vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,N=N,B=B,
 			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting=weighting)
 
 	noise["rotational"]["dBA_offset"] = noise_weighting(noise["rotational"]["f_fund"],0)
