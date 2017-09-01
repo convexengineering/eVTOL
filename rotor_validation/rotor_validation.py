@@ -14,7 +14,7 @@ from aircraft_models import Rotors, FlightState, RotorsAero
 test_data = {}
 
 test_data["N"] = 1
-test_data["s"] = 0.1
+test_data["s"] = 0.098
 test_data["R"] = 32.5*ureg.inch
 
 test_data["CT_oldConvention"] = np.array([0.0019, 0.0026, 0.0027, 0.0033, 0.0041, 0.0042,\
@@ -110,7 +110,7 @@ plt.title("Power Coefficient",fontsize = 24)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 18)
 
 
-title_str = "Rotor Aerodynamic Model Validation (s = %0.1f; $C_{d_0}$ = %0.2f)"\
+title_str = "Rotor Aerodynamic Model Validation (s = %0.3f; $C_{d_0}$ = %0.2f)"\
 	% (gp_model_data["s"], gp_model_data["Cd0"])
 plt.suptitle(title_str,fontsize = 26)
 plt.tight_layout()
