@@ -53,10 +53,10 @@ plt.rc('axes', axisbelow=True)
 plt.show()
 
 
-plt.plot(f_peak_array.to(ureg.turn/ureg.s).magnitude,vortex_dBA_offset,
-	'k-',linewidth=3,label="$A(f)$")
 plt.plot(f_peak_array.to(ureg.turn/ureg.s).magnitude,A_weighting_response_function,
-	'k--',linewidth=3,label="$A(f_{peak}, vortex)$")
+	'k--',linewidth=3,label="$A(f)$")
+plt.plot(f_peak_array.to(ureg.turn/ureg.s).magnitude,vortex_dBA_offset,
+	'k-',linewidth=3,label="$A(f_{peak}, vortex)$")
 
 plt.xlim(xmin=np.min(f_peak_array.to(ureg.turn/ureg.s).magnitude),
 	xmax=np.max(f_peak_array.to(ureg.turn/ureg.s).magnitude))

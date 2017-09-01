@@ -515,21 +515,33 @@ for config in configs:
 	 output_data.write("\n")
 
 output_data.write("\n")
-output_data.write("Configuration \tVT (m/s)\tomega (rpm)\tMT\tFOM\tSPL (dB)\n")
+output_data.write("Configuration \tVT (m/s)\tomega (rpm)\tMT\tFOM\n")
+
+for config in configs:
+
+	sol = configs[config]["solution"]
+
+	output_data.write(config)
+	output_data.write("\t%0.1f" % sol("VT_OnDemandSizingMission")[0].to(ureg.m/ureg.s).magnitude)
+	output_data.write("\t\t%0.0f" % sol("\omega_OnDemandSizingMission")[0].to(ureg.rpm).magnitude)
+	output_data.write("\t\t%0.3f" % sol("MT_OnDemandSizingMission")[0])
+	output_data.write("\t%0.3f" % sol("FOM_OnDemandSizingMission")[0])
+
+	output_data.write("\n")
+
+output_data.write("\n")
+output_data.write("Configuration \tf_peak (Hz)\tSPL (dB)\tSPL (dBA)\n")
 
 for config in configs:
 	 
-	 sol = configs[config]["solution"]
+	c = configs[config]
 	 
-	 output_data.write(config)
-	 output_data.write("\t%0.1f" % sol("VT_OnDemandSizingMission")[0].to(ureg.m/ureg.s).magnitude)
-	 output_data.write("\t\t%0.0f" % sol("\omega_OnDemandSizingMission")[0].to(ureg.rpm).magnitude)
-	 output_data.write("\t\t%0.3f" % sol("MT_OnDemandSizingMission")[0])
-	 output_data.write("\t%0.3f" % sol("FOM_OnDemandSizingMission")[0])
-	 SPL = 20*np.log10(sol("p_{ratio}_OnDemandSizingMission")[0])
-	 output_data.write("\t%0.1f" % SPL)
+	output_data.write(config)
+	output_data.write("\t%0.1f" % c["f_{peak}"].to(ureg.turn/ureg.s).magnitude)
+	output_data.write("\t\t%0.1f" % c["SPL"])
+	output_data.write("\t\t%0.1f" % c["SPL_A"])
 
-	 output_data.write("\n")
+	output_data.write("\n")
 
 output_data.close()
 
