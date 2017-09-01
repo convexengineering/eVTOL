@@ -54,7 +54,7 @@ deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 # Data specific to study
 configs = OrderedDict()
-case_array = ["Baseline","Progressive","Aggressive"]
+case_array = ["Baseline","Rotor replacement","Aircraft redesign"]
 
 for config in configuration_data:
 	configs[config] = OrderedDict()
@@ -67,11 +67,11 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Progressive":
+			if case == "Rotor replacement":
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.1
-			if case == "Aggressive":
+			if case == "Aircraft redesign":
 				configs[config][case]["N"] = 12
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.14
@@ -83,11 +83,11 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Progressive":
+			if case == "Rotor replacement":
 				configs[config][case]["B"] = 3
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.15
-			if case == "Aggressive":
+			if case == "Aircraft redesign":
 				configs[config][case]["N"] = 1
 				configs[config][case]["B"] = 3
 				configs[config][case]["s"] = 0.1
@@ -99,11 +99,12 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Progressive":
+			if case == "Rotor replacement":
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.1
-			if case == "Aggressive":
+			if case == "Aircraft redesign":
+				configs[config][case]["N"] = 12
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.14
 				configs[config][case]["t_c"] = 0.1
@@ -114,11 +115,11 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Progressive":
+			if case == "Rotor replacement":
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.1
-			if case == "Aggressive":
+			if case == "Aircraft redesign":
 				configs[config][case]["N"] = 16
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.14
@@ -128,24 +129,24 @@ for config in configuration_data:
 
 #Delete unwanted configurations
 del configs["Multirotor"]["Baseline"]
-del configs["Multirotor"]["Progressive"]
-del configs["Multirotor"]["Aggressive"]
+del configs["Multirotor"]["Rotor replacement"]
+del configs["Multirotor"]["Aircraft redesign"]
 
 del configs["Autogyro"]["Baseline"]
-del configs["Autogyro"]["Progressive"]
-del configs["Autogyro"]["Aggressive"]
+del configs["Autogyro"]["Rotor replacement"]
+del configs["Autogyro"]["Aircraft redesign"]
 
 del configs["Helicopter"]["Baseline"]
-del configs["Helicopter"]["Progressive"]
-del configs["Helicopter"]["Aggressive"]
+del configs["Helicopter"]["Rotor replacement"]
+del configs["Helicopter"]["Aircraft redesign"]
 
 del configs["Tilt duct"]["Baseline"]
-del configs["Tilt duct"]["Progressive"]
-del configs["Tilt duct"]["Aggressive"]
+del configs["Tilt duct"]["Rotor replacement"]
+del configs["Tilt duct"]["Aircraft redesign"]
 
 del configs["Coaxial heli"]["Baseline"]
-del configs["Coaxial heli"]["Progressive"]
-del configs["Coaxial heli"]["Aggressive"]
+del configs["Coaxial heli"]["Rotor replacement"]
+del configs["Coaxial heli"]["Aircraft redesign"]
 
 
 #Delete configurations that will not be evaluated
@@ -305,33 +306,31 @@ plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
-#Vortex-noise peak frequency (in hover, sizing mission) 
+
+#Unweighted sound pressure level (in hover, sizing mission) 
 plt.subplot(2,2,3)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
 		offset = offset_array[j]
-		f_peak = c["f_{peak}"].to(ureg.turn/ureg.s).magnitude
+		SPL_sizing = c["SPL"]
 
 		if (i == 0):
-			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j],
+			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j],
 				label=case)
 		else:
-			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j])
-
+			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
-plt.yscale('log')
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax=ymax*5)
+plt.ylim(ymin = 57,ymax = ymax + 1)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('Frequency (Hz)', fontsize = 16)
-plt.title("Vortex-Noise Peak Frequency",fontsize = 18)
+plt.ylabel('SPL (dB)', fontsize = 16)
+plt.title("Unweighted SPL (sizing mission)",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
-
-#Sound pressure level (in hover, sizing mission) 
+#A-weighted sound pressure level (in hover, sizing mission) 
 plt.subplot(2,2,4)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
@@ -354,7 +353,7 @@ plt.xlim(xmin=xmin,xmax=xmax)
 plt.ylim(ymin = 57,ymax = ymax + 1)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dBA)', fontsize = 16)
-plt.title("Sound Pressure Level (sizing mission)",fontsize = 18)
+plt.title("A-Weighted SPL (sizing mission)",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
 
@@ -388,3 +387,105 @@ plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('low_noise_design_plot_01.pdf')
+
+
+fig2 = plt.figure(figsize=(12,12), dpi=80)
+plt.show()
+
+#Vortex-noise peak frequency (in hover, sizing mission) 
+plt.subplot(2,2,1)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+		f_peak = c["f_{peak}"].to(ureg.turn/ureg.s).magnitude
+
+		if (i == 0):
+			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j],
+				label=case)
+		else:
+			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j])
+
+
+plt.grid()
+plt.yscale('log')
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=ymax*5)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Frequency (Hz)', fontsize = 16)
+plt.title("Vortex-Noise Peak Frequency",fontsize = 18)
+plt.legend(loc='upper right', fontsize = 12)
+
+
+#Rotor radius
+plt.subplot(2,2,2)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+		R = c["solution"]("R").to(ureg.ft).magnitude
+
+		if (i == 0):
+			plt.bar(i+offset,R,align='center',alpha=1,width=width,color=colors[j],
+				label=case)
+		else:
+			plt.bar(i+offset,R,align='center',alpha=1,width=width,color=colors[j])
+
+plt.grid()
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Radius (ft)', fontsize = 16)
+plt.xlim(xmin=xmin,xmax=xmax)
+plt.title("Rotor Radius",fontsize = 18)
+plt.legend(loc='upper right', fontsize = 12)
+
+
+#Rotor rotational speed (sizing mission) 
+plt.subplot(2,2,3)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+		rpm = c["solution"]("\omega_OnDemandSizingMission")[0].to(ureg.rpm).magnitude
+
+		if (i == 0):
+			plt.bar(i+offset,rpm,align='center',alpha=1,width=width,color=colors[j],
+				label=case)
+		else:
+			plt.bar(i+offset,rpm,align='center',alpha=1,width=width,color=colors[j])
+
+plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Rotational speed (rpm)', fontsize = 16)
+plt.title("Rotor Rotational Speed (sizing mission)",fontsize = 18)
+plt.legend(loc='upper left', fontsize = 12)
+
+
+#Rotor tip speed (sizing mission)
+plt.subplot(2,2,4)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+		VT = c["solution"]("VT_OnDemandSizingMission")[0].to(ureg.ft/ureg.s).magnitude
+
+		if (i == 0):
+			plt.bar(i+offset,VT,align='center',alpha=1,width=width,color=colors[j],
+				label=case)
+		else:
+			plt.bar(i+offset,VT,align='center',alpha=1,width=width,color=colors[j])
+
+plt.grid()
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.2*ymax)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Tip speed (ft/s)', fontsize = 16)
+plt.title("Rotor Tip Speed (sizing mission)",fontsize = 18)
+plt.legend(loc='upper right', fontsize = 12)
+
+plt.suptitle(title_str,fontsize = 13.5)
+plt.tight_layout()
+plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
+plt.savefig('low_noise_design_plot_02.pdf')
