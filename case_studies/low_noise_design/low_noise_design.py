@@ -54,7 +54,7 @@ deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 # Data specific to study
 configs = OrderedDict()
-case_array = ["Baseline","Low Noise"]
+case_array = ["Baseline","Progressive","Aggressive"]
 
 for config in configuration_data:
 	configs[config] = OrderedDict()
@@ -67,7 +67,11 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Low Noise":
+			if case == "Progressive":
+				configs[config][case]["B"] = 7
+				configs[config][case]["s"] = 0.1
+				configs[config][case]["t_c"] = 0.1
+			if case == "Aggressive":
 				configs[config][case]["N"] = 12
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.14
@@ -79,7 +83,11 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Low Noise":
+			if case == "Progressive":
+				configs[config][case]["B"] = 3
+				configs[config][case]["s"] = 0.1
+				configs[config][case]["t_c"] = 0.15
+			if case == "Aggressive":
 				configs[config][case]["N"] = 1
 				configs[config][case]["B"] = 3
 				configs[config][case]["s"] = 0.1
@@ -91,8 +99,11 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Low Noise":
-				configs[config][case]["N"] = 12
+			if case == "Progressive":
+				configs[config][case]["B"] = 7
+				configs[config][case]["s"] = 0.1
+				configs[config][case]["t_c"] = 0.1
+			if case == "Aggressive":
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.14
 				configs[config][case]["t_c"] = 0.1
@@ -103,7 +114,11 @@ for config in configuration_data:
 				configs[config][case]["B"] = generic_data["B"]
 				configs[config][case]["s"] = 0.1
 				configs[config][case]["t_c"] = 0.12
-			if case == "Low Noise":
+			if case == "Progressive":
+				configs[config][case]["B"] = 7
+				configs[config][case]["s"] = 0.1
+				configs[config][case]["t_c"] = 0.1
+			if case == "Aggressive":
 				configs[config][case]["N"] = 16
 				configs[config][case]["B"] = 7
 				configs[config][case]["s"] = 0.14
@@ -113,19 +128,24 @@ for config in configuration_data:
 
 #Delete unwanted configurations
 del configs["Multirotor"]["Baseline"]
-del configs["Multirotor"]["Low Noise"]
+del configs["Multirotor"]["Progressive"]
+del configs["Multirotor"]["Aggressive"]
 
 del configs["Autogyro"]["Baseline"]
-del configs["Autogyro"]["Low Noise"]
+del configs["Autogyro"]["Progressive"]
+del configs["Autogyro"]["Aggressive"]
 
 del configs["Helicopter"]["Baseline"]
-del configs["Helicopter"]["Low Noise"]
+del configs["Helicopter"]["Progressive"]
+del configs["Helicopter"]["Aggressive"]
 
 del configs["Tilt duct"]["Baseline"]
-del configs["Tilt duct"]["Low Noise"]
+del configs["Tilt duct"]["Progressive"]
+del configs["Tilt duct"]["Aggressive"]
 
 del configs["Coaxial heli"]["Baseline"]
-del configs["Coaxial heli"]["Low Noise"]
+del configs["Coaxial heli"]["Progressive"]
+del configs["Coaxial heli"]["Aggressive"]
 
 
 #Delete configurations that will not be evaluated
@@ -147,14 +167,18 @@ for config in configs:
 		V_cruise = c["V_{cruise}"]
 		L_D_cruise = c["L/D"]
 		T_A = c["T/A"]
-		Cl_mean_max = c["Cl_{mean_{max}}"]
-		N = c["N"]
 		loiter_type = c["loiter_type"]
 		tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 		tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
 
+		N = c["N"]
+		B = c["B"]
+		s = c["s"]
+		t_c = c["t_c"]
+		Cl_mean_max = c["Cl_{mean_{max}}"]
+
 		Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
-			Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
+			Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,s=s,n=n,eta_electric=eta_electric,
 			cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
 			autonomousEnabled=autonomousEnabled)
 
@@ -201,31 +225,19 @@ for config in configs:
 		Cl_mean = solution("Cl_{mean_{max}}")
 		N = solution("N")
 
-		#A-weighted
+		#Unweighted
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
-			weighting="A")
-		configs[config][case]["SPL_sizing_A"] = SPL
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=t_c,St=0.28,
+			weighting="None")
+		configs[config][case]["SPL"] = SPL
 		configs[config][case]["f_{peak}"] = f_peak
-		configs[config][case]["spectrum_sizing_A"] = spectrum
-
-		#Noise computations (revenue mission)
-		T_perRotor = solution("T_perRotor_OnDemandRevenueMission")[0]
-		Q_perRotor = solution("Q_perRotor_OnDemandRevenueMission")[0]
-		R = solution("R")
-		VT = solution("VT_OnDemandRevenueMission")[0]
-		s = solution("s")
-		Cl_mean = solution("Cl_{mean_{max}}")
-		N = solution("N")
 
 		#A-weighted
 		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=t_c,St=0.28,
 			weighting="A")
-		configs[config][case]["SPL_revenue_A"] = SPL
-		configs[config][case]["f_{peak}"] = f_peak
-		configs[config][case]["spectrum_revenue_A"] = spectrum
-
+		configs[config][case]["SPL_A"] = SPL
+		
 
 # Plotting commands
 plt.ion()
@@ -245,14 +257,6 @@ offset_array = [-0.3,0,0.3]
 width = 0.2
 colors = ["grey", "w", "k"]
 
-legend_labels = [""]*np.size(sizing_mission_range_array)
-for i,val in enumerate(legend_labels):
-	legend_labels[i] = "%0.0f nm sizing mission; %0.0f nm revenue mission" \
-		% (sizing_mission_range_array[i].to(ureg.nautical_mile).magnitude,
-			revenue_mission_range_array[i].to(ureg.nautical_mile).magnitude)
-	if revenue_mission_range_array[i] != deadhead_mission_range_array[i]:
-		raise ValueError("Revenue and deadhead missions must be the same length.")
-
 
 #Maximum takeoff weight
 plt.subplot(2,2,1)
@@ -263,9 +267,8 @@ for i,config in enumerate(configs):
 		MTOW = c["MTOW"].to(ureg.lbf).magnitude
 
 		if (i == 0):
-			label = legend_labels[j]
 			plt.bar(i+offset,MTOW,align='center',alpha=1,width=width,color=colors[j],
-				label=label)
+				label=case)
 		else:
 			plt.bar(i+offset,MTOW,align='center',alpha=1,width=width,color=colors[j])
 
@@ -274,9 +277,9 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.3*ymax)
+plt.ylim(ymax = 1.1*ymax)
 plt.title("Maximum Takeoff Weight",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 
 #Trip cost per passenger 
@@ -288,34 +291,57 @@ for i,config in enumerate(configs):
 		cptpp = c["cost_per_trip_per_passenger"]
 
 		if (i == 0):
-			label = legend_labels[j]
 			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j],
-				label=label)
+				label=case)
 		else:
 			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j])
 
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.3*ymax)
+plt.ylim(ymax = 1.1*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
-
-#Sound pressure level (in hover, sizing mission) 
+#Vortex-noise peak frequency (in hover, sizing mission) 
 plt.subplot(2,2,3)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
 		offset = offset_array[j]
-		SPL_sizing = c["SPL_sizing_A"]
+		f_peak = c["f_{peak}"].to(ureg.turn/ureg.s).magnitude
 
 		if (i == 0):
-			label = legend_labels[j]
+			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j],
+				label=case)
+		else:
+			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j])
+
+
+plt.grid()
+plt.yscale('log')
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=ymax*5)
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.ylabel('Frequency (Hz)', fontsize = 16)
+plt.title("Vortex-Noise Peak Frequency",fontsize = 18)
+plt.legend(loc='upper right', fontsize = 12)
+
+
+#Sound pressure level (in hover, sizing mission) 
+plt.subplot(2,2,4)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+		SPL_sizing = c["SPL_A"]
+
+		if (i == 0):
 			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j],
-				label=label)
+				label=case)
 		else:
 			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j])
 
@@ -329,34 +355,7 @@ plt.ylim(ymin = 57,ymax = ymax + 1)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level (sizing mission)",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
-
-#Sound pressure level (in hover, revenue mission) 
-plt.subplot(2,2,4)
-for i,config in enumerate(configs):
-	for j,case in enumerate(configs[config]):
-		c = configs[config][case]
-		offset = offset_array[j]
-		SPL_revenue = c["SPL_revenue_A"]
-
-		if (i == 0):
-			label = legend_labels[j]
-			plt.bar(i+offset,SPL_revenue,align='center',alpha=1,width=width,color=colors[j],
-				label=label)
-		else:
-			plt.bar(i+offset,SPL_revenue,align='center',alpha=1,width=width,color=colors[j])
-
-SPL_req = 62
-plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
-	color="black", linewidth=3, linestyle="-")
-plt.grid()
-plt.xlim(xmin=xmin,xmax=xmax)
-[ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymin = 57,ymax = ymax + 1)
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('SPL (dBA)', fontsize = 16)
-plt.title("Sound Pressure Level (revenue mission)",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 
 if reserve_type == "FAA_day" or reserve_type == "FAA_night":
@@ -375,8 +374,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
+	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
