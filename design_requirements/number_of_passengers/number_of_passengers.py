@@ -60,8 +60,8 @@ del configs["Coaxial heli"]
 
 #Data specific to study
 sizing_N_passengers_array = np.linspace(1,5,3)
-passenger_ratio = 2./3
-revenue_N_passengers_array = passenger_ratio*sizing_N_passengers_array
+load_factor = 2./3
+revenue_N_passengers_array = load_factor*sizing_N_passengers_array
 
 
 #Optimize remaining configurations
@@ -285,9 +285,9 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nm; passenger ratio = %0.2f; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	+ "Revenue mission (%s): range = %0.0f nm; load factor = %0.2f; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
-		passenger_ratio, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
+		load_factor, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
 	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
