@@ -100,47 +100,48 @@ for heli in test_data:
 #Plotting commands
 
 plt.ion()
-fig1 = plt.figure(figsize=(12,6), dpi=80)
+fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.show()
 
 style = {}
 style["linestyle"] = ["-","--","-."]
 style["markersize"] = 10
 
-#Figure of Merit
 
 for j, heli in enumerate(test_data):
 	
-	plt.subplot(1,2,j+1)
-	
 	for i,data in enumerate(test_data[heli]):
 		
+		plt.subplot(3,2,2*i+j+1)
+	
 		omega = test_data[heli][i]["omega"].to(ureg.rpm).magnitude
-		data_label_calculated = "Calculated ($\Omega$ = %0.0f rpm)" % omega
-		data_label_measured = "Measured ($\Omega$ = %0.0f rpm)" % omega
 		
 		T = test_data[heli][i]["T"].to(ureg.lbf).magnitude/1e3
 		SPL_calculated = test_data[heli][i]["SPL_calculated"]
 		SPL_measured = test_data[heli][i]["SPL_measured"]
+		max_SPL_error = np.max(np.abs(SPL_calculated-SPL_measured))
 		
-		plt.plot(T,SPL_calculated,color="black",linestyle=style["linestyle"][i],
-			linewidth=2,marker="o",markersize=style["markersize"],
-			label=data_label_calculated)
-		plt.plot(T,SPL_measured,color="black",linestyle=style["linestyle"][i],
-			linewidth=2,marker="s",markersize=style["markersize"],
-			label=data_label_measured)
-	
-	[ymin,ymax] = plt.gca().get_ylim()
-	plt.ylim(ymin=ymin-8,ymax=ymax)
-	plt.grid()
-	plt.xlabel(r'Thrust (lbf $\times \; 10^3$)', fontsize = 20)
-	plt.ylabel('SPL (dB)', fontsize = 20)
-	plt.title(heli,fontsize = 24)
-	plt.legend(numpoints = 2,loc='lower right', fontsize = 14)
+		plt.plot(T,SPL_calculated,color="black",linestyle="-",linewidth=2,
+			marker="o",markersize=style["markersize"],label="Calculated")
+		plt.plot(T,SPL_measured,color="black",linestyle="-",linewidth=2,
+			marker="s",markersize=style["markersize"],label="Measured")
+		
+		[ymin,ymax] = plt.gca().get_ylim()
+		plt.ylim(ymin=ymin-1,ymax=ymax+1)
+		plt.grid()
+		plt.xlabel(r'Thrust (lbf $\times \; 10^3$)', fontsize = 16)
+		plt.ylabel('SPL (dB)', fontsize = 16)
+		
+		title_str = heli \
+			+ " (%0.0f rpm; max error = %0.1f dB)" \
+			% (omega, max_SPL_error)
+		plt.title(title_str,fontsize = 18)
+		plt.legend(numpoints = 2,loc='lower right', fontsize = 14)
 		
 
-title_str = "Noise Model Validation" 
+title_str = "Noise Model Validation ($\Delta S$ = %0.0f ft)" \
+	% generic_inputs["delta_S"].to(ureg.ft).magnitude
 plt.suptitle(title_str,fontsize = 26)
 plt.tight_layout()
-plt.subplots_adjust(left=0.06,right=0.98,bottom=0.1,top=0.86)
+plt.subplots_adjust(left=0.06,right=0.98,bottom=0.05,top=0.92)
 plt.savefig('noise_validation_plot_01.pdf')
