@@ -16,7 +16,7 @@ def rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delt
 	t_c=0.12,num_harmonics=10,weighting="None"):
 
 	pi = math.pi
-	P0 = (2e-5)*ureg.Pa
+	P_ref = (2e-5)*ureg.Pa
 
 	atmospheric_data = stdatmo(h)
 	rho = atmospheric_data["\rho"].to(ureg.kg/ureg.m**3)
@@ -33,8 +33,9 @@ def rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delt
 	spectrum["f"] = np.zeros(num_harmonics)*ureg.rad/ureg.s
 	spectrum["SPL"] = np.zeros(num_harmonics)
 
-	p_ratio_squared = 0
-
+	p_ratio_squared = np.zeros(num_harmonics)
+	
+	#Compute unweighted spectrum
 	for i, m in enumerate(spectrum["m"]):
 		spectrum["f"][i] = m*B*omega
 		
@@ -47,23 +48,21 @@ def rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=175*ureg.degree,delt
 			- Q_perRotor*a/(omega*R_eff**2))*bessel_term #loading
 		P_mT = ((-rho*((m*B*omega)**2)*B)/(3*np.sqrt(2)*pi*delta_S))*c*t*R_eff*bessel_term #thickness
 
-		p_ratio = np.sqrt(N)*np.abs(P_mL + P_mT)/P0
-		p_ratio_squared = p_ratio_squared + p_ratio**2
+		p_ratio_squared[i] = N*((P_mL/P_ref)**2 + (P_mT/P_ref)**2)
+		spectrum["SPL"][i] = 10*np.log10(p_ratio_squared[i])
 
-		spectrum["SPL"][i] = 20*np.log10(p_ratio)
-
-	SPL = 10*np.log10(p_ratio_squared)
-	f_fundamental = spectrum["f"][0]
-
+	#Apply weighting schemes
 	if weighting == "A":
 		spectrum["SPL"] = noise_weighting(spectrum["f"],spectrum["SPL"],type="A")
-		
-		p_ratio_squared = 0
-		for i,SPL in enumerate(spectrum["SPL"]):
-			p_ratio_squared += 10**(SPL/10)
+	
+	#Calculate overall SPL
+	p_ratio_squared_sum = 0
+	for i,SPL in enumerate(spectrum["SPL"]):
+		p_ratio_squared_sum += 10**(SPL/10)
 
-		SPL = 10*np.log10(p_ratio_squared)
+	SPL = 10*np.log10(p_ratio_squared_sum)
 
+	f_fundamental = spectrum["f"][0]
 	return f_fundamental, SPL, spectrum
 
 
