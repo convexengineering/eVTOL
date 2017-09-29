@@ -16,7 +16,6 @@ from noise_models import vortex_noise
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
@@ -56,7 +55,7 @@ del configs["Multirotor"]
 del configs["Autogyro"]
 
 del configs["Helicopter"]
-del configs["Coaxial heli"]
+#del configs["Coaxial heli"]
 
 #Optimize remaining configurations
 for config in configs:
@@ -73,6 +72,7 @@ for config in configs:
 	loiter_type = c["loiter_type"]
 	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
+	weight_fraction = c["weight_fraction"]
 
 	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -199,12 +199,12 @@ plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(loc="upper right")
 
-if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if reserve_type == "FAA_day":
-		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_night":
-		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+	if reserve_type == "FAA_aircraft":
+		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_heli":
+		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
@@ -214,8 +214,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -272,7 +272,7 @@ plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Energy (kWh)', fontsize = 16)
 plt.title("Energy Use",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12)
+plt.legend(loc='upper left', fontsize = 12)
 
 
 #Power consumption by mission segment (sizing mission)
@@ -300,12 +300,12 @@ for i, config in enumerate(configs):
 			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j])
 
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax=1.2*ymax)
+plt.ylim(ymax=1.6*ymax)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Power Consumption",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12)
+plt.legend(loc='upper left', fontsize = 12)
 
 #Rotor tip speed 
 plt.subplot(3,2,3)
@@ -398,7 +398,7 @@ plt.grid()
 plt.ylim(ymax = 1.3*ymax)
 plt.title("Acquisition Costs",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper right', fontsize = 12)
+	loc='upper left', fontsize = 12)
 
 plt.subplot(3,2,3)
 for i, config in enumerate(configs):
@@ -416,7 +416,7 @@ plt.grid()
 plt.ylim(ymax = 1.3*ymax)
 plt.title("Revenue and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue cost","Deadhead cost"),
-	loc='upper right', fontsize = 12)
+	loc='upper left', fontsize = 12)
 
 plt.subplot(3,2,4)
 for i, config in enumerate(configs):
@@ -434,7 +434,7 @@ plt.grid()
 plt.ylim(ymax = 1.35*ymax)
 plt.title("Cost breakdown (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
-	loc='upper right', fontsize = 12)
+	loc='upper left', fontsize = 12)
 
 plt.subplot(3,2,5)
 for i, config in enumerate(configs):
@@ -454,7 +454,7 @@ plt.grid()
 plt.ylim(ymax = 1.1*ymax)
 plt.title("Capital Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper right', fontsize = 12)
+	loc='upper left', fontsize = 12)
 
 plt.subplot(3,2,6)
 for i, config in enumerate(configs):
@@ -476,7 +476,7 @@ plt.grid()
 plt.ylim(ymax = 1.3*ymax)
 plt.title("Operating Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
-	loc='upper right', fontsize = 12)
+	loc='upper left', fontsize = 12)
 
 cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; battery cost ratio = \$%0.0f per kWh; %s\n" \
 	% (vehicle_cost_per_weight.to(ureg.lbf**-1).magnitude, \

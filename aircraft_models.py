@@ -378,7 +378,7 @@ class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
     def setup(self,aircraft,mission_range=100*ureg.nautical_mile,
 		V_cruise=150*ureg.mph,N_passengers=1,t_hover=120*ureg.s,
-		reserve_type="Uber",mission_type="piloted",loiter_type="level_flight",
+		reserve_type="FAA_heli",mission_type="piloted",loiter_type="level_flight",
 		tailRotor_power_fraction_hover=0.0001,tailRotor_power_fraction_levelFlight=0.0001):
 		
 		if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
@@ -409,22 +409,22 @@ class OnDemandSizingMission(Model):
 		self.fs3 = Hover(self,aircraft,hoverState,
 			tailRotor_power_fraction=tailRotor_power_fraction_hover)#take off again
 		
-		if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+		if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 			V_reserve = ((1/3.)**(1/4.))*V_cruise #Approximation for max-endurance speed
 			
-			if reserve_type == "FAA_day":
-				#30-minute loiter time, as per day VFR rules
+			if reserve_type == "FAA_aircraft":
+				#30-minute loiter time, as per VFR rules for aircraft (daytime only)
 				t_loiter = Variable("t_{loiter}",30,"minutes","Loiter time")
-			elif reserve_type == "FAA_night":
-				#45-minute loiter time, as per night VFR rules
-				t_loiter = Variable("t_{loiter}",45,"minutes","Loiter time")
+			elif reserve_type == "FAA_heli":
+				#30-minute loiter time, as per VFR rules for helicopters
+				t_loiter = Variable("t_{loiter}",20,"minutes","Loiter time")
 
 			if loiter_type == "level_flight":#loiter segment is a level-flight segment
 				self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter",
 					tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)
 			elif loiter_type == "hover":#loiter segment is a hover segment
 				self.fs4 = Hover(self,aircraft,hoverState,
-					tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)
+					tailRotor_power_fraction=tailRotor_power_fraction_hover)
 
 			constraints += [t_loiter == self.fs4.topvar("t")]
 
@@ -988,7 +988,7 @@ if __name__=="__main__":
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	Cl_mean_max = 1.0
 	n=1.0#battery discharge parameter
-	reserve_type = "FAA_night"
+	reserve_type = "FAA_heli"
 	loiter_type = "level_flight"
 	delta_S = 500*ureg.ft
 	noise_weighting = "A"
@@ -1068,7 +1068,7 @@ if __name__=="__main__":
 
 		SPL_dict[mission] = SPL
 
-	if (reserve_type == "FAA_day") or (reserve_type == "FAA_night"):
+	if (reserve_type == "FAA_aircraft") or (reserve_type == "FAA_heli"):
 		num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
 		reserve_type_string = " (%0.0f-minute loiter time)" % num
 	if reserve_type == "Uber":
