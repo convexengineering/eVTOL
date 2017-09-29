@@ -260,6 +260,9 @@ for i,config in enumerate(configs):
 
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.1*ymax)
+
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 18)
@@ -391,6 +394,8 @@ for i,config in enumerate(configs):
 
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.1*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($millions US)', fontsize = 16)
 plt.title("Acquisition Cost",fontsize = 18)
@@ -455,6 +460,8 @@ for i,config in enumerate(configs):
 
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.1*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Operating Expenses per Trip",fontsize = 18)
