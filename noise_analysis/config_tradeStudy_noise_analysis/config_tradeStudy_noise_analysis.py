@@ -16,7 +16,6 @@ from noise_models import rotational_noise, vortex_noise, noise_weighting
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
@@ -71,6 +70,7 @@ for config in configs:
 	loiter_type = c["loiter_type"]
 	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
+	weight_fraction = c["weight_fraction"]
 
 	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -322,12 +322,12 @@ for i, config in enumerate(configs):
 	ax2.legend(lines + lines2, labels + labels2, fontsize=13,loc="lower right")
 
 
-if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if reserve_type == "FAA_day":
-		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_night":
-		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+	if reserve_type == "FAA_aircraft":
+		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_heli":
+		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
@@ -337,8 +337,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -350,7 +350,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_01.pdf')
@@ -399,7 +399,7 @@ for i, config in enumerate(configs):
 	plt.title(config, fontsize = 18)
 	plt.legend(loc="lower left",fontsize=12)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_02.pdf')
@@ -435,7 +435,7 @@ for i, config in enumerate(configs):
 	plt.title(config, fontsize = 18)
 	plt.legend(loc="lower right")
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_03.pdf')
@@ -474,7 +474,7 @@ for i, theta_desired in enumerate(theta_plot_values):
 	subtitle_str = config + " ($\Theta$ = %0.1f$^\circ$)" % theta.to(ureg.degree).magnitude
 	plt.title(subtitle_str, fontsize = 18)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_04.pdf')
