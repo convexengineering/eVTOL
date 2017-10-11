@@ -404,11 +404,8 @@ class OnDemandSizingMission(Model):
 			tailRotor_power_fraction=tailRotor_power_fraction_hover)#takeoff
 		self.fs1 = LevelFlight(self,aircraft,V=V_cruise,
 			tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#fly to destination
-		self.fs2 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing
-		self.fs3 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#take off again
 		
+		#Reserve segment
 		if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 			V_reserve = ((1/3.)**(1/4.))*V_cruise #Approximation for max-endurance speed
 			
@@ -416,30 +413,30 @@ class OnDemandSizingMission(Model):
 				#30-minute loiter time, as per VFR rules for aircraft (daytime only)
 				t_loiter = Variable("t_{loiter}",30,"minutes","Loiter time")
 			elif reserve_type == "FAA_heli":
-				#30-minute loiter time, as per VFR rules for helicopters
+				#20-minute loiter time, as per VFR rules for helicopters
 				t_loiter = Variable("t_{loiter}",20,"minutes","Loiter time")
 
 			if loiter_type == "level_flight":#loiter segment is a level-flight segment
-				self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter",
+				self.fs2 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter",
 					tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)
 			elif loiter_type == "hover":#loiter segment is a hover segment
-				self.fs4 = Hover(self,aircraft,hoverState,
+				self.fs2 = Hover(self,aircraft,hoverState,
 					tailRotor_power_fraction=tailRotor_power_fraction_hover)
 
-			constraints += [t_loiter == self.fs4.topvar("t")]
+			constraints += [t_loiter == self.fs2.topvar("t")]
 
 		if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
 			V_reserve = V_cruise
 			R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
-			self.fs4 = LevelFlight(self,aircraft,V=V_reserve,segment_type="cruise",
+			self.fs2 = LevelFlight(self,aircraft,V=V_reserve,segment_type="cruise",
 				tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#reserve segment
-			constraints += [R_divert == self.fs4.topvar("segment_range")]
+			constraints += [R_divert == self.fs2.topvar("segment_range")]
 		
-		self.fs5 = Hover(self,aircraft,hoverState,
+		self.fs3 = Hover(self,aircraft,hoverState,
 			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing again
 
-		self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4, self.fs5]
-		self.hover_segments  = [self.fs0, self.fs2, self.fs3, self.fs5] #not including loiter
+		self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3]
+		self.hover_segments  = [self.fs0, self.fs3] #not including loiter
 		
 		#Power and energy consumption by mission segment
 		with Vectorize(len(self.flight_segments)):
@@ -977,14 +974,14 @@ if __name__=="__main__":
 
 	from noise_models import rotational_noise, vortex_noise, noise_weighting
 	
-	#Joby S2 representative analysis (applies to tilt-rotors in general)
-	
+	#Concept representative analysis
+
 	N = 12 #number of propellers
-	T_A = 16.3*ureg("lbf")/ureg("ft")**2
+	T_A = 15.*ureg("lbf")/ureg("ft")**2
 	L_D_cruise = 14. #estimated L/D in cruise
 	eta_cruise = 0.85 #propulsive efficiency in cruise
 	eta_electric = 0.9 #electrical system efficiency
-	weight_fraction = 0.2464 #structural mass fraction
+	weight_fraction = 0.55 #structural mass fraction
 	C_m = 400*ureg.Wh/ureg.kg #battery energy density
 	Cl_mean_max = 1.0
 	n=1.0#battery discharge parameter
@@ -996,21 +993,21 @@ if __name__=="__main__":
 
 	V_cruise = 200*ureg.mph
 
-	sizing_mission_range = 200*ureg.nautical_mile
-	revenue_mission_range = 100*ureg.nautical_mile
-	deadhead_mission_range = 100*ureg.nautical_mile
+	sizing_mission_range = 87*ureg.nautical_mile
+	revenue_mission_range = 30*ureg.nautical_mile
+	deadhead_mission_range = 30*ureg.nautical_mile
 
-	sizing_t_hover=120*ureg.s
-	revenue_t_hover=30*ureg.s
-	deadhead_t_hover=30*ureg.s
+	sizing_t_hover = 120*ureg.s
+	revenue_t_hover = 30*ureg.s
+	deadhead_t_hover = 30*ureg.s
 
 	autonomousEnabled = True
 	sizing_mission_type = "piloted"
 	revenue_mission_type = "piloted"
 	deadhead_mission_type = "piloted"
 
-	sizing_N_passengers = 1
-	revenue_N_passengers = 1
+	sizing_N_passengers = 3
+	revenue_N_passengers = 2
 	deadhead_N_passengers = 0.00001
 
 	charger_power = 200*ureg.kW
