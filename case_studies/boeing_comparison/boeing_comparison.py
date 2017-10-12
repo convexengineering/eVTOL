@@ -16,6 +16,8 @@ from noise_models import vortex_noise
 #Data from the Boeing study
 boeing_data = {}
 
+boeing_data["C_m"] = (400/0.8)*ureg.Wh/ureg.kg
+
 boeing_data["sizing_mission"] = {}
 boeing_data["sizing_mission"]["type"] = "piloted"
 boeing_data["sizing_mission"]["N_passengers"] = 3
@@ -26,6 +28,7 @@ boeing_data["Lift + cruise"] = {}
 boeing_data["Lift + cruise"]["V_{cruise}"] = 150*ureg("mph")
 boeing_data["Lift + cruise"]["L/D"] = 9.1
 boeing_data["Lift + cruise"]["T/A"] = 7.3*ureg("lbf")/ureg("ft")**2
+boeing_data["Lift + cruise"]["loiter_type"] = "level_flight"
 boeing_data["Lift + cruise"]["MTOW"] = 3710*ureg.lbf
 boeing_data["Lift + cruise"]["W_{battery}"] = 948*ureg.lbf
 boeing_data["Lift + cruise"]["P_{cruise}"] = 199*ureg.hp
@@ -35,11 +38,21 @@ boeing_data["Tilt rotor"] = {}
 boeing_data["Tilt rotor"]["V_{cruise}"] = 150*ureg("mph")
 boeing_data["Tilt rotor"]["L/D"] = 11.0
 boeing_data["Tilt rotor"]["T/A"] = 12.8*ureg("lbf")/ureg("ft")**2
+boeing_data["Tilt rotor"]["loiter_type"] = "level_flight"
 boeing_data["Tilt rotor"]["MTOW"] = 3930*ureg.lbf
 boeing_data["Tilt rotor"]["W_{battery}"] = 965*ureg.lbf
 boeing_data["Tilt rotor"]["P_{cruise}"] = 187*ureg.hp
 boeing_data["Tilt rotor"]["P_{hover}"] = 542*ureg.hp
 
+boeing_data["Helicopter"] = {}
+boeing_data["Helicopter"]["V_{cruise}"] = 150*ureg("mph")
+boeing_data["Helicopter"]["L/D"] = 7.26
+boeing_data["Helicopter"]["T/A"] = 4.1*ureg("lbf")/ureg("ft")**2
+boeing_data["Helicopter"]["loiter_type"] = "level_flight"
+boeing_data["Helicopter"]["MTOW"] = 3470*ureg.lbf
+boeing_data["Helicopter"]["W_{battery}"] = 1170*ureg.lbf
+boeing_data["Helicopter"]["P_{cruise}"] = 250*ureg.hp
+boeing_data["Helicopter"]["P_{hover}"] = 347*ureg.hp
 
 sizing_mission_type = generic_data["sizing_mission"]["type"]
 sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
@@ -50,7 +63,7 @@ sizing_t_hover = generic_data["sizing_mission"]["t_{hover}"]
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-C_m = generic_data["C_m"]
+C_m = boeing_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
 
@@ -87,7 +100,7 @@ configs = configuration_data.copy()
 del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
-del configs["Helicopter"]
+#del configs["Helicopter"]
 del configs["Coaxial heli"]
 del configs["Tilt wing"]
 del configs["Compound heli"]
@@ -105,7 +118,7 @@ for config in configs:
 	
 	Cl_mean_max = c["Cl_{mean_{max}}"]
 	N = c["N"]
-	loiter_type = c["loiter_type"]
+	loiter_type = boeing_data[config]["loiter_type"]
 	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
 	weight_fraction = c["weight_fraction"]
@@ -187,12 +200,12 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.1*ymax)
+plt.ylim(ymax = 1.2*ymax)
 
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12)
+plt.legend(loc='upper left', fontsize = 12)
 
 #Battery weight
 plt.subplot(2,2,2)
@@ -218,12 +231,12 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.1*ymax)
+plt.ylim(ymax = 1.05*ymax)
 
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12)
+plt.legend(loc='upper left', fontsize = 12)
 
 
 #Power consumption (cruise)
@@ -255,7 +268,7 @@ plt.ylim(ymax = 1.1*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Cruise Power (sizing mission)",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12)
+plt.legend(loc='upper left', fontsize = 12)
 
 
 #Power consumption (hover)
@@ -306,7 +319,9 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: %0.0f rotor blades\n" % B \
+
+title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers,\
 		sizing_t_hover.to(ureg.s).magnitude) + reserve_type_string + "\n" \
