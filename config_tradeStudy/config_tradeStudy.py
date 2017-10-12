@@ -55,7 +55,7 @@ del configs["Multirotor"]
 del configs["Autogyro"]
 
 del configs["Helicopter"]
-#del configs["Coaxial heli"]
+del configs["Coaxial heli"]
 
 #Optimize remaining configurations
 for config in configs:
@@ -252,11 +252,12 @@ for i, config in enumerate(configs):
 	E_data[0]["value"] = sol("E_OnDemandSizingMission")[1]
 	
 	E_data[1]["type"] = "Hover"
-	E_data[1]["value"] = sol("E_OnDemandSizingMission")[0]
-	E_data[1]["value"] = E_data[1]["value"]*4 #number of hover segments
+	E_data[1]["value"] = sol("E_OnDemandSizingMission")[0] \
+		+ sol("E_OnDemandSizingMission")[3]
+	
 
 	E_data[2]["type"] = "Reserve"
-	E_data[2]["value"] = sol("E_OnDemandSizingMission")[4]
+	E_data[2]["value"] = sol("E_OnDemandSizingMission")[2]
 
 	bottom = 0
 	for j,E in enumerate(E_data):
@@ -269,10 +270,12 @@ for i, config in enumerate(configs):
 		bottom = bottom + E_value
 
 plt.grid()
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.3*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Energy (kWh)', fontsize = 16)
 plt.title("Energy Use",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 
 #Power consumption by mission segment (sizing mission)
@@ -283,7 +286,7 @@ for i, config in enumerate(configs):
 	P_battery = np.zeros(3)	
 	P_battery[0] = sol("P_{battery}_OnDemandSizingMission")[1].to(ureg.kW).magnitude#cruise
 	P_battery[1] = sol("P_{battery}_OnDemandSizingMission")[0].to(ureg.kW).magnitude#hover
-	P_battery[2] = sol("P_{battery}_OnDemandSizingMission")[4].to(ureg.kW).magnitude#reserve
+	P_battery[2] = sol("P_{battery}_OnDemandSizingMission")[2].to(ureg.kW).magnitude#reserve
 	
 	for j,offset in enumerate(offset_array):
 		if (i == 0):
@@ -300,12 +303,12 @@ for i, config in enumerate(configs):
 			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j])
 
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax=1.6*ymax)
+plt.ylim(ymax=1.5*ymax)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Power Consumption",fontsize = 18)
-plt.legend(loc='upper left', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12)
 
 #Rotor tip speed 
 plt.subplot(3,2,3)
@@ -395,10 +398,10 @@ plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost ($millions US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.3*ymax)
+plt.ylim(ymax = 1.5*ymax)
 plt.title("Acquisition Costs",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,3)
 for i, config in enumerate(configs):
@@ -416,7 +419,7 @@ plt.grid()
 plt.ylim(ymax = 1.3*ymax)
 plt.title("Revenue and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue cost","Deadhead cost"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,4)
 for i, config in enumerate(configs):
@@ -431,10 +434,10 @@ plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.35*ymax)
+plt.ylim(ymax = 1.4*ymax)
 plt.title("Cost breakdown (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,5)
 for i, config in enumerate(configs):
@@ -451,10 +454,10 @@ plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.1*ymax)
+plt.ylim(ymax = 1.25*ymax)
 plt.title("Capital Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 plt.subplot(3,2,6)
 for i, config in enumerate(configs):
@@ -473,10 +476,10 @@ plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.3*ymax)
+plt.ylim(ymax = 1.55*ymax)
 plt.title("Operating Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
-	loc='upper left', fontsize = 12)
+	loc='upper right', fontsize = 12)
 
 cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; battery cost ratio = \$%0.0f per kWh; %s\n" \
 	% (vehicle_cost_per_weight.to(ureg.lbf**-1).magnitude, \

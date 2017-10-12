@@ -7,18 +7,15 @@ Lift + cruise	8	0.903	1.842e+03	1.947e+02	4.043e+04
 Compound heli	1	4.595	1.429e+04	7.052e+03	1.762e+05
 Tilt wing	8	0.885	1.766e+03	1.828e+02	3.876e+04
 Tilt rotor	12	0.693	1.083e+03	8.781e+01	2.377e+04
-Coaxial heli	2	3.197	1.076e+04	3.350e+03	1.733e+05
 
 Configuration 	VT (m/s)	omega (rpm)	MT	FOM
 Lift + cruise	187.6		1982		0.551	0.780
 Compound heli	114.9		239		0.338	0.761
 Tilt wing	187.6		2025		0.551	0.780
 Tilt rotor	187.6		2585		0.551	0.780
-Coaxial heli	165.4		494		0.486	0.726
 
 Configuration 	f_peak (Hz)	SPL (dB)	SPL (dBA)
 Lift + cruise	2338.2		72.9		72.0
 Compound heli	316.9		63.3		64.2
 Tilt wing	2388.0		72.7		71.8
 Tilt rotor	3049.2		72.3		70.7
-Coaxial heli	751.4		70.1		71.2
