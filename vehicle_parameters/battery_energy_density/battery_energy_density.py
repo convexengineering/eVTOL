@@ -16,7 +16,6 @@ from noise_models import vortex_noise
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
@@ -54,6 +53,8 @@ configs = configuration_data.copy()
 del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
+del configs["Helicopter"]
+del configs["Coaxial heli"]
 
 #Optimize remaining configurations
 for config in configs:
@@ -62,19 +63,19 @@ for config in configs:
 
 	#set up C_m arrays (different for each configuration)
 	num_pts_short = 3
-	num_pts_long = 9
+	num_pts_long = 8
 	if config == "Helicopter":
 		C_m_array = np.linspace(640,700,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Coaxial heli":
 		C_m_array = np.linspace(570,700,num_pts_short)*ureg.Wh/ureg.kg
 	elif config == "Lift + cruise":
-		C_m_array = np.linspace(350,700,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(290,700,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Compound heli":
-		C_m_array = np.linspace(360,700,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(300,700,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Tilt rotor":
-		C_m_array = np.linspace(280,700,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(250,700,num_pts_long)*ureg.Wh/ureg.kg
 	elif config == "Tilt wing":
-		C_m_array = np.linspace(310,700,num_pts_long)*ureg.Wh/ureg.kg
+		C_m_array = np.linspace(270,700,num_pts_long)*ureg.Wh/ureg.kg
 
 	configs[config]["C_m_array"] = C_m_array
 	configs[config]["MTOW"] = np.zeros(np.size(C_m_array))
@@ -92,6 +93,7 @@ for config in configs:
 	loiter_type = c["loiter_type"]
 	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
+	weight_fraction = c["weight_fraction"]
 
 	for i,C_m in enumerate(C_m_array):
 
@@ -203,7 +205,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
+plt.legend(numpoints = 1,loc='lower left', fontsize = 12)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
@@ -213,21 +215,20 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.ylim(ymax=86)
+plt.ylim(ymax=78)
 plt.xlabel('Battery energy density (Wh/kg)', fontsize = 16)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
-
-if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if reserve_type == "FAA_day":
-		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_night":
-		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+	if reserve_type == "FAA_aircraft":
+		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_heli":
+		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
-	num = solution("R_{divert}_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
+	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
 if autonomousEnabled:
@@ -235,8 +236,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; %0.0f rotor blades; %s\n" \
-	% (weight_fraction, B, autonomy_string) \
+title_str = "Aircraft parameters: %0.0f rotor blades; %s\n" \
+	% (B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -247,7 +248,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; %0.0f rotor 
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
 plt.savefig('battery_energy_density_plot_01.pdf')
