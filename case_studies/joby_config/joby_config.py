@@ -167,6 +167,8 @@ for i, config in enumerate(configs):
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.1*ymax)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 16)
 
@@ -192,12 +194,12 @@ for i, config in enumerate(configs):
 	E_data[0]["value"] = sol("E_OnDemandSizingMission")[1]
 	
 	E_data[1]["type"] = "Hover"
-	E_data[1]["value"] = sol("E_OnDemandSizingMission")[0]
-	E_data[1]["value"] = E_data[1]["value"]*4 #number of hover segments
-
+	E_data[1]["value"] = sol("E_OnDemandSizingMission")[0] \
+		+ sol("E_OnDemandSizingMission")[3]
+	
 	E_data[2]["type"] = "Reserve"
-	E_data[2]["value"] = sol("E_OnDemandSizingMission")[4]
-
+	E_data[2]["value"] = sol("E_OnDemandSizingMission")[2]
+	
 	bottom = 0
 	for j,E in enumerate(E_data):
 		E_value = E["value"].to(ureg.kWh).magnitude
@@ -212,6 +214,8 @@ for i, config in enumerate(configs):
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.2*ymax)
 plt.ylabel('Energy (kWh)', fontsize = 16)
 plt.title("Energy Use",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
@@ -224,7 +228,7 @@ for i, config in enumerate(configs):
 	P_battery = np.zeros(3)	
 	P_battery[0] = sol("P_{battery}_OnDemandSizingMission")[1].to(ureg.kW).magnitude#cruise
 	P_battery[1] = sol("P_{battery}_OnDemandSizingMission")[0].to(ureg.kW).magnitude#hover
-	P_battery[2] = sol("P_{battery}_OnDemandSizingMission")[4].to(ureg.kW).magnitude#reserve
+	P_battery[2] = sol("P_{battery}_OnDemandSizingMission")[2].to(ureg.kW).magnitude#reserve
 	
 	for j,offset in enumerate(offset_array):
 		if (i == 0):
@@ -304,10 +308,12 @@ for i, config in enumerate(configs):
 	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,width=long_width,color="k")
 	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,width=long_width,color="lightgrey")
 
+plt.grid()
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.xlim(xmin = np.min(y_pos)-0.8,xmax = np.max(y_pos)+0.8)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.1*ymax)
 plt.ylabel('Cost per mission ($US)', fontsize = 16)
-plt.grid()
 plt.title("Cost breakdown (revenue mission only)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
 	loc='upper right', fontsize = 12)

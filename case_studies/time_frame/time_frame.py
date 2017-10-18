@@ -417,6 +417,8 @@ for i,config in enumerate(configs):
 
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.1*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US/mile)', fontsize = 16)
 plt.title("Cost per Seat Mile",fontsize = 18)
