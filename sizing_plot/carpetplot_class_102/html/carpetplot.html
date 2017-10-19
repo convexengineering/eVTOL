@@ -1,0 +1,714 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Carpetplot Class Example Plots</title><meta name="generator" content="MATLAB 8.0"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2013-05-30"><meta name="DC.source" content="demo.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, tt, code { font-size:12px; }
+pre { margin:0px 0px 20px; }
+pre.error { color:red; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Carpetplot Class Example Plots</h1><!--introduction--><p>These are some examples plots made with the carpetplot class.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Simple Example</a></li><li><a href="#2">Input Data</a></li><li><a href="#12">Curve Fitting</a></li><li><a href="#14">Cheater Plots</a></li><li><a href="#18">Multiple Plots</a></li><li><a href="#21">Styles</a></li><li><a href="#26">Transform coordinate Systems</a></li><li><a href="#28">Constraint Plot with fixed Weight trade study</a></li><li><a href="#29">Contourf Plot</a></li></ul></div><h2>Simple Example<a name="1"></a></h2><p>In the beginning a simple example. More details about creating and labeling a carpet plot will be illustrated in the following examples.</p><pre class="codeinput">set(gcf,<span class="string">'Renderer'</span>,<span class="string">'OpenGL'</span>)
+
+a = 1:0.25:2;
+b = 1:20:100;
+[A B] = meshgrid(a,b);
+Y = A.*B;
+
+o = carpetplot(A,B,Y);
+label(o,<span class="string">'A-Axis'</span>,<span class="string">'B-Axis'</span>)
+
+grid <span class="string">on</span>;
+</pre><img vspace="5" hspace="5" src="demo_01.png" alt=""> <h2>Input Data<a name="2"></a></h2><p>The carpetplot class supports different kind of input data. The data can be exact (a matrix containing all datapoints) or scattered data. In this case the data points will be interpolated using TriScatteredInterp.</p><p>There are two different types of carpet plots:</p><p><b>The cheater plot</b></p><pre>obj = carpetplot(a,b,Y)
+obj = carpetplot(a,b,Y,z)</pre><p><b>The (real) carpet plot</b></p><pre>obj = carpetplot(a,b,X,Y)
+obj = carpetplot(a,b,X,Y,z)</pre><p>In case of exact data A and B can be eather vectors or meshgrids.</p><p>If the input data are scattered data points a,b,(x) and y must be vectors with the corresponding coordinates of the datapoints.</p><p>The z parameter is only used for the interpolation of whole carpet plots or lattice plots.</p><p><img vspace="5" hspace="5" src="input.png" alt=""> </p><p>A plot using exact data input and Meshgrids</p><pre class="codeinput">warning <span class="string">off</span>; <span class="comment">% Suppress warnings (optional)</span>
+a = linspace(1,100,30);
+b = linspace(100,200,20);
+[A B] = meshgrid(a,b);
+X = A.^2+B;
+Y = A+B;
+o = carpetplot(A,B,X,Y);
+</pre><img vspace="5" hspace="5" src="demo_02.png" alt=""> <p>Using the vectors for a and b has the same effect</p><pre class="codeinput">clf;
+warning <span class="string">off</span>; <span class="comment">% Suppress warnings (optional)</span>
+a = linspace(1,100,30);
+b = linspace(100,200,20);
+[A,B] = meshgrid(a,b);
+X = A.^2+B;
+Y = A+B;
+o = carpetplot(a,b,X,Y);
+</pre><img vspace="5" hspace="5" src="demo_03.png" alt=""> <p>Scattered data</p><pre class="codeinput">clf;
+a = [1 1 1 2 2 2 3 3 3];
+b = [10 20 30 10 20 30 10 20 30];
+X = a.^2+a;
+Y = a+b;
+o = carpetplot(a,b,X,Y);
+</pre><img vspace="5" hspace="5" src="demo_04.png" alt=""> <h2>Curve Fitting<a name="12"></a></h2><p>In the default case the interpolations of the carpet plot will be calculated and connected with a straight line.</p><p>This <b>linear</b> curve will produce a cornered carpet if you do not have a lot of intersections.</p><p>To avoid this use the <b>spline</b> and <b>pchip</b> methods to produce curved lines with the given intersections.</p><p>Alternatively if you have a lot of data points but only wan't to vizualize a few intersections it is recommended to use  the exact methods <b>epchip</b> or <b>espline</b> pr <b>elinear</b> as these methods consider all input datapoints for plotting.</p><p>The following example illustrates the different effects of the curve fitting methods.</p><pre class="codeinput">a = linspace(-.5,1,50);
+b = linspace(-1,6,14);
+[A,B] = meshgrid(a,b);
+Y = A.^3+B;
+X = A-B*.2;
+Y(1,4) = Y(1,4)-0.1;
+clf;
+hold <span class="string">on</span>;
+
+oinput = carpetplot(A,B,X,Y,<span class="string">'o'</span>,<span class="string">'Color'</span>,[0.2 0.2 0.2]);
+set(oinput,<span class="string">'aTick'</span>,linspace(-.5,1,50),<span class="string">'bTick'</span>,linspace(-1,6,14))
+ospline = carpetplot(A,B,X,Y,<span class="string">'-'</span>,<span class="string">'Color'</span>,[1 0 0]);
+olinear = carpetplot(A,B,X,Y,<span class="string">'-'</span>,<span class="string">'Color'</span>,[0.5 1 0.5]);
+set(olinear,<span class="string">'curveFitting'</span>,<span class="string">'linear'</span>,<span class="string">'aTick'</span>,linspace(-.5,1,5))
+set(ospline,<span class="string">'curveFitting'</span>,<span class="string">'spline'</span>,<span class="string">'aTick'</span>,linspace(-.5,1,5))
+opchip = carpetplot(A,B,X,Y,<span class="string">'-'</span>,<span class="string">'Color'</span>,[0 1 0]);
+set(opchip,<span class="string">'curveFitting'</span>,<span class="string">'pchip'</span>,<span class="string">'aTick'</span>,linspace(-.5,1,5))
+oepchip = carpetplot(A,B,X,Y,<span class="string">'-'</span>,<span class="string">'Color'</span>,[0 0 1]);
+set(oepchip,<span class="string">'curveFitting'</span>,<span class="string">'epchip'</span>,<span class="string">'aTick'</span>,linspace(-.5,1,5))
+oespline = carpetplot(A,B,X,Y,<span class="string">'-'</span>,<span class="string">'Color'</span>,[1 1 0]);
+set(oespline,<span class="string">'curveFitting'</span>,<span class="string">'espline'</span>,<span class="string">'aTick'</span>,linspace(-.5,1,5))
+oelinear = carpetplot(A,B,X,Y,<span class="string">'-'</span>,<span class="string">'Color'</span>,[0 1 1]);
+set(oelinear,<span class="string">'curveFitting'</span>,<span class="string">'elinear'</span>,<span class="string">'aTick'</span>,linspace(-.5,1,5))
+
+legend([oinput olinear ospline opchip oepchip oespline oelinear] <span class="keyword">...</span>
+    ,<span class="string">'Input Data'</span>,<span class="string">'linear'</span>,<span class="string">'Spline'</span>,<span class="string">'Pchip'</span>,<span class="string">'Exact pchip'</span>,<span class="string">'Exact Spline'</span>,<span class="string">'Exact Linear'</span>);
+
+xlim([-0.32 0.1]); ylim([-1.17 -0.86])
+</pre><img vspace="5" hspace="5" src="demo_05.png" alt=""> <p>As you can see all curve fitting methods have their trade offs. <b>pchip</b> and <b>spline</b> don't consider the points between the intersections.</p><p><b>linear</b> just draws a straight line.</p><p>The Exact Methods consider all points but are only usable if you have a lot of input data. <b>espline</b> especially with the data anomaly swings out a lot.</p><h2>Cheater Plots<a name="14"></a></h2><p>Cheater plots do not have an x axis. The x-values for the vizualisation will calculated using</p><pre>X = k0 + a*K1 + b*K2</pre><p>The K values controll the plotting direction of the plot and as default the intersections align vertically. The allignement does only work if the a and b values are equally spaced.</p><pre class="codeinput">clf;
+aValues = [1 1 1 2 2 2 3 3 3];
+bValues = [10 15 20 10 15 20 10 15 20];
+Y = aValues+bValues;
+o = carpetplot(aValues,bValues,Y);
+label(o);
+set(o,<span class="string">'style'</span>,<span class="string">'clean'</span>,<span class="string">'alabelspacing'</span>,0.15);
+[arrowH,textH] = cheaterlegend(o,<span class="string">'northwest'</span>);
+grid <span class="string">on</span>;
+</pre><img vspace="5" hspace="5" src="demo_06.png" alt=""> <p>Use get and set to change the K Values. The Intersections will not allign vertically anymore.</p><pre class="codeinput">delete(arrowH,textH)
+
+set(o,<span class="string">'K1'</span>,get(o,<span class="string">'K1'</span>)*3)
+
+cheaterlegend(o,<span class="string">'northwest'</span>);
+grid <span class="string">on</span>
+</pre><img vspace="5" hspace="5" src="demo_07.png" alt=""> <h2>Multiple Plots<a name="18"></a></h2><p>The carpetplot class supports multiple plots. They can just be plotted into one figure by using the <tt>hold on</tt> command.</p><pre class="codeinput">clf;
+a =[1;2;3;1;2;3];
+b =[10;10;10;30;30;30];
+x = b-a.^3;
+y = a.*b;
+
+hold <span class="string">on</span>;
+o1 = carpetplot(a,b,x,y,10);
+o2 = carpetplot(a,b,x+40,y+40,22);
+o3 = carpetplot(a,b,x+190,y+15,34);
+
+zlabel(o1,<span class="string">'Plot1 (z=10)'</span>);
+zlabel(o2,<span class="string">'Plot2 (z=22)'</span>);
+zlabel(o3,<span class="string">'Plot3 (z=34)'</span>);
+[hlines hmarkers htext] = showpoint(o1,o2,o3,1.7,23);
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_08.png" alt=""> <p>A whole plot can be interpolated. The showpoint lines and text can be deleted using the handles.</p><pre class="codeinput">delete(hlines); delete(hmarkers); delete(htext);
+oi = interpolateplot(o1,o2,o3,30);
+set(get(oi,<span class="string">'aLines'</span>),<span class="string">'color'</span>,[0.5 0.5 0.5],<span class="string">'LineStyle'</span>,<span class="string">'--'</span>);
+set(get(oi,<span class="string">'blines'</span>),<span class="string">'color'</span>,[0.5 0.5 0.5],<span class="string">'LineStyle'</span>,<span class="string">'--'</span>);
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_09.png" alt=""> <p>Altough cheater plot's do not have an x-axis multiple carpets can be plotted using the lattice method. The x-axis shifting of the plot will represent the plot's z-value.</p><pre class="codeinput">clear;
+clf;
+
+a = linspace(1,10,3);
+b = linspace(10,30,3);
+[A B] = meshgrid(a,b);
+X1 = A.*B;
+X2 = (A.*B).*2;
+X3 = (A.*B).*3;
+
+
+hold <span class="string">on</span>;
+o1 = carpetplot(A,B,X1,-124);
+set(o1,<span class="string">'style'</span>,<span class="string">'standard'</span>);
+o2 = carpetplot(A,B,X2,500);
+set(o2,<span class="string">'k0'</span>,20,<span class="string">'style'</span>,<span class="string">'standard'</span>)
+o3 = carpetplot(A,B,X3,3000);
+set(o3,<span class="string">'k0'</span>,40,<span class="string">'style'</span>,<span class="string">'standard'</span>)
+
+alabel(o3); blabel(o1);
+
+lLines = lattice(o1,o2,o3,<span class="string">'lines'</span>);
+set(lLines,<span class="string">'LineWidth'</span>,0.5);
+</pre><img vspace="5" hspace="5" src="demo_10.png" alt=""> <h2>Styles<a name="21"></a></h2><p>The carpetplot class supports the possibility to customize the carpet plot with built in styles as well as with custom parameters.</p><pre class="codeinput">hold <span class="string">off</span>;
+clear;
+clf;
+
+a = linspace(1,10,3);
+b = linspace(10,30,3);
+[A B] = meshgrid(a,b);
+X = A+3.*B;
+
+o = carpetplot(A,B,X);
+label(o);
+title(<span class="string">'carpet plot with standard parameters'</span>)
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_11.png" alt=""> <pre class="codeinput">o = carpetplot(A,B,X,<span class="string">'ko--'</span>);
+label(o);
+title(<span class="string">'carpet plot with custom line spec'</span>)
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_12.png" alt=""> <pre class="codeinput">o = carpetplot(A,B,X);
+label(o);
+set(o.alines,<span class="string">'color'</span>,[1 0 0],<span class="string">'linestyle'</span>,<span class="string">':'</span>)
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_13.png" alt=""> <pre class="codeinput">o = carpetplot(A,B,X); label(o);
+set(o,<span class="string">'style'</span>,<span class="string">'standard'</span>);
+title(<span class="string">'Standard Style'</span>);
+snapnow; <span class="comment">%Only needed for publishing</span>
+set(o,<span class="string">'style'</span>,<span class="string">'basic'</span>);
+title(<span class="string">'Basic Style'</span>);
+snapnow; <span class="comment">%Only needed for publishing</span>
+set(o,<span class="string">'style'</span>,<span class="string">'minimal'</span>);
+title(<span class="string">'Minimal Style'</span>);
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_14.png" alt=""> <img vspace="5" hspace="5" src="demo_15.png" alt=""> <img vspace="5" hspace="5" src="demo_16.png" alt=""> <h2>Transform coordinate Systems<a name="26"></a></h2><p>The carpetpot class has three build in functions to draw hatchedlines, line plots, and filled contours into the a b coordinate systems. If there are other plots needed it is possible to transform any vectors or matrixes into the carpet plot's coordinate system</p><pre class="codeinput">x = linspace(-0.5,10,200);
+rng(0,<span class="string">'twister'</span>);
+y = 10*cos(x)+ rand(1,200)+20;
+
+hold <span class="string">off</span>;
+scatter(x,y)
+title(<span class="string">'Scatter Plot in the XY coordinate system'</span>);
+snapnow; <span class="comment">%Only needed for publishing</span>
+
+a = linspace(-.5,10,5);
+b = linspace(-1,40,4);
+[A,B] = meshgrid(a,b);
+Y = A.^2+B;
+X = A-B*.2;
+
+o = carpetplot(A,B,X,Y);
+set(o,<span class="string">'curvefitting'</span>,<span class="string">'pchip'</span>);
+hold <span class="string">on</span>;
+[x, y] = o.abtoxy(x,y);
+scatter(x,y)
+title(<span class="string">'Scatter Plot in the AB coordinate system'</span>);
+
+hatchedline(o,linspace(-.5,10,5),ones(1,5)*32,<span class="string">'r-'</span>,-45);
+hatchedline(o,linspace(-.5,10,5),ones(1,5)*10,<span class="string">'g-'</span>,45);
+plot(o,linspace(-.5,10,5),ones(1,5)*20,<span class="string">'b:'</span>);
+
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_17.png" alt=""> <img vspace="5" hspace="5" src="demo_18.png" alt=""> <h2>Constraint Plot with fixed Weight trade study<a name="28"></a></h2><p>This is a constraint plot common in aircraft design. The fixed weights of planes with different Wingloading [W/S] and Thrust/Weight-Ration [T/W] had been take in into account. The data was created using spreadsheet calculation.</p><pre class="codeinput">clear;
+clf;
+
+<span class="comment">% Weight Estimations for different T/W and W/S</span>
+TW =  [0.1000    0.1200    0.1500    0.2000    0.2500    0.3000    0.1000    0.1200    0.1500    0.2000    0.2500 0.3000    0.1000    0.1200    0.1500    0.2000    0.2500    0.3000];
+WS =  [60    60    60    60    60    60    90    90    90    90    90    90   120   120   120   120   120   120];
+G0 =  10^4*[0.9901    1.0042    1.0252    1.0603    1.0953    1.1304    0.8957    0.9097    0.9308    0.9658    1.0009 1.0359    0.8485    0.8625    0.8835    0.9186    0.9537    0.9887];
+
+<span class="comment">% Constraint data</span>
+TW_Land = [ 0    0.0500    0.1000    0.1100    0.1200    0.1300    0.1400    0.1500    0.1600    0.1700    0.1800 0.1900    0.2000    0.3000];
+WS_Land =[109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875 109.6875  109.6875  109.6875];
+TW_takeoff =[0    0.0250    0.0500    0.0750    0.1000    0.1250    0.1500    0.1750    0.2000    0.2250    0.2500 0.2750    0.3000    0.3250];
+WS_takeoff =[0   10.7250   21.4500   32.1750   42.9000   53.6250   64.3500   75.0750   85.8000   96.5250  107.2500 117.9750  128.7000  139.4250];
+TW_Cruise =[0.1000    0.1100    0.1200    0.1300    0.1400    0.1500    0.1600    0.1700    0.1800    0.1900    0.2000];
+WS_Cruise =[109.0134   99.1031   90.8445   83.8565   77.8668   72.6756   68.1334   64.1256   60.5631   57.3755   54.5068];
+TW_secondSeg =[0.1402    0.1402    0.1402    0.1402    0.1402    0.1402    0.1402    0.1402    0.1402];
+WS_secondSeg =[60    70    80    90   100   120   130   140   150];
+
+<span class="comment">% Create the object and plot it</span>
+o = carpetplot(TW,WS,G0);
+
+
+
+<span class="comment">%Add some labels</span>
+alabel(o,<span class="string">'T/W'</span>);
+blabel(o,<span class="string">'W/S [lb/ft&sup2;]'</span>);
+ylabel(<span class="string">'G0 [lb]'</span>);
+
+set(o,<span class="string">'curveFitting'</span>,<span class="string">'pchip'</span>,<span class="string">'bLabelSpacing'</span>,0.2);
+
+hold <span class="string">on</span>;
+LandConstr = hatchedline(o,TW_Land,WS_Land,<span class="string">'r-'</span>);
+TakeOffConstr = hatchedline(o,TW_takeoff,WS_takeoff,<span class="string">'g-'</span>);
+secSegmentConstr = hatchedline(o,TW_secondSeg,WS_secondSeg,<span class="string">'y-'</span>);
+CruiseConstr = hatchedline(o,TW_Cruise,WS_Cruise,<span class="string">'b-'</span>,-120);
+o.showpoint(0.25,105);
+</pre><img vspace="5" hspace="5" src="demo_19.png" alt=""> <h2>Contourf Plot<a name="29"></a></h2><p>This example uses the simple <tt>peaks()</tt> contour and the fill style for a constraint</p><pre class="codeinput">clear;
+clf;
+<span class="comment">% Generate some Input Data</span>
+a =[1;2;3;1;2;3];
+b =[10;10;10;30;30;30];
+x = b-a.^3;
+y = a.*b;
+
+<span class="comment">% Create the object and Plot</span>
+plotObject = carpetplot(a,b,x,y);
+label(plotObject,<span class="string">'A-Axis'</span>,<span class="string">'B-Axis'</span>)
+
+<span class="comment">% Change the curve Fitting and style</span>
+set(plotObject,<span class="string">'curvefitting'</span>,<span class="string">'pchip'</span>,<span class="string">'style'</span>,<span class="string">'standard'</span>,<span class="string">'blabelspacing'</span>,0.2,<span class="string">'barrowspacing'</span>,0.2);
+
+<span class="comment">% Add the contourf</span>
+hold <span class="string">on</span>;
+contourf(plotObject,1:0.1:3,10:1:30,peaks(21));
+
+<span class="comment">% Add some Constraints</span>
+const = constraint(plotObject,<span class="string">'y&lt;60 '</span>,<span class="string">'fill'</span>,[0.3 0.3 0.3]);
+const = constraint(plotObject,<span class="string">'y&gt;20'</span>,<span class="string">'hatchedline'</span>,<span class="string">'r-'</span>,45);
+
+showpoint(plotObject,2,16);
+
+<span class="comment">% Move the label a little bit</span>
+snapnow; <span class="comment">%Only needed for publishing</span>
+</pre><img vspace="5" hspace="5" src="demo_20.png" alt=""> <p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2012b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Carpetplot Class Example Plots
+% These are some examples plots made with the carpetplot class.
+
+%% Simple Example
+% In the beginning a simple example. More details about creating and
+% labeling a carpet plot will be illustrated in the following examples.
+
+set(gcf,'Renderer','OpenGL')
+
+a = 1:0.25:2;
+b = 1:20:100;
+[A B] = meshgrid(a,b);
+Y = A.*B;
+
+o = carpetplot(A,B,Y);
+label(o,'A-Axis','B-Axis')
+
+grid on;
+
+
+
+%%  Input Data
+% The carpetplot class supports different kind of input data. The data can
+% be exact (a matrix containing all datapoints) or scattered data. In this
+% case the data points will be interpolated using TriScatteredInterp.
+%
+% There are two different types of carpet plots:
+%
+%%
+% *The cheater plot*
+%
+%%
+%  obj = carpetplot(a,b,Y)
+%  obj = carpetplot(a,b,Y,z)
+%%
+% *The (real) carpet plot*
+%%
+%  obj = carpetplot(a,b,X,Y)
+%  obj = carpetplot(a,b,X,Y,z)
+%
+%%
+% In case of exact data A and B can be eather vectors or meshgrids.
+%
+% If the input data are scattered data points a,b,(x) and y must be vectors
+% with the corresponding coordinates of the datapoints.
+%
+% The z parameter is only used for the interpolation of whole carpet plots
+% or lattice plots.
+% 
+%%
+% <<input.png>>
+%
+% 
+
+%%
+% A plot using exact data input and Meshgrids
+warning off; % Suppress warnings (optional)
+a = linspace(1,100,30);
+b = linspace(100,200,20);
+[A B] = meshgrid(a,b);
+X = A.^2+B;
+Y = A+B;
+o = carpetplot(A,B,X,Y);
+
+
+%%
+% Using the vectors for a and b has the same effect
+
+clf;
+warning off; % Suppress warnings (optional)
+a = linspace(1,100,30);
+b = linspace(100,200,20);
+[A,B] = meshgrid(a,b);
+X = A.^2+B;
+Y = A+B;
+o = carpetplot(a,b,X,Y);
+
+%%
+% Scattered data
+
+clf;
+a = [1 1 1 2 2 2 3 3 3];
+b = [10 20 30 10 20 30 10 20 30];
+X = a.^2+a;
+Y = a+b;
+o = carpetplot(a,b,X,Y);
+
+
+%% Curve Fitting
+% In the default case the interpolations of the carpet plot will be
+% calculated and connected with a straight line.
+%
+% This *linear* curve will produce a cornered carpet if you do not have a lot of 
+% intersections.
+%
+% To avoid this use the *spline* and *pchip* methods to produce curved 
+% lines with the given intersections.
+%
+% Alternatively if you have a lot of data points but only wan't to vizualize
+% a few intersections it is recommended to use  the exact methods 
+% *epchip* or *espline* pr *elinear* as these methods consider all input
+% datapoints for plotting.
+%
+% The following example illustrates the different effects of the curve
+% fitting methods.
+
+a = linspace(-.5,1,50);
+b = linspace(-1,6,14);
+[A,B] = meshgrid(a,b);
+Y = A.^3+B;
+X = A-B*.2;
+Y(1,4) = Y(1,4)-0.1;
+clf;
+hold on;
+
+oinput = carpetplot(A,B,X,Y,'o','Color',[0.2 0.2 0.2]);
+set(oinput,'aTick',linspace(-.5,1,50),'bTick',linspace(-1,6,14))
+ospline = carpetplot(A,B,X,Y,'-','Color',[1 0 0]);
+olinear = carpetplot(A,B,X,Y,'-','Color',[0.5 1 0.5]);
+set(olinear,'curveFitting','linear','aTick',linspace(-.5,1,5))
+set(ospline,'curveFitting','spline','aTick',linspace(-.5,1,5))
+opchip = carpetplot(A,B,X,Y,'-','Color',[0 1 0]);
+set(opchip,'curveFitting','pchip','aTick',linspace(-.5,1,5))
+oepchip = carpetplot(A,B,X,Y,'-','Color',[0 0 1]);
+set(oepchip,'curveFitting','epchip','aTick',linspace(-.5,1,5))
+oespline = carpetplot(A,B,X,Y,'-','Color',[1 1 0]);
+set(oespline,'curveFitting','espline','aTick',linspace(-.5,1,5))
+oelinear = carpetplot(A,B,X,Y,'-','Color',[0 1 1]);
+set(oelinear,'curveFitting','elinear','aTick',linspace(-.5,1,5))
+
+legend([oinput olinear ospline opchip oepchip oespline oelinear] ...
+    ,'Input Data','linear','Spline','Pchip','Exact pchip','Exact Spline','Exact Linear');
+
+xlim([-0.32 0.1]); ylim([-1.17 -0.86])
+
+%%
+% As you can see all curve fitting methods have their trade offs. *pchip*
+% and *spline* don't consider the points between the intersections. 
+%
+% *linear* just draws a straight line.
+%
+% The Exact Methods consider all points but are only usable if you have a
+% lot of input data. *espline* especially with the data anomaly swings out
+% a lot.
+%
+% 
+
+
+
+%% Cheater Plots
+% Cheater plots do not have an x axis. The x-values for the vizualisation
+% will calculated using 
+%%
+%  X = k0 + a*K1 + b*K2
+%
+%%
+% The K values controll the plotting direction of the plot and as default
+% the intersections align vertically. The allignement does only work if the
+% a and b values are equally spaced.
+
+clf;
+aValues = [1 1 1 2 2 2 3 3 3];
+bValues = [10 15 20 10 15 20 10 15 20];
+Y = aValues+bValues;
+o = carpetplot(aValues,bValues,Y);
+label(o);
+set(o,'style','clean','alabelspacing',0.15);
+[arrowH,textH] = cheaterlegend(o,'northwest');
+grid on;
+
+%%
+% Use get and set to change the K Values. The Intersections will not allign
+% vertically anymore.
+
+delete(arrowH,textH)
+
+set(o,'K1',get(o,'K1')*3)
+
+cheaterlegend(o,'northwest');
+grid on
+
+%% Multiple Plots
+% The carpetplot class supports multiple plots. They can just be plotted
+% into one figure by using the |hold on| command.
+
+clf;
+a =[1;2;3;1;2;3];
+b =[10;10;10;30;30;30];
+x = b-a.^3;
+y = a.*b;
+
+hold on;
+o1 = carpetplot(a,b,x,y,10);
+o2 = carpetplot(a,b,x+40,y+40,22);
+o3 = carpetplot(a,b,x+190,y+15,34);
+
+zlabel(o1,'Plot1 (z=10)');
+zlabel(o2,'Plot2 (z=22)');
+zlabel(o3,'Plot3 (z=34)');
+[hlines hmarkers htext] = showpoint(o1,o2,o3,1.7,23);
+snapnow; %Only needed for publishing
+
+%%
+% A whole plot can be interpolated. The showpoint lines and text can be deleted using the handles.
+
+delete(hlines); delete(hmarkers); delete(htext);
+oi = interpolateplot(o1,o2,o3,30);
+set(get(oi,'aLines'),'color',[0.5 0.5 0.5],'LineStyle','REPLACE_WITH_DASH_DASH');
+set(get(oi,'blines'),'color',[0.5 0.5 0.5],'LineStyle','REPLACE_WITH_DASH_DASH');
+snapnow; %Only needed for publishing
+
+%%
+% Altough cheater plot's do not have an x-axis multiple carpets can be
+% plotted using the lattice method. The x-axis shifting of the plot will
+% represent the plot's z-value.
+
+clear;
+clf;
+
+a = linspace(1,10,3);
+b = linspace(10,30,3);
+[A B] = meshgrid(a,b);
+X1 = A.*B;
+X2 = (A.*B).*2;
+X3 = (A.*B).*3;
+
+
+hold on;
+o1 = carpetplot(A,B,X1,-124);
+set(o1,'style','standard');
+o2 = carpetplot(A,B,X2,500);
+set(o2,'k0',20,'style','standard')
+o3 = carpetplot(A,B,X3,3000);
+set(o3,'k0',40,'style','standard')
+
+alabel(o3); blabel(o1);
+
+lLines = lattice(o1,o2,o3,'lines');
+set(lLines,'LineWidth',0.5);
+
+%% Styles
+% The carpetplot class supports the possibility to customize the carpet
+% plot with built in styles as well as with custom parameters.
+
+%%
+hold off;
+clear;
+clf;
+
+a = linspace(1,10,3);
+b = linspace(10,30,3);
+[A B] = meshgrid(a,b);
+X = A+3.*B;
+
+o = carpetplot(A,B,X);
+label(o);
+title('carpet plot with standard parameters')
+snapnow; %Only needed for publishing
+%%
+o = carpetplot(A,B,X,'koREPLACE_WITH_DASH_DASH');
+label(o);
+title('carpet plot with custom line spec')
+snapnow; %Only needed for publishing
+
+%%
+o = carpetplot(A,B,X);
+label(o);
+set(o.alines,'color',[1 0 0],'linestyle',':')
+snapnow; %Only needed for publishing
+
+%%
+
+o = carpetplot(A,B,X); label(o); 
+set(o,'style','standard');
+title('Standard Style');
+snapnow; %Only needed for publishing
+set(o,'style','basic');
+title('Basic Style');
+snapnow; %Only needed for publishing
+set(o,'style','minimal');
+title('Minimal Style');
+snapnow; %Only needed for publishing
+
+%% Transform coordinate Systems
+% The carpetpot class has three build in functions to draw hatchedlines,
+% line plots, and filled contours into the a b coordinate systems. If there
+% are other plots needed it is possible to transform any vectors or
+% matrixes into the carpet plot's coordinate system
+
+
+%%
+%
+x = linspace(-0.5,10,200);
+rng(0,'twister');
+y = 10*cos(x)+ rand(1,200)+20;
+
+hold off;
+scatter(x,y)
+title('Scatter Plot in the XY coordinate system');
+snapnow; %Only needed for publishing
+
+a = linspace(-.5,10,5);
+b = linspace(-1,40,4);
+[A,B] = meshgrid(a,b);
+Y = A.^2+B;
+X = A-B*.2;
+
+o = carpetplot(A,B,X,Y);
+set(o,'curvefitting','pchip');
+hold on;
+[x, y] = o.abtoxy(x,y);
+scatter(x,y)
+title('Scatter Plot in the AB coordinate system');
+
+hatchedline(o,linspace(-.5,10,5),ones(1,5)*32,'r-',-45);
+hatchedline(o,linspace(-.5,10,5),ones(1,5)*10,'g-',45);
+plot(o,linspace(-.5,10,5),ones(1,5)*20,'b:');
+
+snapnow; %Only needed for publishing
+
+
+%% Constraint Plot with fixed Weight trade study 
+% This is a constraint plot common in aircraft design. The fixed weights of
+% planes with different Wingloading [W/S] and Thrust/Weight-Ration [T/W] had been
+% take in into account. The data was created using spreadsheet calculation.
+
+clear;
+clf;
+
+% Weight Estimations for different T/W and W/S
+TW =  [0.1000    0.1200    0.1500    0.2000    0.2500    0.3000    0.1000    0.1200    0.1500    0.2000    0.2500 0.3000    0.1000    0.1200    0.1500    0.2000    0.2500    0.3000];
+WS =  [60    60    60    60    60    60    90    90    90    90    90    90   120   120   120   120   120   120];
+G0 =  10^4*[0.9901    1.0042    1.0252    1.0603    1.0953    1.1304    0.8957    0.9097    0.9308    0.9658    1.0009 1.0359    0.8485    0.8625    0.8835    0.9186    0.9537    0.9887];
+
+% Constraint data
+TW_Land = [ 0    0.0500    0.1000    0.1100    0.1200    0.1300    0.1400    0.1500    0.1600    0.1700    0.1800 0.1900    0.2000    0.3000];
+WS_Land =[109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875  109.6875 109.6875  109.6875  109.6875];
+TW_takeoff =[0    0.0250    0.0500    0.0750    0.1000    0.1250    0.1500    0.1750    0.2000    0.2250    0.2500 0.2750    0.3000    0.3250];
+WS_takeoff =[0   10.7250   21.4500   32.1750   42.9000   53.6250   64.3500   75.0750   85.8000   96.5250  107.2500 117.9750  128.7000  139.4250];
+TW_Cruise =[0.1000    0.1100    0.1200    0.1300    0.1400    0.1500    0.1600    0.1700    0.1800    0.1900    0.2000];
+WS_Cruise =[109.0134   99.1031   90.8445   83.8565   77.8668   72.6756   68.1334   64.1256   60.5631   57.3755   54.5068];
+TW_secondSeg =[0.1402    0.1402    0.1402    0.1402    0.1402    0.1402    0.1402    0.1402    0.1402];
+WS_secondSeg =[60    70    80    90   100   120   130   140   150];
+
+% Create the object and plot it
+o = carpetplot(TW,WS,G0);
+
+
+
+%Add some labels
+alabel(o,'T/W');
+blabel(o,'W/S [lb/ft²]');
+ylabel('G0 [lb]');
+
+set(o,'curveFitting','pchip','bLabelSpacing',0.2);
+
+hold on;
+LandConstr = hatchedline(o,TW_Land,WS_Land,'r-');
+TakeOffConstr = hatchedline(o,TW_takeoff,WS_takeoff,'g-');
+secSegmentConstr = hatchedline(o,TW_secondSeg,WS_secondSeg,'y-');
+CruiseConstr = hatchedline(o,TW_Cruise,WS_Cruise,'b-',-120);
+o.showpoint(0.25,105);
+
+
+%% Contourf Plot
+% This example uses the simple |peaks()| contour and the fill style for a
+% constraint
+
+clear;
+clf;
+% Generate some Input Data
+a =[1;2;3;1;2;3];
+b =[10;10;10;30;30;30];
+x = b-a.^3;
+y = a.*b;
+
+% Create the object and Plot
+plotObject = carpetplot(a,b,x,y);
+label(plotObject,'A-Axis','B-Axis')
+
+% Change the curve Fitting and style
+set(plotObject,'curvefitting','pchip','style','standard','blabelspacing',0.2,'barrowspacing',0.2);
+
+% Add the contourf
+hold on;
+contourf(plotObject,1:0.1:3,10:1:30,peaks(21));
+
+% Add some Constraints
+const = constraint(plotObject,'y<60 ','fill',[0.3 0.3 0.3]);
+const = constraint(plotObject,'y>20','hatchedline','r-',45);
+
+showpoint(plotObject,2,16);
+
+% Move the label a little bit
+snapnow; %Only needed for publishing
+
+
+
+
+
+
+##### SOURCE END #####
+--></body></html>
