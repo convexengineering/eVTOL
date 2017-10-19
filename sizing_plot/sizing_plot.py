@@ -49,8 +49,8 @@ deadhead_mission_range = generic_data["deadhead_mission"]["range"]
 deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 numrows = 6
-L_D_array = np.linspace(7,14,numrows)
-T_A_array = np.linspace(4.5,14,numrows)
+L_D_array = np.linspace(7,15,numrows)
+T_A_array = np.linspace(4.5,16,numrows)
 L_D_array, T_A_array = np.meshgrid(L_D_array, T_A_array)
 T_A_array = T_A_array*ureg.lbf/ureg.ft**2
 
@@ -154,7 +154,8 @@ for i,T_A in enumerate(T_A_array[:,0]):
 	x = cptpp_row[-1]
 	y = SPL_A_row[-1]
 	label = "T/A = %0.1f lbf/ft$^2$" % T_A.to(ureg.lbf/ureg.ft**2).magnitude
-	plt.text(x-4.7,y,label,fontsize=16,rotation=0)
+	plt.text(x-15,y,label,fontsize=16,rotation=0)
+
 	
 locs,labels = plt.xticks()
 new_xticks = [""]*len(locs)
@@ -165,7 +166,7 @@ plt.yticks(fontsize=14)
 
 plt.grid()
 [xmin,xmax] = plt.gca().get_xlim()
-plt.xlim(xmin=xmin-2)
+plt.xlim(xmin=xmin-15)
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymin=ymin-1.5)
 plt.xlabel('Cost per trip, per passenger', fontsize = 16)
@@ -202,12 +203,12 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 
 plt.title(title_str,fontsize = 13)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.97,bottom=0.07,top=0.9)
+plt.subplots_adjust(left=0.07,right=0.96,bottom=0.07,top=0.9)
 plt.savefig('sizing_plot_01.pdf')
 
 
-
-#Sizing-plot data output (to text file)output_data = open("sizing_plot_data.txt","w")
+#Sizing-plot data output (to text file)
+output_data = open("sizing_plot_data.txt","w")
 
 output_data.write("Sizing plot data\n\n")
 output_data.write("Configuration: %s\n\n" % config)
