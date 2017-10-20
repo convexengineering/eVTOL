@@ -12,6 +12,7 @@ from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
+from scipy.interpolate import interp2d
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -48,9 +49,26 @@ deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
 deadhead_mission_range = generic_data["deadhead_mission"]["range"]
 deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
+#Data from Boeing study
+boeing_data = {}
+
+boeing_data["Lift + cruise"] = {}
+boeing_data["Lift + cruise"]["L/D"] = 9.1
+boeing_data["Lift + cruise"]["T/A"] = 7.3*ureg("lbf")/ureg("ft")**2
+
+boeing_data["Tilt rotor"] = {}
+boeing_data["Tilt rotor"]["L/D"] = 11.0
+boeing_data["Tilt rotor"]["T/A"] = 12.8*ureg("lbf")/ureg("ft")**2
+
+boeing_data["Helicopter"] = {}
+boeing_data["Helicopter"]["L/D"] = 7.26
+boeing_data["Helicopter"]["T/A"] = 4.1*ureg("lbf")/ureg("ft")**2
+
+
+#Instantiate arrays
 numrows = 6
 L_D_array = np.linspace(7,15,numrows)
-T_A_array = np.linspace(4.5,16,numrows)
+T_A_array = np.linspace(4,16,numrows)
 L_D_array, T_A_array = np.meshgrid(L_D_array, T_A_array)
 T_A_array = T_A_array*ureg.lbf/ureg.ft**2
 
@@ -61,9 +79,15 @@ SPL_A_array = np.zeros(np.shape(L_D_array))
 
 #Optimize 
 configs = configuration_data.copy()
+del configs["Tilt duct"]
+del configs["Multirotor"]
+del configs["Autogyro"]
+del configs["Helicopter"]
+del configs["Coaxial heli"]
+del configs["Compound heli"]
+
 config = "Lift + cruise" #pull other data from this configuration
 c = configs[config]
-
 
 for i, T_A in enumerate(T_A_array[:,0]):
 	for j, L_D_cruise in enumerate(L_D_array[0]):
@@ -128,11 +152,36 @@ for i, T_A in enumerate(T_A_array[:,0]):
 MTOW_array = MTOW_array*ureg.lbf
 
 
-#Generate sizing plot
+#Add Boeing inputs to configs
+for config in boeing_data:
+	label = config + " (Boeing)"
+	configs[label] = boeing_data[config]
 
+	
+#Set up the bilinear interpolation functions
+cptpp_interp = interp2d(L_D_array,T_A_array.to(ureg.lbf/ureg.ft**2).magnitude,\
+	cptpp_array,kind="cubic")
+SPL_A_interp = interp2d(L_D_array,T_A_array.to(ureg.lbf/ureg.ft**2).magnitude,\
+	SPL_A_array,kind="cubic")
+	
+	
+#Estimated cptpp and SPL_A
+for config in configs:
+	L_D = configs[config]["L/D"]
+	T_A = configs[config]["T/A"].to(ureg.lbf/ureg.ft**2)
+	
+	configs[config]["cptpp"] = cptpp_interp(L_D,T_A)
+	configs[config]["SPL_A"] = SPL_A_interp(L_D,T_A)
+
+#Generate sizing plot
 plt.ion()
 fig1 = plt.figure(figsize=(12,12), dpi=80)
 plt.show()
+
+style = {}
+style["marker"] = ["s","^","v","s","o","^","v"]
+style["fillstyle"] = ["full","full","full","none","none","none","none"]
+style["markersize"] = 16
 
 #First set of lines
 for i,L_D in enumerate(L_D_array[0,:]):
@@ -154,23 +203,31 @@ for i,T_A in enumerate(T_A_array[:,0]):
 	x = cptpp_row[-1]
 	y = SPL_A_row[-1]
 	label = "T/A = %0.1f lbf/ft$^2$" % T_A.to(ureg.lbf/ureg.ft**2).magnitude
-	plt.text(x-15,y,label,fontsize=16,rotation=0)
+	plt.text(x-18,y-0.2,label,fontsize=16,rotation=0)
 
+#Configuration data
+for i,config in enumerate(configs):
+	cptpp = configs[config]["cptpp"]
+	SPL_A = configs[config]["SPL_A"]
+	plt.plot(cptpp,SPL_A,'k',marker=style["marker"][i],fillstyle=style["fillstyle"][i],\
+		markersize=style["markersize"],markeredgewidth=3,label=config)
 	
+plt.grid()
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xlim(xmin=xmin-15,xmax=xmax+1)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymin=ymin-1.5)
+
 locs,labels = plt.xticks()
 new_xticks = [""]*len(locs)
 for i,loc in enumerate(locs):
 	new_xticks[i] = "\$%0.2f" % loc
-plt.xticks(locs,new_xticks,fontsize=14)
-plt.yticks(fontsize=14)
+plt.xticks(locs,new_xticks,fontsize=16)
+plt.yticks(fontsize=18)
 
-plt.grid()
-[xmin,xmax] = plt.gca().get_xlim()
-plt.xlim(xmin=xmin-15)
-[ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymin=ymin-1.5)
-plt.xlabel('Cost per trip, per passenger', fontsize = 16)
-plt.ylabel('SPL (dBA)', fontsize = 16)
+plt.xlabel('Cost per trip, per passenger', fontsize = 20)
+plt.ylabel('SPL (dBA)', fontsize = 20)
+plt.legend(numpoints = 1,loc='upper left',fontsize = 15)
 
 if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
@@ -203,7 +260,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 
 plt.title(title_str,fontsize = 13)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.96,bottom=0.07,top=0.9)
+plt.subplots_adjust(left=0.07,right=0.945,bottom=0.06,top=0.9)
 plt.savefig('sizing_plot_01.pdf')
 
 
