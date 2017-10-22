@@ -17,7 +17,6 @@ from noise_models import rotational_noise, vortex_noise, noise_weighting
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
@@ -74,6 +73,7 @@ for config in configs:
 	loiter_type = c["loiter_type"]
 	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
+	weight_fraction = c["weight_fraction"]
 
 	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -144,8 +144,9 @@ for config in configs:
 	#Vortex noise computations (A-weighted)
 	configs[config]["theta"]["vortex"] = {}
 
-	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-		N=N,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
+		Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
+		weighting="A")
 
 	configs[config]["theta"]["vortex"]["f_peak"] = f_peak
 	configs[config]["theta"]["vortex"]["SPL_A"] = SPL
@@ -156,12 +157,12 @@ for config in configs:
 plt.ion()
 plt.rc('axes', axisbelow=True)
 
-if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if reserve_type == "FAA_day":
-		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_night":
-		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+	if reserve_type == "FAA_aircraft":
+		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_heli":
+		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
@@ -171,8 +172,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
+title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %s\n" \
+	% (C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -218,7 +219,7 @@ for i, config in enumerate(configs):
 	plt.title(config, fontsize = 18)
 	plt.legend(loc="lower left")
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('number_of_blades_plot_01.pdf')

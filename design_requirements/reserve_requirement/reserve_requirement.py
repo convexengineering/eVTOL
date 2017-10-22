@@ -18,7 +18,6 @@ from noise_models import vortex_noise
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
@@ -105,6 +104,7 @@ for config in configs:
 		loiter_type = c["loiter_type"]
 		tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 		tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
+		weight_fraction = c["weight_fraction"]
 
 		Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 			Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
@@ -304,7 +304,6 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
-
 
 if autonomousEnabled:
 	autonomy_string = "autonomy enabled"

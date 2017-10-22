@@ -16,7 +16,6 @@ from noise_models import vortex_noise
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-#weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
@@ -207,18 +206,18 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.ylim(ymax=85)
+plt.ylim(ymax=80)
 plt.xlabel('Structural mass fraction', fontsize = 16)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left', fontsize = 12)
 
-if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission")[0].to(ureg.minute).magnitude
-	if reserve_type == "FAA_day":
-		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_night":
-		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+	if reserve_type == "FAA_aircraft":
+		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_heli":
+		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
@@ -240,7 +239,7 @@ title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f ro
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
 plt.savefig('structural_fraction_plot_01.pdf')

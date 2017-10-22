@@ -16,7 +16,6 @@ from noise_models import vortex_noise
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
-weight_fraction = generic_data["weight_fraction"]
 C_m = generic_data["C_m"]
 n = generic_data["n"]
 B = generic_data["B"]
@@ -76,6 +75,7 @@ for config in configs:
 	loiter_type = c["loiter_type"]
 	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
 	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
+	weight_fraction = c["weight_fraction"]
 
 	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,s=solidity,n=n,
@@ -178,24 +178,26 @@ for i, config in enumerate(configs):
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.ylim(ymin=0)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymin=0,ymax=1.1*ymax)
 plt.xlabel('Rotor solidity', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower left', fontsize = 12)
 
-#Vortex-noise peak frequency
+#Rotor tip speed
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(solidity,c["f_{peak}"].to(ureg.turn/ureg.s).magnitude,
-		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
-		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
+	VT = c["solution"]("VT_OnDemandSizingMission")[:,0]
+	plt.plot(solidity,VT,color="black",linewidth=1.5,linestyle=style["linestyle"][i],
+		marker=style["marker"][i],fillstyle=style["fillstyle"][i],
+		markersize=style["markersize"],label=config)
 plt.grid()
-plt.yscale('log')
+plt.ylim(ymin=0)
 plt.xlabel('Rotor solidity', fontsize = 16)
-plt.ylabel('Peak Frequency (Hz)', fontsize = 16)
-plt.title("Vortex-Noise Peak Frequency",fontsize = 20)
+plt.ylabel('Tip speed (ft/s)', fontsize = 16)
+plt.title("Rotor Tip Speed",fontsize = 20)
 plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
 
 #Sound pressure level (in hover)
@@ -212,12 +214,12 @@ plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower left', fontsize = 12)
 
-if reserve_type == "FAA_day" or reserve_type == "FAA_night":
+if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission")[0].to(ureg.minute).magnitude
-	if reserve_type == "FAA_day":
-		reserve_type_string = "FAA day VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_night":
-		reserve_type_string = "FAA night VFR (%0.0f-minute loiter time)" % num
+	if reserve_type == "FAA_aircraft":
+		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
+	elif reserve_type == "FAA_heli":
+		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
 elif reserve_type == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
@@ -227,8 +229,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
@@ -239,7 +241,7 @@ title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery ener
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
 plt.savefig('rotor_solidity_plot_01.pdf')
