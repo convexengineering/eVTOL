@@ -204,10 +204,10 @@ class BatteryPerformance(Model):
 		return constraints
 
 class Crew(Model):
-	def setup(self,mission_type="piloted",W_oneCrew=190*ureg.lbf):
+	def setup(self,mission_type="piloted",W_oneCrew=190*ureg.lbf,N_crew=1):
 		
 		W_oneCrew = Variable("W_{oneCrew}",W_oneCrew,"lbf","Weight of 1 crew member")
-		N_crew = Variable("N_{crew}",1,"-","Number of crew members (if present)")
+		N_crew = Variable("N_{crew}",N_crew,"-","Number of crew members (if present)")
 
 		constraints = []
 
