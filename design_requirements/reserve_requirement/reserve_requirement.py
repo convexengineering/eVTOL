@@ -53,31 +53,33 @@ deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 # Data specific to study
 configs = OrderedDict()
-reserve_type_array = ["Uber","FAA_day","FAA_night"]
+reserve_type_array = ["Uber","FAA_heli","FAA_aircraft"]
 
 for config in configuration_data:
-	configs[config] = {}
+	configs[config] = OrderedDict()
 	for reserve_type in reserve_type_array:
 		configs[config][reserve_type] = configuration_data[config].copy()
 
 #Delete unwanted configurations
 del configs["Multirotor"]["Uber"]
-del configs["Multirotor"]["FAA_day"]
-del configs["Multirotor"]["FAA_night"]
+del configs["Multirotor"]["FAA_heli"]
+del configs["Multirotor"]["FAA_aircraft"]
 
 del configs["Autogyro"]["Uber"]
-del configs["Autogyro"]["FAA_day"]
-del configs["Autogyro"]["FAA_night"]
+del configs["Autogyro"]["FAA_heli"]
+del configs["Autogyro"]["FAA_aircraft"]
 
-del configs["Helicopter"]["FAA_day"]
-del configs["Helicopter"]["FAA_night"]
+del configs["Helicopter"]["Uber"]
+del configs["Helicopter"]["FAA_heli"]
+del configs["Helicopter"]["FAA_aircraft"]
 
 del configs["Tilt duct"]["Uber"]
-del configs["Tilt duct"]["FAA_day"]
-del configs["Tilt duct"]["FAA_night"]
+del configs["Tilt duct"]["FAA_heli"]
+del configs["Tilt duct"]["FAA_aircraft"]
 
-del configs["Coaxial heli"]["FAA_day"]
-del configs["Coaxial heli"]["FAA_night"]
+del configs["Coaxial heli"]["Uber"]
+del configs["Coaxial heli"]["FAA_heli"]
+del configs["Coaxial heli"]["FAA_aircraft"]
 
 
 #Delete configurations that will not be evaluated
@@ -190,10 +192,10 @@ for i,config in enumerate(configs):
 		if (i == 0):
 			if (reserve_type == "Uber"):
 				label = reserve_type + " (2-nm diversion)"
-			elif (reserve_type == "FAA_day"):
-				label = "FAA day VFR (30-min loiter)"
-			elif (reserve_type == "FAA_night"):
-				label = "FAA night VFR (45-min loiter)"
+			elif (reserve_type == "FAA_heli"):
+				label = "FAA helicopter VFR (20-min loiter)"
+			elif (reserve_type == "FAA_aircraft"):
+				label = "FAA aircraft VFR (30-min loiter)"
 
 			plt.bar(i+offset,MTOW,align='center',alpha=1,width=width,color=colors[j],
 				label=label)
@@ -203,7 +205,7 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.05*ymax)
+plt.ylim(ymax = 1.3*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Maximum Takeoff Weight",fontsize = 18)
@@ -221,10 +223,10 @@ for i,config in enumerate(configs):
 		if (i == 0):
 			if (reserve_type == "Uber"):
 				label = reserve_type + " (2-nm diversion)"
-			elif (reserve_type == "FAA_day"):
-				label = "FAA day VFR (30-min loiter)"
-			elif (reserve_type == "FAA_night"):
-				label = "FAA night VFR (45-min loiter)"
+			elif (reserve_type == "FAA_heli"):
+				label = "FAA helicopter VFR (20-min loiter)"
+			elif (reserve_type == "FAA_aircraft"):
+				label = "FAA aircraft VFR (30-min loiter)"
 
 			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j],
 				label=label)
@@ -234,7 +236,7 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.05*ymax)
+plt.ylim(ymax = 1.2*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 18)
@@ -252,10 +254,10 @@ for i,config in enumerate(configs):
 		if (i == 0):
 			if (reserve_type == "Uber"):
 				label = reserve_type + " (2-nm diversion)"
-			elif (reserve_type == "FAA_day"):
-				label = "FAA day VFR (30-min loiter)"
-			elif (reserve_type == "FAA_night"):
-				label = "FAA night VFR (45-min loiter)"
+			elif (reserve_type == "FAA_heli"):
+				label = "FAA helicopter VFR (20-min loiter)"
+			elif (reserve_type == "FAA_aircraft"):
+				label = "FAA aircraft VFR (30-min loiter)"
 
 			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j],
 				label=label)
@@ -265,7 +267,7 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.05*ymax)
+plt.ylim(ymax = 1.2*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
@@ -283,10 +285,10 @@ for i,config in enumerate(configs):
 		if (i == 0):
 			if (reserve_type == "Uber"):
 				label = reserve_type + " (2-nm diversion)"
-			elif (reserve_type == "FAA_day"):
-				label = "FAA day VFR (30-min loiter)"
-			elif (reserve_type == "FAA_night"):
-				label = "FAA night VFR (45-min loiter)"
+			elif (reserve_type == "FAA_heli"):
+				label = "FAA helicopter VFR (20-min loiter)"
+			elif (reserve_type == "FAA_aircraft"):
+				label = "FAA aircraft VFR (30-min loiter)"
 
 			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j],
 				label=label)
@@ -297,7 +299,7 @@ SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 	color="black", linewidth=3, linestyle="-")
 
-plt.ylim(ymin = 57,ymax = 85)
+plt.ylim(ymin = 57,ymax = 80)
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
@@ -310,8 +312,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time\n" \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers,\
 		sizing_t_hover.to(ureg.s).magnitude) \

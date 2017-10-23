@@ -64,21 +64,21 @@ for config in configs:
 	print "Solving configuration: " + config
 
 	#set up range arrays (different for each configuration)
-	num_pts_short = 3
+	num_pts_short = 4
 	num_pts_long = 9
 	
 	if (config == "Multirotor"):
-		mission_range_array = np.linspace(1,8,num_pts_short)
+		mission_range_array = np.linspace(1,18,num_pts_short)
 	elif (config == "Helicopter"):
-		mission_range_array = np.linspace(2,8,num_pts_short)
+		mission_range_array = np.linspace(2,36,num_pts_short)
 	elif (config == "Coaxial heli"):
-		mission_range_array = np.linspace(1,5,num_pts_short)
+		mission_range_array = np.linspace(1,49,num_pts_short)
 	elif (config == "Compound heli"):
-		mission_range_array = np.linspace(10,61,num_pts_long)
+		mission_range_array = np.linspace(10,82,num_pts_long)
 	elif (config == "Lift + cruise"):
-		mission_range_array = np.linspace(10,70,num_pts_long)
+		mission_range_array = np.linspace(10,85,num_pts_long)
 	elif (config == "Tilt wing"):
-		mission_range_array = np.linspace(15,95,num_pts_long)
+		mission_range_array = np.linspace(15,98,num_pts_long)
 	elif (config == "Tilt rotor"):
 		mission_range_array = np.linspace(15,120,num_pts_long)
 		
@@ -239,7 +239,6 @@ plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
 plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
-
 if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
 	if reserve_type == "FAA_aircraft":
@@ -255,8 +254,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
+	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
