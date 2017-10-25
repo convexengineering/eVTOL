@@ -50,13 +50,12 @@ deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
 deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
 
 # Delete certain configurations
-configs = OrderedDict(configuration_data.copy())
+configs = configuration_data.copy()
 del configs["Tilt duct"]
 del configs["Autogyro"]
-
-#Put multirotor at the end
+del configs["Helicopter"]
+del configs["Coaxial heli"]
 del configs["Multirotor"]
-configs["Multirotor"] = configuration_data["Multirotor"].copy()
 
 #Optimize remaining configurations
 for config in configs:
@@ -223,7 +222,7 @@ plt.ylim(ymin=0)
 plt.xlabel('Mission range (nm)', fontsize = 16)
 plt.ylabel('Cost ($US/mile)', fontsize = 16)
 plt.title("Cost per Seat Mile",fontsize = 20)
-plt.legend(numpoints = 1,loc='upper right', fontsize = 12)
+plt.legend(numpoints = 1,loc='lower right', fontsize = 12)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)

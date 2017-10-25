@@ -60,10 +60,11 @@ boeing_data["Tilt rotor"] = {}
 boeing_data["Tilt rotor"]["L/D"] = 11.0
 boeing_data["Tilt rotor"]["T/A"] = 12.8*ureg("lbf")/ureg("ft")**2
 
+'''
 boeing_data["Helicopter"] = {}
 boeing_data["Helicopter"]["L/D"] = 7.26
 boeing_data["Helicopter"]["T/A"] = 4.1*ureg("lbf")/ureg("ft")**2
-
+'''
 
 #Instantiate arrays
 numrows = 6
