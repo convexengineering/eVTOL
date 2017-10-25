@@ -92,7 +92,7 @@ class AirAmbulanceSizingMission(Model):
 		
 		self.fs9 = Hover(self,aircraft,hoverState,
 			tailRotor_power_fraction=tailRotor_power_fraction_hover)#Land at base
-		self.time_on_ground = TimeOnGround(self,charger_power=charger_power)#Charging
+		self.time_on_ground = TimeOnGround(self)#Charging
 
 		self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3, self.fs4,\
 			self.fs5, self.fs6, self.fs7, self.fs8, self.fs9]#all segments included
@@ -228,8 +228,8 @@ if __name__=="__main__":
 		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
 		autonomousEnabled=autonomousEnabled)
 	
-	SizingMission = AirAmbulanceSizingMission(Aircraft,V_cruise=V_cruise,N_passengers=3,
-		reserve_type=reserve_type,loiter_type=loiter_type,
+	SizingMission = AirAmbulanceSizingMission(Aircraft,V_cruise=V_cruise,N_crew=3,
+		N_passengers=1,reserve_type=reserve_type,loiter_type=loiter_type,
 		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
 		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
 	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})

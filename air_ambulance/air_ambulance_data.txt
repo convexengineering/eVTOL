@@ -1,0 +1,17 @@
+Configuration: Tilt rotor
+
+The mission profile includes three cruise segments. The range of the first two segments is set equal, and is the independent variable. The third segment is 10.0 nmi long.
+
+Note: pilot, crew are not included in cost estimates.
+
+R_segment (nmi)	MTOW (lbf)	W_{battery} (lbf)	t_{mission} (minutes)	Mission cost ($)	Purchase price ($)	
+20.0	3974.3	738.5	79.7	151.12	878653.18	
+27.8	4351.6	908.2	94.2	186.44	963585.29	
+35.6	4807.9	1113.5	110.3	229.29	1066330.14	
+43.3	5371.1	1367.0	128.5	282.76	1193147.98	
+51.1	6083.8	1687.7	149.6	351.92	1353621.87	
+58.9	7014.6	2106.6	175.0	445.46	1563199.57	
+66.7	8281.7	2676.8	207.0	579.68	1848490.25	
+74.4	10107.5	3498.4	250.0	788.55	2259567.46	
+82.2	12965.8	4784.6	313.1	1154.71	2903147.22	
+90.0	18078.3	7085.2	420.5	1933.65	4054260.17	

@@ -20,7 +20,7 @@ class OnDemandAircraft(Model):
 
 		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
 			"Cost per unit empty weight of the aircraft")
-		purchase_price = Variable("purchase_price","-","Purchase price of the aircraft")
+		purchase_price = Variable("purchase_price","-","Purchase price of the airframe")
 		vehicle_life = Variable("vehicle_life",vehicle_life,"hours","Vehicle lifetime")
 
 		self.autonomousEnabled = autonomousEnabled
