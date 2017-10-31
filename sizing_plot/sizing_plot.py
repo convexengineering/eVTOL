@@ -253,20 +253,20 @@ else:
 title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; cruising speed = %0.0f mph\n" \
 	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude,V_cruise.to(ureg.mph).magnitude) \
 	+ "%0.0f rotors; %0.0f rotor blades; mean lift coefficient = %0.1f; %s. %s configuration.\n" \
-	% (N, B, Cl_mean_max, autonomy_string,config) \
+	% (N, B, Cl_mean_max, autonomy_string,sizing_plot_config) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n" \
 	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
 		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f\n" \
 	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
 plt.title(title_str,fontsize = 13)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.945,bottom=0.06,top=0.9)
+plt.subplots_adjust(left=0.07,right=0.945,bottom=0.06,top=0.89)
 plt.savefig('sizing_plot_01.pdf')
 
 
