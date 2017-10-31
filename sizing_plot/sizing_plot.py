@@ -14,6 +14,9 @@ from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
 from scipy.interpolate import interp2d
 
+import matplotlib as mpl
+mpl.style.use("classic")
+
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
@@ -87,7 +90,9 @@ del configs["Helicopter"]
 del configs["Coaxial heli"]
 del configs["Compound heli"]
 
-config = "Lift + cruise" #pull other data from this configuration
+sizing_plot_config = "Lift + cruise" #pull other data from this configuration
+config = sizing_plot_config 
+
 c = configs[config]
 
 for i, T_A in enumerate(T_A_array[:,0]):
