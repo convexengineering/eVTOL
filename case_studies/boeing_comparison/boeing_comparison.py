@@ -13,6 +13,9 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
 
+import matplotlib as mpl
+mpl.style.use("classic")
+
 #Data from the Boeing study
 boeing_data = {}
 
@@ -46,7 +49,7 @@ boeing_data["Tilt rotor"]["P_{hover}"] = 542*ureg.hp
 
 boeing_data["Helicopter"] = {}
 boeing_data["Helicopter"]["V_{cruise}"] = 150*ureg("mph")
-boeing_data["Helicopter"]["L/D"] = 7.26
+boeing_data["Helicopter"]["L/D"] = 7.84
 boeing_data["Helicopter"]["T/A"] = 4.1*ureg("lbf")/ureg("ft")**2
 boeing_data["Helicopter"]["loiter_type"] = "level_flight"
 boeing_data["Helicopter"]["MTOW"] = 3470*ureg.lbf
@@ -156,6 +159,12 @@ for config in configs:
 	
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
+
+
+for config in configs:
+	MTOW_diff_percent = configs[config]["solution"]("MTOW_OnDemandAircraft")-boeing_data[config]["MTOW"]
+	MTOW_diff_percent = (MTOW_diff_percent/boeing_data[config]["MTOW"]).to(ureg.dimensionless)
+	print "%s GP weight increase: %0.1f%%" % (config, MTOW_diff_percent*100)
 
 
 # Plotting commands
