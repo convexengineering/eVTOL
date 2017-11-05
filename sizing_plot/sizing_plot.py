@@ -91,6 +91,7 @@ del configs["Coaxial heli"]
 del configs["Compound heli"]
 
 sizing_plot_config = "Lift + cruise" #pull other data from this configuration
+sizing_plot_weight_fraction = configs[sizing_plot_config]["weight_fraction"]
 config = sizing_plot_config 
 
 c = configs[config]
@@ -250,8 +251,8 @@ if autonomousEnabled:
 else:
 	autonomy_string = "pilot required"
 
-title_str = "Aircraft parameters: structural mass fraction = %0.2f; battery energy density = %0.0f Wh/kg; cruising speed = %0.0f mph\n" \
-	% (weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude,V_cruise.to(ureg.mph).magnitude) \
+title_str = "Aircraft parameters: empty weight fraction = %0.2f; battery energy density = %0.0f Wh/kg; cruising speed = %0.0f mph\n" \
+	% (sizing_plot_weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude,V_cruise.to(ureg.mph).magnitude) \
 	+ "%0.0f rotors; %0.0f rotor blades; mean lift coefficient = %0.1f; %s. %s configuration.\n" \
 	% (N, B, Cl_mean_max, autonomy_string,sizing_plot_config) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \

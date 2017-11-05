@@ -15,6 +15,8 @@ from copy import deepcopy
 from collections import OrderedDict
 from noise_models import vortex_noise
 
+import matplotlib as mpl
+mpl.style.use("classic")
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
@@ -375,15 +377,15 @@ else:
 
 title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %s\n" \
 	% (C_m.to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
-	+ "Sizing mission (%s): %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (sizing_mission_type, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
+	+ "Sizing mission (%s): range = %0.0f nmi; %0.0f passengers; %0.0fs hover time; reserve type = " \
+	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
 	+ reserve_type_string + "\n"\
-	+ "Revenue mission (%s): %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (revenue_mission_type, revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
-	% (deadhead_mission_type, deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
+	+ "Revenue mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
+	+ "Deadhead mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('low_noise_design_plot_01.pdf')
@@ -402,16 +404,15 @@ for i,config in enumerate(configs):
 
 		if (i == 0):
 			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j],
-				label=case)
+				label=case,log=True)
 		else:
-			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j])
-
+			plt.bar(i+offset,f_peak,align='center',alpha=1,width=width,color=colors[j],
+				log=True)
 
 plt.grid()
-plt.yscale('log')
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax=ymax*5)
+plt.ylim(ymin=100,ymax=ymax*5)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Frequency (Hz)', fontsize = 16)
 plt.title("Vortex-Noise Peak Frequency",fontsize = 18)
@@ -440,7 +441,7 @@ plt.title("Rotor Radius",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
 
-#Rotor rotational speed (sizing mission) 
+#Rotor angular velocity (sizing mission) 
 plt.subplot(2,2,3)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
@@ -457,8 +458,8 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.ylabel('Rotational speed (rpm)', fontsize = 16)
-plt.title("Rotor Rotational Speed (sizing mission)",fontsize = 18)
+plt.ylabel('Angular velocity (rpm)', fontsize = 16)
+plt.title("Rotor Angular Velocity (sizing mission)",fontsize = 18)
 plt.legend(loc='upper left', fontsize = 12)
 
 
@@ -485,7 +486,7 @@ plt.ylabel('Tip speed (ft/s)', fontsize = 16)
 plt.title("Rotor Tip Speed (sizing mission)",fontsize = 18)
 plt.legend(loc='upper right', fontsize = 12)
 
-plt.suptitle(title_str,fontsize = 13.5)
+plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('low_noise_design_plot_02.pdf')

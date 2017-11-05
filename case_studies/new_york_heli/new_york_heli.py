@@ -15,6 +15,8 @@ from copy import deepcopy
 from collections import OrderedDict
 from noise_models import vortex_noise
 
+import matplotlib as mpl
+mpl.style.use("classic")
 
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 

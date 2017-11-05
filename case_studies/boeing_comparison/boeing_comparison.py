@@ -331,13 +331,13 @@ else:
 
 title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
 	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
-	+ "Sizing mission: range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
+	+ "Sizing mission: range = %0.0f nmi; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers,\
 		sizing_t_hover.to(ureg.s).magnitude) + reserve_type_string + "\n" \
-	+ "Revenue mission: range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	+ "Revenue mission: range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (revenue_mission_range.to(ureg.nautical_mile).magnitude, \
 		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
-	+ "Deadhead mission: range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve" \
+	+ "Deadhead mission: range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve" \
 	% (deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
 		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude)
 

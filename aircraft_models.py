@@ -1076,7 +1076,7 @@ if __name__=="__main__":
 	print "Concept representative analysis"
 	print
 	print "Battery energy density: %0.0f Wh/kg" % C_m.to(ureg.Wh/ureg.kg).magnitude
-	print "Structural mass fraction: %0.4f" % weight_fraction
+	print "Empty weight fraction: %0.4f" % weight_fraction
 	print "Cruise lift-to-drag ratio: %0.1f" % L_D_cruise
 	print "Hover disk loading: %0.1f lbf/ft^2" % T_A.to(ureg("lbf/ft**2")).magnitude
 	print "Rotor maximum mean lift coefficient: %0.2f" % Cl_mean_max
