@@ -13,6 +13,9 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from noise_models import rotational_noise, vortex_noise, noise_weighting
 
+import matplotlib as mpl
+mpl.style.use("classic")
+
 #General data
 eta_cruise = generic_data["\eta_{cruise}"] 
 eta_electric = generic_data["\eta_{electric}"]
@@ -419,8 +422,8 @@ for i, config in enumerate(configs):
 	SPL_total_A = c["y"]["total"]["SPL_A"]
 	
 	plt.subplot(2,2,i+1)
-	plt.plot(y_array.to(ureg.ft).magnitude,SPL_rotational,'k--',linewidth=3,
-		label="Rotational noise (unweighted)")
+	#plt.plot(y_array.to(ureg.ft).magnitude,SPL_rotational,'k--',linewidth=3,
+	#	label="Rotational noise (unweighted)")
 	plt.plot(y_array.to(ureg.ft).magnitude,SPL_rotational_A,'k-.',linewidth=3,
 		label="Rotational noise (A-weighted)")
 	plt.plot(y_array.to(ureg.ft).magnitude,SPL_vortex_A,linestyle="none",color="k",
