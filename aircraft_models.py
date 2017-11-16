@@ -53,6 +53,7 @@ class Structure(Model):
 		W = Variable("W","lbf","Structural weight")
 		weight_fraction = Variable("weight_fraction",weight_fraction,"-",
 			"Structural weight fraction")
+		self.weight_fraction = weight_fraction
 
 		return [W == weight_fraction*MTOW]
 
@@ -1101,7 +1102,10 @@ if __name__=="__main__":
 		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
 		autonomousEnabled=autonomousEnabled)
 
-	print testAircraft.substitutions
+	#testAircraft.substitutions[testAircraft.structure.weight_fraction] = 0.50
+	
+	#subDict = {testAircraft.structure.weight_fraction: 0.50}
+	#testAircraft.substitutions.update(subDict)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
