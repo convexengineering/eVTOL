@@ -970,6 +970,83 @@ class OperatingExpenses(Model):
 		return constraints
 
 
+def test():
+	from noise_models import rotational_noise, vortex_noise, noise_weighting
+	
+	#Concept representative analysis
+
+	N = 12 #number of propellers
+	T_A = 15.*ureg("lbf")/ureg("ft")**2
+	L_D_cruise = 14. #estimated L/D in cruise
+	eta_cruise = 0.85 #propulsive efficiency in cruise
+	eta_electric = 0.9 #electrical system efficiency
+	weight_fraction = 0.55 #structural mass fraction
+	C_m = 400*ureg.Wh/ureg.kg #battery energy density
+	Cl_mean_max = 1.0
+	n=1.0#battery discharge parameter
+	reserve_type = "FAA_heli"
+	loiter_type = "level_flight"
+	delta_S = 500*ureg.ft
+	noise_weighting = "A"
+	B = 5
+
+	V_cruise = 200*ureg.mph
+
+	sizing_mission_range = 87*ureg.nautical_mile
+	revenue_mission_range = 30*ureg.nautical_mile
+	deadhead_mission_range = 30*ureg.nautical_mile
+
+	sizing_t_hover = 120*ureg.s
+	revenue_t_hover = 30*ureg.s
+	deadhead_t_hover = 30*ureg.s
+
+	autonomousEnabled = True
+	sizing_mission_type = "piloted"
+	revenue_mission_type = "piloted"
+	deadhead_mission_type = "piloted"
+
+	sizing_N_passengers = 3
+	revenue_N_passengers = 2
+	deadhead_N_passengers = 0.00001
+
+	charger_power = 200*ureg.kW
+
+	vehicle_cost_per_weight = 350*ureg.lbf**-1
+	battery_cost_per_C = 400*ureg.kWh**-1
+	pilot_wrap_rate = 70*ureg.hr**-1
+	mechanic_wrap_rate = 60*ureg.hr**-1
+	MMH_FH = 0.6
+	deadhead_ratio = 0.2
+
+	testAircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
+		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
+		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
+		autonomousEnabled=autonomousEnabled)
+
+	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
+		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
+		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
+	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
+
+	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_range=revenue_mission_range,
+		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
+		charger_power=charger_power,mission_type=revenue_mission_type)
+
+	testDeadheadMission = OnDemandDeadheadMission(testAircraft,mission_range=deadhead_mission_range,
+		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
+		charger_power=charger_power,mission_type=deadhead_mission_type)
+
+	testMissionCost = OnDemandMissionCost(testAircraft,testRevenueMission,testDeadheadMission,
+		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
+		deadhead_ratio=deadhead_ratio)
+	
+	problem = Model(testMissionCost["cost_per_trip"],
+		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission, testMissionCost])
+	
+	solution = problem.solve(verbosity=0)
+	return solution
+
+
 if __name__=="__main__":
 
 	from noise_models import rotational_noise, vortex_noise, noise_weighting
@@ -1023,6 +1100,8 @@ if __name__=="__main__":
 		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
 		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
 		autonomousEnabled=autonomousEnabled)
+
+	print testAircraft.substitutions
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
