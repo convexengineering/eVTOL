@@ -6,32 +6,42 @@ from gpkit import Variable, Model, Vectorize, ureg
 from standard_atmosphere import stdatmo
 
 class OnDemandAircraft(Model):
-	def setup(self,N,L_D_cruise,eta_cruise,weight_fraction,C_m,Cl_mean_max,s=0.1,n=1.,eta_electric=0.9,
-		cost_per_weight=350*ureg.lbf**-1,vehicle_life=20000*ureg.hour,cost_per_C=400*ureg.kWh**-1,
-		autonomousEnabled=False):
+	def setup(self,autonomousEnabled=False):
 		
-		MTOW = Variable("MTOW","lbf","Aircraft maximum takeoff weight")
+		TOGW = Variable("TOGW","lbf","Aircraft takeoff gross weight")
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
-		L_D_loiter = Variable("L_D_loiter",((3**0.5)/2.)*L_D_cruise,"-","Loiter L/D ratio (approximation)")
-		L_D_cruise = Variable("L_D_cruise",L_D_cruise,"-","Cruise L/D ratio")
-		eta_cruise = Variable("\eta_{cruise}",eta_cruise,"-","Cruise propulsive efficiency")
+		L_D_loiter = Variable("L_D_loiter","-","Loiter L/D ratio (approximation)")
+		L_D_cruise = Variable("L_D_cruise","-","Cruise L/D ratio")
+		eta_cruise = Variable("\eta_{cruise}","-","Cruise propulsive efficiency")
 
-		cost_per_weight = Variable("cost_per_weight",cost_per_weight,"lbf**-1",
+		cost_per_weight = Variable("cost_per_weight","lbf**-1",
 			"Cost per unit empty weight of the aircraft")
 		purchase_price = Variable("purchase_price","-","Purchase price of the airframe")
-		vehicle_life = Variable("vehicle_life",vehicle_life,"hours","Vehicle lifetime")
+		vehicle_life = Variable("vehicle_life",20000*ureg.hour,"hours","Vehicle lifetime")
 
 		self.autonomousEnabled = autonomousEnabled
 
-		self.rotors = Rotors(N=N,Cl_mean_max=Cl_mean_max,s=s)
-		self.battery = Battery(C_m=C_m,n=n,cost_per_C=cost_per_C)
-		self.structure = Structure(weight_fraction)
-		self.electricalSystem = ElectricalSystem(eta=eta_electric)
+		self.rotors = Rotors()
+		self.battery = Battery()
+		self.structure = Structure()
+		self.electricalSystem = ElectricalSystem()
 		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
 		
-		self.structure.subinplace({self.structure.topvar("MTOW"):MTOW})
+		self.TOGW = TOGW
+		self.W_empty = W_empty
+		self.C_eff = C_eff
+		self.g = g
+		self.L_D_loiter = L_D_loiter
+		self.L_D_cruise = L_D_cruise
+		self.eta_cruise = eta_cruise
+
+		self.cost_per_weight = cost_per_weight
+		self.purchase_price = purchase_price
+		self.vehicle_life = vehicle_life
+
+		self.structure.subinplace({self.structure.topvar("TOGW"):TOGW})
 
 		self.components = [self.rotors,self.battery,self.structure,self.electricalSystem,self.avionics]
 		
@@ -39,6 +49,9 @@ class OnDemandAircraft(Model):
 		
 		constraints += [g == self.battery.topvar("g")]
 		constraints += [self.components]#all constraints implemented at component level
+		
+		constraints += [L_D_loiter == ((3**0.5)/2.)*L_D_cruise]
+
 		constraints += [C_eff == self.battery.topvar("C_{eff}")]#battery-capacity constraint
 		constraints += [W_empty >= sum(c.topvar("W") for c in self.components)]#weight constraint
 		constraints += [purchase_price == cost_per_weight*self.structure.topvar("W")]
@@ -46,16 +59,16 @@ class OnDemandAircraft(Model):
 		return constraints
 
 class Structure(Model):
-	def setup(self,weight_fraction):
+	def setup(self):
 		
-		MTOW = Variable("MTOW","lbf",
-			"Aircraft maximum takeoff weight (requires substitution or subinplace)")
-		W = Variable("W","lbf","Structural weight")
-		weight_fraction = Variable("weight_fraction",weight_fraction,"-",
-			"Structural weight fraction")
+		TOGW = Variable("TOGW","lbf",
+			"Aircraft takeoff gross weight (requires substitution or subinplace)")
+		W = Variable("W","lbf","Empty weight")
+		weight_fraction = Variable("weight_fraction","-","Empty weight fraction")
+		
 		self.weight_fraction = weight_fraction
 
-		return [W == weight_fraction*MTOW]
+		return [W == weight_fraction*TOGW]
 
 
 class Rotors(Model):
@@ -63,17 +76,24 @@ class Rotors(Model):
 	def performance(self,flightState,MT_max=0.9,SPL_req=100,ki=1.2,Cd0=0.01):
 		return RotorsAero(self,flightState,MT_max,SPL_req,ki=ki,Cd0=Cd0)
 
-	def setup(self,N=1,s=0.1,Cl_mean_max=1.0):
+	def setup(self):
 		R = Variable("R","ft","Propeller radius")
 		D = Variable("D","ft","Propeller diameter")
 		A = Variable("A","ft^2","Area of 1 rotor disk")
 		A_total = Variable("A_{total}","ft^2","Combined area of all rotor disks")
-		N = Variable("N",N,"-","Number of rotors")
-		s = Variable("s",s,"-","Propeller solidity")
-		Cl_mean_max = Variable("Cl_{mean_{max}}",Cl_mean_max,"-",
-			"Maximum allowed mean lift coefficient")
+		N = Variable("N","-","Number of rotors")
+		s = Variable("s","-","Propeller solidity")
+		Cl_mean_max = Variable("Cl_{mean_{max}}","-","Maximum allowed mean lift coefficient")
 
 		W = Variable("W",0,"lbf","Rotor weight") #weight model not implemented yet
+
+		self.R = R
+		self.D = D
+		self.A = A
+		self.A_total = A_total
+		self.N = N
+		self.s = s
+		self.Cl_mean_max = Cl_mean_max
 
 		constraints = [A == math.pi*R**2, D==2*R, A_total==N*A,
 			Cl_mean_max == Cl_mean_max]
@@ -159,30 +179,41 @@ class Battery(Model):
 		return BatteryPerformance(self)
 
 	#Requires a substitution or constraint for g (gravitational acceleration)
-	def setup(self,C_m=350*ureg.Wh/ureg.kg,usable_energy_fraction=0.8,P_m=3000*ureg.W/ureg.kg,
-		n=1.,cost_per_C=400*ureg.kWh**-1):
+	def setup(self):
 		
 		g = Variable("g","m/s**2","Gravitational acceleration")
 		
 		C = Variable("C","kWh","Battery capacity")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
-		usable_energy_fraction = Variable("usable_energy_fraction",usable_energy_fraction,
-			"-","Percentage of the battery energy that can be used (without damaging battery)")
+		usable_energy_fraction = Variable("usable_energy_fraction",0.8,
+			"-","Percentage of the battery energy that can be used without damaging battery")
 	
 		W = Variable("W","lbf","Battery weight")
 		m = Variable("m","kg","Battery mass")
-		C_m = Variable("C_m",C_m,"Wh/kg","Battery energy density")
-		P_m = Variable("P_m",P_m,"W/kg","Battery power density")
+		C_m = Variable("C_m","Wh/kg","Battery energy density")
+		P_m = Variable("P_m",3000*ureg.W/ureg.kg,"W/kg","Battery power density")
 		P_max = Variable("P_{max}","kW","Battery maximum power")
 
-		cost_per_C = Variable("cost_per_C",cost_per_C,"kWh**-1",
-			"Battery cost per unit energy stored")
+		cost_per_C = Variable("cost_per_C","kWh**-1","Battery cost per unit energy stored")
 		purchase_price = Variable("purchase_price","-","Purchase price of the battery")
 		cycle_life = Variable("cycle_life",2000,"-",
 			"Number of cycles before battery needs replacement")
 
+		self.g = g
+		self.C = C
+		self.C_eff = C_eff
+		self.usable_energy_fraction = usable_energy_fraction
+		self.W = W
+		self.m = m
+		self.C_m = C_m
+		self.P_m = P_m
 		self.P_max = P_max
-		self.n = n #battery discharge parameter (needed for Peukert effect)
+		self.cost_per_C = cost_per_C
+		self.purchase_price = purchase_price
+		self.cycle_life = cycle_life
+
+		self.n = 1. #battery discharge parameter (needed for Peukert effect)
+		
 
 		constraints = []
 
@@ -233,9 +264,12 @@ class ElectricalSystem(Model):
 	def performance(self):
 		return ElectricalSystemPerformance(self)
 
-	def setup(self,eta=0.9):
+	def setup(self):
 		W = Variable("W",0,"lbf","Electrical power system weight")
-		eta = Variable("\eta",eta,"-","Electrical power system efficiency")
+		eta = Variable("\eta","-","Electrical power system efficiency")
+
+		self.W = W
+		self.eta = eta
 
 		constraints = []
 		return constraints
@@ -262,6 +296,8 @@ class Avionics(Model):
 		else:
 			purchase_price = Variable("purchase_price",1,"-",
 				"Purchase price of the avionics (negligibly small)")
+
+		self.W = W
 
 		constraints = []
 		return constraints
@@ -1050,25 +1086,35 @@ def test():
 
 if __name__=="__main__":
 
-	from noise_models import rotational_noise, vortex_noise, noise_weighting
-	
 	#Concept representative analysis
 
-	N = 12 #number of propellers
+	from noise_models import rotational_noise, vortex_noise, noise_weighting
+
+	autonomousEnabled = True
+	testAircraft = OnDemandAircraft(autonomousEnabled=autonomousEnabled)
+
+	testAircraft_subDict = {
+		testAircraft.L_D_cruise: 14., #estimated L/D in cruise
+		testAircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
+		testAircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
+		testAircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
+		testAircraft.rotors.N: 12, #number of propellers
+		testAircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
+		testAircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
+		testAircraft.structure.weight_fraction: 0.50, #empty weight fraction
+		testAircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
+	}
+
+	testAircraft.substitutions.update(testAircraft_subDict)
+
+	
+	
 	T_A = 15.*ureg("lbf")/ureg("ft")**2
-	L_D_cruise = 14. #estimated L/D in cruise
-	eta_cruise = 0.85 #propulsive efficiency in cruise
-	eta_electric = 0.9 #electrical system efficiency
-	weight_fraction = 0.55 #structural mass fraction
-	C_m = 400*ureg.Wh/ureg.kg #battery energy density
-	Cl_mean_max = 1.0
-	n=1.0#battery discharge parameter
 	reserve_type = "FAA_heli"
 	loiter_type = "level_flight"
 	delta_S = 500*ureg.ft
 	noise_weighting = "A"
 	B = 5
-
 	V_cruise = 200*ureg.mph
 
 	sizing_mission_range = 87*ureg.nautical_mile
@@ -1079,7 +1125,6 @@ if __name__=="__main__":
 	revenue_t_hover = 30*ureg.s
 	deadhead_t_hover = 30*ureg.s
 
-	autonomousEnabled = True
 	sizing_mission_type = "piloted"
 	revenue_mission_type = "piloted"
 	deadhead_mission_type = "piloted"
@@ -1090,22 +1135,12 @@ if __name__=="__main__":
 
 	charger_power = 200*ureg.kW
 
-	vehicle_cost_per_weight = 350*ureg.lbf**-1
-	battery_cost_per_C = 400*ureg.kWh**-1
 	pilot_wrap_rate = 70*ureg.hr**-1
 	mechanic_wrap_rate = 60*ureg.hr**-1
 	MMH_FH = 0.6
 	deadhead_ratio = 0.2
 
-	testAircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
-		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
-		autonomousEnabled=autonomousEnabled)
-
-	#testAircraft.substitutions[testAircraft.structure.weight_fraction] = 0.50
 	
-	#subDict = {testAircraft.structure.weight_fraction: 0.50}
-	#testAircraft.substitutions.update(subDict)
 
 	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
 		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
@@ -1158,6 +1193,10 @@ if __name__=="__main__":
 	print
 	print "Concept representative analysis"
 	print
+
+	'''
+	
+
 	print "Battery energy density: %0.0f Wh/kg" % C_m.to(ureg.Wh/ureg.kg).magnitude
 	print "Empty weight fraction: %0.4f" % weight_fraction
 	print "Cruise lift-to-drag ratio: %0.1f" % L_D_cruise
@@ -1259,3 +1298,5 @@ if __name__=="__main__":
 		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	
 	#print solution.summary()
+
+	'''
