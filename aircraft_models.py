@@ -12,9 +12,14 @@ class OnDemandAircraft(Model):
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
+		
 		L_D_loiter = Variable("L_D_loiter","-","Loiter L/D ratio (approximation)")
 		L_D_cruise = Variable("L_D_cruise","-","Cruise L/D ratio")
 		eta_cruise = Variable("\eta_{cruise}","-","Cruise propulsive efficiency")
+		tailRotor_power_fraction_hover = Variable("tailRotor_power_fraction_hover",
+			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
+		tailRotor_power_fraction_levelFlight = Variable("tailRotor_power_fraction_levelFlight",
+			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
 
 		cost_per_weight = Variable("cost_per_weight","lbf**-1",
 			"Cost per unit empty weight of the aircraft")
@@ -36,6 +41,8 @@ class OnDemandAircraft(Model):
 		self.L_D_loiter = L_D_loiter
 		self.L_D_cruise = L_D_cruise
 		self.eta_cruise = eta_cruise
+		self.tailRotor_power_fraction_hover = tailRotor_power_fraction_hover
+		self.tailRotor_power_fraction_levelFlight = tailRotor_power_fraction_levelFlight
 
 		self.cost_per_weight = cost_per_weight
 		self.purchase_price = purchase_price
@@ -420,7 +427,7 @@ class LevelFlight(Model):
 
 class TimeOnGround(Model):
 	#Mission segment for charging and passenger drop-off/pick-up
-	def setup(self,mission,charger_power=200*ureg.kW):
+	def setup(self,mission):
 
 		E_mission = mission.E_mission
 
@@ -428,12 +435,19 @@ class TimeOnGround(Model):
 		t_passenger = Variable("t_{passenger}",5,"minute",
 			"Time required to load/unload passengers and conduct safety checks")
 		t_charge = Variable("t_{charge}","s","Time required to fully charge the battery")
-		charger_power = Variable("charger_power",charger_power,"kW","Charger power")
+		charger_power = Variable("charger_power","kW","Charger power")
+		eta_charger = Variable("\eta_{charger}",0.9,"-","Charging efficiency")
+
+		self.t = t
+		self.t_passenger = t_passenger
+		self.t_charge = t_charge
+		self.charger_power = charger_power
+		self.eta_charger = eta_charger
 
 		constraints = []
 		
 		constraints += [t >= t_passenger, t >= t_charge]
-		constraints += [E_mission == charger_power*t_charge]
+		constraints += [E_mission == eta_charger*charger_power*t_charge]
 
 		return constraints
 
@@ -450,10 +464,6 @@ class OnDemandSizingMission(Model):
 		E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 		V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
 		V_loiter = Variable("V_{loiter}","mph","Aircraft loiter speed")
-		tailRotor_power_fraction_hover = Variable("tailRotor_power_fraction_hover",
-			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
-		tailRotor_power_fraction_levelFlight = Variable("tailRotor_power_fraction_levelFlight",
-			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
 
 		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 
@@ -463,8 +473,6 @@ class OnDemandSizingMission(Model):
 		self.E_mission = E_mission
 		self.V_cruise = V_cruise
 		self.V_loiter = V_loiter
-		self.tailRotor_power_fraction_hover = tailRotor_power_fraction_hover
-		self.tailRotor_power_fraction_levelFlight = tailRotor_power_fraction_levelFlight
 
 		self.mission_type = mission_type
 
@@ -544,9 +552,9 @@ class OnDemandSizingMission(Model):
 		constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
 		constraints += [C_eff >= E_mission]
 
-		constraints += [tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
+		constraints += [aircraft.tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
 			for i,segment in enumerate(self.levelFlight_segments)]
-		constraints += [tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
+		constraints += [aircraft.tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
 			for i,segment in enumerate(self.hover_segments)]
 		constraints += [t_hover == segment.topvar("t") for i,segment in enumerate(self.hover_segments)]
 
@@ -569,16 +577,15 @@ class OnDemandSizingMission(Model):
 
 class OnDemandRevenueMission(Model):
 	#Revenue-generating mission. Exactly the same code as OnDemandDeadheadMission.
-    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	N_passengers=1,t_hover=30*ureg.s,charger_power=200*ureg.kW,mission_type="piloted",
-		tailRotor_power_fraction_hover=0.0001,tailRotor_power_fraction_levelFlight=0.0001):
+    def setup(self,aircraft,mission_type="piloted"):
 
     	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
     		raise ValueError("Autonomy is not enabled for Aircraft() model.")
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
-    	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
-    	t_hover = Variable("t_{hover}",t_hover,"s","Time in hover")
+    	mission_range = Variable("mission_range","nautical_mile","Mission range")
+    	t_hover = Variable("t_{hover}","s","Time in hover")
+    	V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
     	
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
@@ -587,23 +594,29 @@ class OnDemandRevenueMission(Model):
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.W = W
+        self.mission_range = mission_range
+        self.t_hover = t_hover
+        self.V_cruise = V_cruise
+        self.C_eff = C_eff
+        self.t_mission = t_mission
+        self.t_flight = t_flight
         self.E_mission = E_mission
+
         self.mission_type = mission_type
+
         self.crew = Crew(mission_type=mission_type)
-        self.passengers = Passengers(N_passengers=N_passengers)
+        self.passengers = Passengers()
         
         hoverState = FlightState(h=0*ureg.ft)
 
-        self.fs0 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#takeoff
-        self.fs1 = LevelFlight(self,aircraft,V=V_cruise,
-			tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#fly to destination
-        self.fs2 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing
-        self.time_on_ground = TimeOnGround(self,charger_power=charger_power)
+        self.fs0 = Hover(self,aircraft,hoverState)#takeoff
+        self.fs1 = LevelFlight(self,aircraft)#fly to destination
+        self.fs2 = Hover(self,aircraft,hoverState)#landing
+        self.time_on_ground = TimeOnGround(self)
 
         self.segments = [self.fs0, self.fs1, self.fs2, self.time_on_ground]
         self.flight_segments = [self.fs0, self.fs1, self.fs2]
+        self.levelFlight_segments = [self.fs1]
         self.hover_segments = [self.fs0, self.fs2]
 
         #Power and energy consumption by mission segment
@@ -627,12 +640,16 @@ class OnDemandRevenueMission(Model):
         	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
 
         constraints = []
+
+        constraints += [self.fs1.L_D == aircraft.L_D_cruise]
+        constraints += [self.fs1.V == V_cruise]
+
         constraints += [self.segments]
         constraints += [self.crew,self.passengers]
 
         constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
         	+ self.crew.topvar("W")]
-        constraints += [aircraft.topvar("MTOW") >= W]
+        constraints += [aircraft.topvar("TOGW") >= W]
         
         constraints += [mission_range == self.fs1.topvar("segment_range")]
         constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
@@ -641,6 +658,10 @@ class OnDemandRevenueMission(Model):
         constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
         constraints += [C_eff >= E_mission]
 
+        constraints += [aircraft.tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
+        	for i,segment in enumerate(self.levelFlight_segments)]
+        constraints += [aircraft.tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
+        	for i,segment in enumerate(self.hover_segments)]
         constraints += [t_hover == segment.topvar("t") for i,segment in enumerate(self.hover_segments)]
 
         constraints += [t_flight >= sum(c.topvar("t") for c in self.flight_segments)]
@@ -665,16 +686,15 @@ class OnDemandRevenueMission(Model):
 
 class OnDemandDeadheadMission(Model):
 	#Deadhead mission. Exactly the same code as OnDemandRevenueMission.
-    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,V_cruise=150*ureg.mph,
-    	N_passengers=1,t_hover=30*ureg.s,charger_power=200*ureg.kW,mission_type="piloted",
-		tailRotor_power_fraction_hover=0.0001,tailRotor_power_fraction_levelFlight=0.0001):
+    def setup(self,aircraft,mission_type="piloted"):
 
     	if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
     		raise ValueError("Autonomy is not enabled for Aircraft() model.")
 
     	W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
-    	mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
-    	t_hover = Variable("t_{hover}",t_hover,"s","Time in hover")
+    	mission_range = Variable("mission_range","nautical_mile","Mission range")
+    	t_hover = Variable("t_{hover}","s","Time in hover")
+    	V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
     	
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
@@ -683,23 +703,29 @@ class OnDemandDeadheadMission(Model):
         E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 
         self.W = W
+        self.mission_range = mission_range
+        self.t_hover = t_hover
+        self.V_cruise = V_cruise
+        self.C_eff = C_eff
+        self.t_mission = t_mission
+        self.t_flight = t_flight
         self.E_mission = E_mission
+
         self.mission_type = mission_type
+
         self.crew = Crew(mission_type=mission_type)
-        self.passengers = Passengers(N_passengers=N_passengers)
+        self.passengers = Passengers()
         
         hoverState = FlightState(h=0*ureg.ft)
 
-        self.fs0 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#takeoff
-        self.fs1 = LevelFlight(self,aircraft,V=V_cruise,
-			tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#fly to destination
-        self.fs2 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing
-        self.time_on_ground = TimeOnGround(self,charger_power=charger_power)
+        self.fs0 = Hover(self,aircraft,hoverState)#takeoff
+        self.fs1 = LevelFlight(self,aircraft)#fly to destination
+        self.fs2 = Hover(self,aircraft,hoverState)#landing
+        self.time_on_ground = TimeOnGround(self)
 
         self.segments = [self.fs0, self.fs1, self.fs2, self.time_on_ground]
         self.flight_segments = [self.fs0, self.fs1, self.fs2]
+        self.levelFlight_segments = [self.fs1]
         self.hover_segments = [self.fs0, self.fs2]
 
         #Power and energy consumption by mission segment
@@ -710,32 +736,41 @@ class OnDemandDeadheadMission(Model):
         #Data from hover segments
         numHoverSegments = len(self.hover_segments)
         with Vectorize(numHoverSegments):
-         	CT = Variable("CT","-","Thrust coefficient")
-         	CP = Variable("CP","-","Power coefficient")
-         	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per lifting rotor")
-         	T_perRotor = Variable("T_perRotor","lbf","Thrust per lifting rotor")
-         	P = Variable("P","kW","Total power supplied to all lifting rotors")
-         	P_perRotor = Variable("P_perRotor","kW","Power per lifting rotor")
-         	VT = Variable("VT","ft/s","Propeller tip speed")
-         	omega = Variable("\omega","rpm","Propeller angular velocity")
-         	MT = Variable("MT","-","Propeller tip Mach number")
-         	FOM = Variable("FOM","-","Figure of merit")
-         	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
-        
+        	CT = Variable("CT","-","Thrust coefficient")
+        	CP = Variable("CP","-","Power coefficient")
+        	Q_perRotor = Variable("Q_perRotor","lbf*ft","Torque per lifting rotor")
+        	T_perRotor = Variable("T_perRotor","lbf","Thrust per lifting rotor")
+        	P = Variable("P","kW","Total power supplied to all lifting rotors")
+        	P_perRotor = Variable("P_perRotor","kW","Power per lifting rotor")
+        	VT = Variable("VT","ft/s","Propeller tip speed")
+        	omega = Variable("\omega","rpm","Propeller angular velocity")
+        	MT = Variable("MT","-","Propeller tip Mach number")
+        	FOM = Variable("FOM","-","Figure of merit")
+        	p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
+
         constraints = []
+
+        constraints += [self.fs1.L_D == aircraft.L_D_cruise]
+        constraints += [self.fs1.V == V_cruise]
+
         constraints += [self.segments]
         constraints += [self.crew,self.passengers]
 
         constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
         	+ self.crew.topvar("W")]
-        constraints += [aircraft.topvar("MTOW") >= W]
+        constraints += [aircraft.topvar("TOGW") >= W]
         
         constraints += [mission_range == self.fs1.topvar("segment_range")]
+        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
         constraints += hoverState
 
         constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
         constraints += [C_eff >= E_mission]
 
+        constraints += [aircraft.tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
+        	for i,segment in enumerate(self.levelFlight_segments)]
+        constraints += [aircraft.tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
+        	for i,segment in enumerate(self.hover_segments)]
         constraints += [t_hover == segment.topvar("t") for i,segment in enumerate(self.hover_segments)]
 
         constraints += [t_flight >= sum(c.topvar("t") for c in self.flight_segments)]
@@ -1131,10 +1166,8 @@ if __name__=="__main__":
 	#Concept representative analysis
 
 	from noise_models import rotational_noise, vortex_noise, noise_weighting
-
-	autonomousEnabled = True
-	testAircraft = OnDemandAircraft(autonomousEnabled=autonomousEnabled)
-
+	
+	testAircraft = OnDemandAircraft(autonomousEnabled=True)
 	Aircraft_subDict = {
 		testAircraft.L_D_cruise: 14., #estimated L/D in cruise
 		testAircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
@@ -1146,36 +1179,10 @@ if __name__=="__main__":
 		testAircraft.structure.weight_fraction: 0.50, #empty weight fraction
 		testAircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
 	}
-
 	testAircraft.substitutions.update(Aircraft_subDict)
 
-	delta_S = 500*ureg.ft
-	noise_weighting = "A"
-	B = 5
-
-	revenue_mission_range = 30*ureg.nautical_mile
-	deadhead_mission_range = 30*ureg.nautical_mile
-
-	revenue_t_hover = 30*ureg.s
-	deadhead_t_hover = 30*ureg.s
-
-	revenue_mission_type = "piloted"
-	deadhead_mission_type = "piloted"
-
-	revenue_N_passengers = 2
-	deadhead_N_passengers = 0.00001
-
-	charger_power = 200*ureg.kW
-
-	pilot_wrap_rate = 70*ureg.hr**-1
-	mechanic_wrap_rate = 60*ureg.hr**-1
-	MMH_FH = 0.6
-	deadhead_ratio = 0.2
-
-
-	testSizingMission = OnDemandSizingMission(testAircraft,reserve_type="FAA_heli",
-		mission_type="piloted")
-
+	testSizingMission = OnDemandSizingMission(testAircraft,mission_type="piloted",
+		reserve_type="FAA_heli")
 	sizingMission_subDict = {
 		testSizingMission.mission_range: 87*ureg.nautical_mile,#mission range
 		testSizingMission.V_cruise: 200*ureg.mph,#cruising speed
@@ -1183,18 +1190,43 @@ if __name__=="__main__":
 		testSizingMission.fs0.T_A: 15.*ureg("lbf")/ureg("ft")**2,#disk loading
 		testSizingMission.passengers.N_passengers: 3,#Number of passengers
 	}
-
 	testSizingMission.substitutions.update(sizingMission_subDict)
 
+	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_type="piloted")
+	revenueMission_subDict = {
+		testRevenueMission.mission_range: 30*ureg.nautical_mile,#mission range
+		testRevenueMission.V_cruise: 200*ureg.mph,#cruising speed
+		testRevenueMission.t_hover: 30*ureg.s,#hover time
+		testRevenueMission.passengers.N_passengers: 2,#Number of passengers
+		testRevenueMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+	}
+	testRevenueMission.substitutions.update(revenueMission_subDict)
+
+	
+	testDeadheadMission = OnDemandRevenueMission(testAircraft,mission_type="autonomous")
+	deadheadMission_subDict = {
+		testDeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
+		testDeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
+		testDeadheadMission.t_hover: 30*ureg.s,#hover time
+		testDeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
+		testDeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+	}
+	testDeadheadMission.substitutions.update(deadheadMission_subDict)
+
+	problem = Model(testAircraft["TOGW"],
+		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission])
+
 	'''
-	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_range=revenue_mission_range,
-		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-		charger_power=charger_power,mission_type=revenue_mission_type)
+	delta_S = 500*ureg.ft
+	noise_weighting = "A"
+	B = 5
 
-	testDeadheadMission = OnDemandDeadheadMission(testAircraft,mission_range=deadhead_mission_range,
-		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-		charger_power=charger_power,mission_type=deadhead_mission_type)
+	pilot_wrap_rate = 70*ureg.hr**-1
+	mechanic_wrap_rate = 60*ureg.hr**-1
+	MMH_FH = 0.6
+	deadhead_ratio = 0.2
 
+	
 	testMissionCost = OnDemandMissionCost(testAircraft,testRevenueMission,testDeadheadMission,
 		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
 		deadhead_ratio=deadhead_ratio)
@@ -1287,7 +1319,7 @@ if __name__=="__main__":
 	print
 	
 	print "Maximum takeoff weight: %0.0f lbs" % \
-		solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
+		solution("TOGW_OnDemandAircraft").to(ureg.lbf).magnitude
 	print "Structural weight: %0.0f lbs" % \
 		solution("W_OnDemandAircraft/Structure").to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
