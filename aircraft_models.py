@@ -370,20 +370,19 @@ class Hover(Model):
 
 class LevelFlight(Model):
 	#Substitution required for either segment_range  or t (loiter time).
-	def setup(self,mission,aircraft,V=150*ureg.mph,segment_type="cruise",
-		tailRotor_power_fraction=0.0001):
+	def setup(self,mission,aircraft):
 		E = Variable("E","kWh","Electrical energy used during level-flight segment")
 		P_battery = Variable("P_{battery}","kW","Power drawn (from batteries) during segment")
 		P_cruise  = Variable("P_{cruise}","kW","Power used (by propulsion system) during cruise segment")
 		P_tailRotor = Variable("P_{tailRotor}","kW","Power used (by tail rotor) during hover segment")
-		tailRotor_power_fraction = Variable("tailRotor_power_fraction",tailRotor_power_fraction,
+		tailRotor_power_fraction = Variable("tailRotor_power_fraction",
 			"-","Tail-rotor power as a fraction of cruise power")
 		T = Variable("T","lbf","Thrust during level-flight  segment")
 		D = Variable("D","lbf","Drag during level-flight segment")
 		t = Variable("t","s","Time in level-flight segment")
 		segment_range = Variable("segment_range","nautical_mile",
 			"Distance travelled during segment")
-		V = Variable("V",V,"mph","Velocity during segment")
+		V = Variable("V","mph","Velocity during segment")
 		L_D = Variable("L_D","-","Segment lift-to-drag ratio")
 		
 		W = mission.W
@@ -404,11 +403,6 @@ class LevelFlight(Model):
 		self.eta_cruise = eta_cruise
 
 		constraints = []
-		
-		if segment_type == "cruise":
-			constraints += [L_D == aircraft.topvar("L_D_cruise")]
-		if segment_type == "loiter":
-			constraints += [L_D == aircraft.topvar("L_D_loiter")]
 		
 		self.batteryPerf = aircraft.battery.performance()
 		self.electricalSystemPerf = aircraft.electricalSystem.performance()
@@ -516,7 +510,7 @@ class OnDemandSizingMission(Model):
 		self.fs3 = Hover(self,aircraft,hoverState)#landing again
 
 		self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3]
-		self.levelFlight_segments = [self.fs0, self.fs3]
+		self.levelFlight_segments = [self.fs1, self.fs2]
 		self.hover_segments  = [self.fs0, self.fs3] #not including loiter
 		
 		#Power and energy consumption by mission segment
@@ -1176,7 +1170,7 @@ if __name__=="__main__":
 		testAircraft.rotors.N: 12, #number of propellers
 		testAircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
 		testAircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
-		testAircraft.structure.weight_fraction: 0.50, #empty weight fraction
+		testAircraft.structure.weight_fraction: 0.55, #empty weight fraction
 		testAircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
 	}
 	testAircraft.substitutions.update(Aircraft_subDict)
@@ -1214,7 +1208,8 @@ if __name__=="__main__":
 	testDeadheadMission.substitutions.update(deadheadMission_subDict)
 
 	problem = Model(testAircraft["TOGW"],
-		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission])
+		[testAircraft, testSizingMission])
+	solution = problem.solve(verbosity=0)
 
 	'''
 	delta_S = 500*ureg.ft
