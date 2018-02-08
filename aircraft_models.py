@@ -236,10 +236,10 @@ class BatteryPerformance(Model):
 		return constraints
 
 class Crew(Model):
-	def setup(self,mission_type="piloted",W_oneCrew=190*ureg.lbf,N_crew=1):
+	def setup(self,mission_type="piloted"):
 		
-		W_oneCrew = Variable("W_{oneCrew}",W_oneCrew,"lbf","Weight of 1 crew member")
-		N_crew = Variable("N_{crew}",N_crew,"-","Number of crew members (if present)")
+		W_oneCrew = Variable("W_{oneCrew}",190,"lbf","Weight of 1 crew member")
+		N_crew = Variable("N_{crew}",1,"-","Number of crew members (if present)")
 
 		constraints = []
 
@@ -252,11 +252,13 @@ class Crew(Model):
 		return constraints
 
 class Passengers(Model):
-	def setup(self,W_onePassenger=200*ureg.lbf,N_passengers=1):
-		W_onePassenger = Variable("W_{onePassenger}",W_onePassenger,
-			"lbf","Weight of 1 passenger")
-		N_passengers = Variable("N_{passengers}",N_passengers,"-","Number of passengers")
+	def setup(self):
+		W_onePassenger = Variable("W_{onePassenger}",200,"lbf","Weight of 1 passenger")
+		N_passengers = Variable("N_{passengers}","-","Number of passengers")
 		W = Variable("W","lbf","Total weight")
+
+		self.W_onePassenger = W_onePassenger
+		self.N_passengers = N_passengers
 
 		return [W == N_passengers*W_onePassenger]
 
@@ -317,18 +319,28 @@ class FlightState(Model):
 
 class Hover(Model):
 	#t should be set via substitution
-	def setup(self,mission,aircraft,state,tailRotor_power_fraction=0.0001):
+	def setup(self,mission,aircraft,state):
 		E = Variable("E","kWh","Electrical energy used during hover segment")
 		P_battery = Variable("P_{battery}","kW","Power drawn (from batteries) during hover segment")
 		P_rotors  = Variable("P_{rotors}","kW","Power used (by lifting rotors) during hover segment")
 		P_tailRotor = Variable("P_{tailRotor}","kW","Power used (by tail rotor) during hover segment")
-		tailRotor_power_fraction = Variable("tailRotor_power_fraction",tailRotor_power_fraction,
+		tailRotor_power_fraction = Variable("tailRotor_power_fraction",
 			"-","Tail-rotor power as a fraction of lifting-rotors power")
 
 		T = Variable("T","lbf","Total thrust (from rotors) during hover segment")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading during hover segment")
 		t = Variable("t","s","Time in hover segment")
 		W = mission.W
+
+		self.E = E
+		self.P_battery = P_battery
+		self.P_rotors = P_rotors
+		self.P_tailRotor = P_tailRotor
+		self.tailRotor_power_fraction = tailRotor_power_fraction
+		self.T = T
+		self.T_A = T_A
+		self.t = t
+		self.W = W
 
 		self.rotorPerf = aircraft.rotors.performance(state)
 		self.batteryPerf = aircraft.battery.performance()
@@ -370,6 +382,20 @@ class LevelFlight(Model):
 		W = mission.W
 		eta_cruise = aircraft.topvar("\eta_{cruise}")
 		
+		self.E = E
+		self.P_battery = P_battery
+		self.P_cruise = P_cruise
+		self.P_tailRotor = P_tailRotor
+		self.tailRotor_power_fraction = tailRotor_power_fraction
+		self.T = T
+		self.D = D
+		self.t = t
+		self.segment_range = segment_range
+		self.V = V
+		self.L_D = L_D
+		self.W = W
+		self.eta_cruise = eta_cruise
+
 		constraints = []
 		
 		if segment_type == "cruise":
@@ -413,38 +439,54 @@ class TimeOnGround(Model):
 
 class OnDemandSizingMission(Model):
 	#Mission the aircraft must be able to fly. No economic analysis.
-    def setup(self,aircraft,mission_range=100*ureg.nautical_mile,
-		V_cruise=150*ureg.mph,N_passengers=1,t_hover=120*ureg.s,
-		reserve_type="FAA_heli",mission_type="piloted",loiter_type="level_flight",
-		tailRotor_power_fraction_hover=0.0001,tailRotor_power_fraction_levelFlight=0.0001):
+    def setup(self,aircraft,reserve_type="FAA_heli",mission_type="piloted"):
 		
 		if not(aircraft.autonomousEnabled) and (mission_type != "piloted"):
 			raise ValueError("Autonomy is not enabled for Aircraft() model.")
 		
 		W = Variable("W_{mission}","lbf","Weight of the aircraft during the mission")
-		mission_range = Variable("mission_range",mission_range,"nautical_mile","Mission range")
-		t_hover = Variable("t_{hover}",t_hover,"s","Time in hover")
-		
-		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
+		mission_range = Variable("mission_range","nautical_mile","Mission range")
+		t_hover = Variable("t_{hover}","s","Time in hover")
 		E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
+		V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
+		V_loiter = Variable("V_{loiter}","mph","Aircraft loiter speed")
+		tailRotor_power_fraction_hover = Variable("tailRotor_power_fraction_hover",
+			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
+		tailRotor_power_fraction_levelFlight = Variable("tailRotor_power_fraction_levelFlight",
+			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
+
+		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 
 		self.W = W
+		self.mission_range = mission_range
+		self.t_hover = t_hover
+		self.E_mission = E_mission
+		self.V_cruise = V_cruise
+		self.V_loiter = V_loiter
+		self.tailRotor_power_fraction_hover = tailRotor_power_fraction_hover
+		self.tailRotor_power_fraction_levelFlight = tailRotor_power_fraction_levelFlight
+
 		self.mission_type = mission_type
+
 		self.crew = Crew(mission_type=mission_type)
-		self.passengers = Passengers(N_passengers=N_passengers)
+		self.passengers = Passengers()
 		
 		hoverState = FlightState(h=0*ureg.ft)
 		
 		constraints = []
 		
-		self.fs0 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#takeoff
-		self.fs1 = LevelFlight(self,aircraft,V=V_cruise,
-			tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#fly to destination
-		
+		self.fs0 = Hover(self,aircraft,hoverState) #takeoff
+		self.fs1 = LevelFlight(self,aircraft) #fly to destination
+		self.fs2 = LevelFlight(self,aircraft) #reserve
+
+		constraints += [self.fs1.L_D == aircraft.L_D_cruise]
+		constraints += [self.fs1.V == V_cruise]
+
 		#Reserve segment
 		if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
-			V_reserve = ((1/3.)**(1/4.))*V_cruise #Approximation for max-endurance speed
+
+			constraints += [self.fs2.L_D == aircraft.L_D_loiter]
+			constraints += [self.fs2.V == V_loiter]
 			
 			if reserve_type == "FAA_aircraft":
 				#30-minute loiter time, as per VFR rules for aircraft (daytime only)
@@ -453,26 +495,20 @@ class OnDemandSizingMission(Model):
 				#20-minute loiter time, as per VFR rules for helicopters
 				t_loiter = Variable("t_{loiter}",20,"minutes","Loiter time")
 
-			if loiter_type == "level_flight":#loiter segment is a level-flight segment
-				self.fs2 = LevelFlight(self,aircraft,V=V_reserve,segment_type="loiter",
-					tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)
-			elif loiter_type == "hover":#loiter segment is a hover segment
-				self.fs2 = Hover(self,aircraft,hoverState,
-					tailRotor_power_fraction=tailRotor_power_fraction_hover)
-
 			constraints += [t_loiter == self.fs2.topvar("t")]
 
 		if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
-			V_reserve = V_cruise
+
+			constraints += [self.fs2.L_D == aircraft.L_D_cruise]
+			constraints += [self.fs2.V == V_cruise]
+
 			R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
-			self.fs2 = LevelFlight(self,aircraft,V=V_reserve,segment_type="cruise",
-				tailRotor_power_fraction=tailRotor_power_fraction_levelFlight)#reserve segment
 			constraints += [R_divert == self.fs2.topvar("segment_range")]
 		
-		self.fs3 = Hover(self,aircraft,hoverState,
-			tailRotor_power_fraction=tailRotor_power_fraction_hover)#landing again
+		self.fs3 = Hover(self,aircraft,hoverState)#landing again
 
 		self.flight_segments = [self.fs0, self.fs1, self.fs2, self.fs3]
+		self.levelFlight_segments = [self.fs0, self.fs3]
 		self.hover_segments  = [self.fs0, self.fs3] #not including loiter
 		
 		#Power and energy consumption by mission segment
@@ -498,14 +534,20 @@ class OnDemandSizingMission(Model):
 		constraints += [self.crew, self.passengers]
 		constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
 			+ self.crew.topvar("W")]
-		constraints += [aircraft.topvar("MTOW") >= W]
+		constraints += [aircraft.topvar("TOGW") >= W]
 		
 		constraints += [mission_range == self.fs1.topvar("segment_range")]
 		constraints += [hoverState]
 		
+		constraints += [V_loiter == ((1/3.)**(1/4.))*V_cruise]
+
 		constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
 		constraints += [C_eff >= E_mission]
 
+		constraints += [tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
+			for i,segment in enumerate(self.levelFlight_segments)]
+		constraints += [tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
+			for i,segment in enumerate(self.hover_segments)]
 		constraints += [t_hover == segment.topvar("t") for i,segment in enumerate(self.hover_segments)]
 
 		constraints += [P_battery[i] == segment.topvar("P_{battery}") for i,segment in enumerate(self.flight_segments)]
@@ -1093,7 +1135,7 @@ if __name__=="__main__":
 	autonomousEnabled = True
 	testAircraft = OnDemandAircraft(autonomousEnabled=autonomousEnabled)
 
-	testAircraft_subDict = {
+	Aircraft_subDict = {
 		testAircraft.L_D_cruise: 14., #estimated L/D in cruise
 		testAircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
 		testAircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
@@ -1105,31 +1147,21 @@ if __name__=="__main__":
 		testAircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
 	}
 
-	testAircraft.substitutions.update(testAircraft_subDict)
+	testAircraft.substitutions.update(Aircraft_subDict)
 
-	
-	
-	T_A = 15.*ureg("lbf")/ureg("ft")**2
-	reserve_type = "FAA_heli"
-	loiter_type = "level_flight"
 	delta_S = 500*ureg.ft
 	noise_weighting = "A"
 	B = 5
-	V_cruise = 200*ureg.mph
 
-	sizing_mission_range = 87*ureg.nautical_mile
 	revenue_mission_range = 30*ureg.nautical_mile
 	deadhead_mission_range = 30*ureg.nautical_mile
 
-	sizing_t_hover = 120*ureg.s
 	revenue_t_hover = 30*ureg.s
 	deadhead_t_hover = 30*ureg.s
 
-	sizing_mission_type = "piloted"
 	revenue_mission_type = "piloted"
 	deadhead_mission_type = "piloted"
 
-	sizing_N_passengers = 3
 	revenue_N_passengers = 2
 	deadhead_N_passengers = 0.00001
 
@@ -1140,13 +1172,21 @@ if __name__=="__main__":
 	MMH_FH = 0.6
 	deadhead_ratio = 0.2
 
-	
 
-	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
-	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
+	testSizingMission = OnDemandSizingMission(testAircraft,reserve_type="FAA_heli",
+		mission_type="piloted")
 
+	sizingMission_subDict = {
+		testSizingMission.mission_range: 87*ureg.nautical_mile,#mission range
+		testSizingMission.V_cruise: 200*ureg.mph,#cruising speed
+		testSizingMission.t_hover: 120*ureg.s,#hover time
+		testSizingMission.fs0.T_A: 15.*ureg("lbf")/ureg("ft")**2,#disk loading
+		testSizingMission.passengers.N_passengers: 3,#Number of passengers
+	}
+
+	testSizingMission.substitutions.update(sizingMission_subDict)
+
+	'''
 	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_range=revenue_mission_range,
 		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
 		charger_power=charger_power,mission_type=revenue_mission_type)
@@ -1193,8 +1233,6 @@ if __name__=="__main__":
 	print
 	print "Concept representative analysis"
 	print
-
-	'''
 	
 
 	print "Battery energy density: %0.0f Wh/kg" % C_m.to(ureg.Wh/ureg.kg).magnitude
