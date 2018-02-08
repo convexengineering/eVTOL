@@ -459,6 +459,7 @@ class OnDemandSizingMission(Model):
 		E_mission = Variable("E_{mission}","kWh","Electrical energy used during mission")
 		V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
 		V_loiter = Variable("V_{loiter}","mph","Aircraft loiter speed")
+		T_A = Variable("T/A","lbf/ft**2","Disk loading")
 
 		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
 
@@ -468,6 +469,7 @@ class OnDemandSizingMission(Model):
 		self.E_mission = E_mission
 		self.V_cruise = V_cruise
 		self.V_loiter = V_loiter
+		self.T_A = T_A
 
 		self.mission_type = mission_type
 
@@ -482,6 +484,7 @@ class OnDemandSizingMission(Model):
 		self.fs1 = LevelFlight(self,aircraft) #fly to destination
 		self.fs2 = LevelFlight(self,aircraft) #reserve
 
+		constraints += [self.fs0.T_A == T_A]
 		constraints += [self.fs1.L_D == aircraft.L_D_cruise]
 		constraints += [self.fs1.V == V_cruise]
 
@@ -581,6 +584,7 @@ class OnDemandRevenueMission(Model):
     	mission_range = Variable("mission_range","nautical_mile","Mission range")
     	t_hover = Variable("t_{hover}","s","Time in hover")
     	V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
+    	T_A = Variable("T/A","lbf/ft**2","Disk loading")
     	
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
@@ -592,6 +596,7 @@ class OnDemandRevenueMission(Model):
         self.mission_range = mission_range
         self.t_hover = t_hover
         self.V_cruise = V_cruise
+        self.T_A = T_A
         self.C_eff = C_eff
         self.t_mission = t_mission
         self.t_flight = t_flight
@@ -636,6 +641,7 @@ class OnDemandRevenueMission(Model):
 
         constraints = []
 
+        constraints += [self.fs0.T_A == T_A]
         constraints += [self.fs1.L_D == aircraft.L_D_cruise]
         constraints += [self.fs1.V == V_cruise]
 
@@ -690,6 +696,7 @@ class OnDemandDeadheadMission(Model):
     	mission_range = Variable("mission_range","nautical_mile","Mission range")
     	t_hover = Variable("t_{hover}","s","Time in hover")
     	V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
+    	T_A = Variable("T/A","lbf/ft**2","Disk loading")
     	
         C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
         
@@ -701,6 +708,7 @@ class OnDemandDeadheadMission(Model):
         self.mission_range = mission_range
         self.t_hover = t_hover
         self.V_cruise = V_cruise
+        self.T_A = T_A
         self.C_eff = C_eff
         self.t_mission = t_mission
         self.t_flight = t_flight
@@ -745,6 +753,7 @@ class OnDemandDeadheadMission(Model):
 
         constraints = []
 
+        constraints += [self.fs0.T_A == T_A]
         constraints += [self.fs1.L_D == aircraft.L_D_cruise]
         constraints += [self.fs1.V == V_cruise]
 
@@ -1101,80 +1110,76 @@ class OperatingExpenses(Model):
 
 
 def test():
-	from noise_models import rotational_noise, vortex_noise, noise_weighting
+	#String inputs
+	reserve_type="FAA_heli"
+	sizing_mission_type="piloted"
+	revenue_mission_type="piloted"
+	deadhead_mission_type="autonomous"
+
+	Aircraft = OnDemandAircraft(autonomousEnabled=True)
+	Aircraft_subDict = {
+		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
+		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
+		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
+		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
+		Aircraft.rotors.N: 12, #number of propellers
+		Aircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
+		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
+		Aircraft.structure.weight_fraction: 0.55, #empty weight fraction
+		Aircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
+	}
+	Aircraft.substitutions.update(Aircraft_subDict)
+
+	SizingMission = OnDemandSizingMission(Aircraft,mission_type=sizing_mission_type,
+		reserve_type=reserve_type)
+	sizingMission_subDict = {
+		SizingMission.mission_range: 87*ureg.nautical_mile,#mission range
+		SizingMission.V_cruise: 200*ureg.mph,#cruising speed
+		SizingMission.t_hover: 120*ureg.s,#hover time
+		SizingMission.T_A: 15.*ureg("lbf")/ureg("ft")**2,#disk loading
+		SizingMission.passengers.N_passengers: 3,#Number of passengers
+	}
+	SizingMission.substitutions.update(sizingMission_subDict)
+
+	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
+	revenueMission_subDict = {
+		RevenueMission.mission_range: 30*ureg.nautical_mile,#mission range
+		RevenueMission.V_cruise: 200*ureg.mph,#cruising speed
+		RevenueMission.t_hover: 30*ureg.s,#hover time
+		RevenueMission.passengers.N_passengers: 2,#Number of passengers
+		RevenueMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+	}
+	RevenueMission.substitutions.update(revenueMission_subDict)
+
+	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=deadhead_mission_type)
+	deadheadMission_subDict = {
+		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
+		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
+		DeadheadMission.t_hover: 30*ureg.s,#hover time
+		DeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
+		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+	}
+	DeadheadMission.substitutions.update(deadheadMission_subDict)
+
+	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
+	missionCost_subDict = {
+		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
+		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
+		MissionCost.deadhead_ratio: 0.2, #deadhead ratio
+	}
+	MissionCost.substitutions.update(missionCost_subDict)
+
 	
-	#Concept representative analysis
-
-	N = 12 #number of propellers
-	T_A = 15.*ureg("lbf")/ureg("ft")**2
-	L_D_cruise = 14. #estimated L/D in cruise
-	eta_cruise = 0.85 #propulsive efficiency in cruise
-	eta_electric = 0.9 #electrical system efficiency
-	weight_fraction = 0.55 #structural mass fraction
-	C_m = 400*ureg.Wh/ureg.kg #battery energy density
-	Cl_mean_max = 1.0
-	n=1.0#battery discharge parameter
-	reserve_type = "FAA_heli"
-	loiter_type = "level_flight"
-	delta_S = 500*ureg.ft
-	noise_weighting = "A"
-	B = 5
-
-	V_cruise = 200*ureg.mph
-
-	sizing_mission_range = 87*ureg.nautical_mile
-	revenue_mission_range = 30*ureg.nautical_mile
-	deadhead_mission_range = 30*ureg.nautical_mile
-
-	sizing_t_hover = 120*ureg.s
-	revenue_t_hover = 30*ureg.s
-	deadhead_t_hover = 30*ureg.s
-
-	autonomousEnabled = True
-	sizing_mission_type = "piloted"
-	revenue_mission_type = "piloted"
-	deadhead_mission_type = "piloted"
-
-	sizing_N_passengers = 3
-	revenue_N_passengers = 2
-	deadhead_N_passengers = 0.00001
-
-	charger_power = 200*ureg.kW
-
-	vehicle_cost_per_weight = 350*ureg.lbf**-1
-	battery_cost_per_C = 400*ureg.kWh**-1
-	pilot_wrap_rate = 70*ureg.hr**-1
-	mechanic_wrap_rate = 60*ureg.hr**-1
-	MMH_FH = 0.6
-	deadhead_ratio = 0.2
-
-	testAircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
-		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
-		autonomousEnabled=autonomousEnabled)
-
-	testSizingMission = OnDemandSizingMission(testAircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type)
-	testSizingMission.substitutions.update({testSizingMission.fs0.topvar("T/A"):T_A})
-
-	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_range=revenue_mission_range,
-		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-		charger_power=charger_power,mission_type=revenue_mission_type)
-
-	testDeadheadMission = OnDemandDeadheadMission(testAircraft,mission_range=deadhead_mission_range,
-		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-		charger_power=charger_power,mission_type=deadhead_mission_type)
-
-	testMissionCost = OnDemandMissionCost(testAircraft,testRevenueMission,testDeadheadMission,
-		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
-		deadhead_ratio=deadhead_ratio)
-	
-	problem = Model(testMissionCost["cost_per_trip"],
-		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission, testMissionCost])
+	problem = Model(MissionCost["cost_per_trip"],
+		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
 	
 	solution = problem.solve(verbosity=0)
 	return solution
+	
 
 
 if __name__=="__main__":
@@ -1183,71 +1188,75 @@ if __name__=="__main__":
 
 	from noise_models import rotational_noise, vortex_noise, noise_weighting
 	
-	testAircraft = OnDemandAircraft(autonomousEnabled=True)
+	#String inputs
+	reserve_type="FAA_heli"
+	sizing_mission_type="piloted"
+	revenue_mission_type="piloted"
+	deadhead_mission_type="autonomous"
+
+	Aircraft = OnDemandAircraft(autonomousEnabled=True)
 	Aircraft_subDict = {
-		testAircraft.L_D_cruise: 14., #estimated L/D in cruise
-		testAircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
-		testAircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
-		testAircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
-		testAircraft.rotors.N: 12, #number of propellers
-		testAircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
-		testAircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
-		testAircraft.structure.weight_fraction: 0.55, #empty weight fraction
-		testAircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
+		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
+		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
+		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
+		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
+		Aircraft.rotors.N: 12, #number of propellers
+		Aircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
+		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
+		Aircraft.structure.weight_fraction: 0.55, #empty weight fraction
+		Aircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
 	}
-	testAircraft.substitutions.update(Aircraft_subDict)
+	Aircraft.substitutions.update(Aircraft_subDict)
 
-	testSizingMission = OnDemandSizingMission(testAircraft,mission_type="piloted",
-		reserve_type="FAA_heli")
+	SizingMission = OnDemandSizingMission(Aircraft,mission_type=sizing_mission_type,
+		reserve_type=reserve_type)
 	sizingMission_subDict = {
-		testSizingMission.mission_range: 87*ureg.nautical_mile,#mission range
-		testSizingMission.V_cruise: 200*ureg.mph,#cruising speed
-		testSizingMission.t_hover: 120*ureg.s,#hover time
-		testSizingMission.fs0.T_A: 15.*ureg("lbf")/ureg("ft")**2,#disk loading
-		testSizingMission.passengers.N_passengers: 3,#Number of passengers
+		SizingMission.mission_range: 87*ureg.nautical_mile,#mission range
+		SizingMission.V_cruise: 200*ureg.mph,#cruising speed
+		SizingMission.t_hover: 120*ureg.s,#hover time
+		SizingMission.T_A: 15.*ureg("lbf")/ureg("ft")**2,#disk loading
+		SizingMission.passengers.N_passengers: 3,#Number of passengers
 	}
-	testSizingMission.substitutions.update(sizingMission_subDict)
+	SizingMission.substitutions.update(sizingMission_subDict)
 
-	testRevenueMission = OnDemandRevenueMission(testAircraft,mission_type="piloted")
+	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
 	revenueMission_subDict = {
-		testRevenueMission.mission_range: 30*ureg.nautical_mile,#mission range
-		testRevenueMission.V_cruise: 200*ureg.mph,#cruising speed
-		testRevenueMission.t_hover: 30*ureg.s,#hover time
-		testRevenueMission.passengers.N_passengers: 2,#Number of passengers
-		testRevenueMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+		RevenueMission.mission_range: 30*ureg.nautical_mile,#mission range
+		RevenueMission.V_cruise: 200*ureg.mph,#cruising speed
+		RevenueMission.t_hover: 30*ureg.s,#hover time
+		RevenueMission.passengers.N_passengers: 2,#Number of passengers
+		RevenueMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
 	}
-	testRevenueMission.substitutions.update(revenueMission_subDict)
+	RevenueMission.substitutions.update(revenueMission_subDict)
 
-	
-	testDeadheadMission = OnDemandRevenueMission(testAircraft,mission_type="autonomous")
+	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=deadhead_mission_type)
 	deadheadMission_subDict = {
-		testDeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
-		testDeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
-		testDeadheadMission.t_hover: 30*ureg.s,#hover time
-		testDeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
-		testDeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
+		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
+		DeadheadMission.t_hover: 30*ureg.s,#hover time
+		DeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
+		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
 	}
-	testDeadheadMission.substitutions.update(deadheadMission_subDict)
+	DeadheadMission.substitutions.update(deadheadMission_subDict)
 
-	testMissionCost = OnDemandMissionCost(testAircraft,testRevenueMission,testDeadheadMission)
+	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
 	missionCost_subDict = {
-		testMissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
-		testMissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
-		testMissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
-		testMissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
-		testMissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
-		testMissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
-		testMissionCost.deadhead_ratio: 0.2, #deadhead ratio
+		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
+		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
+		MissionCost.deadhead_ratio: 0.2, #deadhead ratio
 	}
-	testMissionCost.substitutions.update(missionCost_subDict)
+	MissionCost.substitutions.update(missionCost_subDict)
 
 	
-	problem = Model(testMissionCost["cost_per_trip"],
-		[testAircraft, testSizingMission, testRevenueMission, testDeadheadMission, testMissionCost])
+	problem = Model(MissionCost["cost_per_trip"],
+		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
 	
 	solution = problem.solve(verbosity=0)
 
-	'''
 	delta_S = 500*ureg.ft
 	noise_weighting = "A"
 	B = 5
@@ -1281,15 +1290,20 @@ if __name__=="__main__":
 	print
 	print "Concept representative analysis"
 	print
-	
-
-	print "Battery energy density: %0.0f Wh/kg" % C_m.to(ureg.Wh/ureg.kg).magnitude
-	print "Empty weight fraction: %0.4f" % weight_fraction
-	print "Cruise lift-to-drag ratio: %0.1f" % L_D_cruise
-	print "Hover disk loading: %0.1f lbf/ft^2" % T_A.to(ureg("lbf/ft**2")).magnitude
-	print "Rotor maximum mean lift coefficient: %0.2f" % Cl_mean_max
-	print "Cruise propulsive efficiency: %0.2f" % eta_cruise
-	print "Electrical system efficiency: %0.2f" % eta_electric
+	print "Battery energy density: %0.0f Wh/kg" \
+		% solution("C_m_OnDemandAircraft/Battery").to(ureg.Wh/ureg.kg).magnitude
+	print "Empty weight fraction: %0.4f" \
+		% solution("weight_fraction_OnDemandAircraft/Structure")
+	print "Cruise lift-to-drag ratio: %0.1f" \
+		% solution("L_D_cruise_OnDemandAircraft")
+	print "Hover disk loading: %0.1f lbf/ft^2" \
+		% solution("T/A_OnDemandSizingMission").to(ureg("lbf/ft**2")).magnitude
+	print "Rotor maximum mean lift coefficient: %0.2f" \
+		% solution("Cl_{mean_{max}}_OnDemandAircraft/Rotors")
+	print "Cruise propulsive efficiency: %0.2f" \
+		% solution("\eta_{cruise}_OnDemandAircraft")
+	print "Electrical system efficiency: %0.2f" \
+		% solution("\eta_OnDemandAircraft/ElectricalSystem")
 	print "Observer distance: %0.0f ft" % delta_S.to(ureg.ft).magnitude
 	print "Noise weighting type: %s" % noise_weighting
 	print
@@ -1333,10 +1347,9 @@ if __name__=="__main__":
 		solution("t_OnDemandDeadheadMission/TimeOnGround").to(ureg.minute).magnitude
 	print "SPL in hover: %0.1f dB" % SPL_dict["Deadhead"]
 	print
-	
-	print "Maximum takeoff weight: %0.0f lbs" % \
+	print "Takeoff gross weight: %0.0f lbs" % \
 		solution("TOGW_OnDemandAircraft").to(ureg.lbf).magnitude
-	print "Structural weight: %0.0f lbs" % \
+	print "Empty weight: %0.0f lbs" % \
 		solution("W_OnDemandAircraft/Structure").to(ureg.lbf).magnitude
 	print "Battery weight: %0.0f lbs" % \
 		solution("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
@@ -1384,5 +1397,3 @@ if __name__=="__main__":
 		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	
 	#print solution.summary()
-
-	'''
