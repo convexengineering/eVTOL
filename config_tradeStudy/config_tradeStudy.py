@@ -15,8 +15,8 @@ from noise_models import vortex_noise
 
 #General data
 
-B = generic_data["B"]
-delta_S = generic_data["delta_S"]
+B = generic_data["B"] #number of rotor blades
+delta_S = generic_data["delta_S"] #observer acoustic distance
 
 reserve_type = generic_data["reserve_type"]
 autonomousEnabled = generic_data["autonomousEnabled"]
@@ -71,7 +71,7 @@ for config in configs:
 
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
 	revenueMission_subDict = {
-		RevenueMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
+		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
 		RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
 		RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
 		RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_passengers"],#Number of passengers
@@ -106,12 +106,6 @@ for config in configs:
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
 	
-	
-
-	'''
-
-	
-
 	#Noise computations
 	T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
 	Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
@@ -147,15 +141,15 @@ for i, config in enumerate(configs):
 	labels[i] = config
 
 
-#Maximum takeoff weight
+#Takeoff gross weight
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
-	MTOW = configs[config]["solution"]("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
-	plt.bar(i,MTOW,align='center',alpha=1,color='k')
+	TOGW = configs[config]["solution"]("TOGW_OnDemandAircraft").to(ureg.lbf).magnitude
+	plt.bar(i,TOGW,align='center',alpha=1,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Maximum Takeoff Weight",fontsize = 18)
+plt.title("Takeoff Gross Weight",fontsize = 18)
 
 #Battery weight
 plt.subplot(2,2,2)
@@ -219,16 +213,19 @@ else:
 	autonomy_string = "pilot required"
 
 title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+	% (generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
+	% (sizing_mission_type, generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
+	 generic_data["sizing_mission"]["N_passengers"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
 	+ reserve_type_string + "\n"\
 	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
-		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
+	% (revenue_mission_type, generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	 generic_data["revenue_mission"]["N_passengers"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["charger_power"].to(ureg.kW).magnitude) \
 	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
-	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
-		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
+	% (deadhead_mission_type, generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	 generic_data["deadhead_mission"]["N_passengers"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["deadhead_ratio"])
 
 
 plt.suptitle(title_str,fontsize = 13)
@@ -236,7 +233,7 @@ plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('config_tradeStudy_plot_01.pdf')
 
-
+'''
 #Additional parameters plot
 fig2 = plt.figure(figsize=(12,12), dpi=80)
 plt.show()
