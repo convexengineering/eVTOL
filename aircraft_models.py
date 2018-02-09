@@ -1258,6 +1258,8 @@ if __name__=="__main__":
 	Aircraft_subDict = {
 		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
 		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
+		Aircraft.tailRotor_power_fraction_hover: 0.0001,
+		Aircraft.tailRotor_power_fraction_levelFlight: 0.0001,
 		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
 		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
 		Aircraft.rotors.N: 12, #number of propellers
@@ -1311,10 +1313,8 @@ if __name__=="__main__":
 	}
 	MissionCost.substitutions.update(missionCost_subDict)
 
-	
 	problem = Model(MissionCost["cost_per_trip"],
 		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
-	
 	solution = problem.solve(verbosity=0)
 
 	delta_S = 500*ureg.ft

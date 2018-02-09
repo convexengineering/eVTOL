@@ -10,7 +10,6 @@ configuration_data = OrderedDict() #configuration-specific data (in order)
 generic_data["\eta_{cruise}"] = 0.85 #propulsive efficiency in cruise
 generic_data["\eta_{electric}"] = 0.9 #electrical system efficiency
 generic_data["C_m"] = 400*ureg.Wh/ureg.kg #battery energy density
-generic_data["n"] = 1.0 #battery discharge parameter
 generic_data["B"] = 5 #number of propeller blades
 
 generic_data["reserve_type"] = "FAA_heli" #20-minute loiter
@@ -44,6 +43,7 @@ generic_data["deadhead_mission"]["N_passengers"] = 0.00001
 generic_data["deadhead_mission"]["range"] = 30*ureg.nautical_mile
 generic_data["deadhead_mission"]["t_{hover}"] = 30*ureg.s
 
+
 configs_OutOfOrder["Multirotor"] = {}
 configs_OutOfOrder["Multirotor"]["V_{cruise}"] = 50*ureg("mph")
 configs_OutOfOrder["Multirotor"]["L/D"] = 1.5
@@ -54,7 +54,6 @@ configs_OutOfOrder["Multirotor"]["loiter_type"] = "level_flight"
 configs_OutOfOrder["Multirotor"]["tailRotor_power_fraction_hover"] = 0.0001
 configs_OutOfOrder["Multirotor"]["tailRotor_power_fraction_levelFlight"] = 0.0001
 configs_OutOfOrder["Multirotor"]["weight_fraction"] = 0.43
-
 
 configs_OutOfOrder["Autogyro"] = {}
 configs_OutOfOrder["Autogyro"]["V_{cruise}"] = 100*ureg("mph")
