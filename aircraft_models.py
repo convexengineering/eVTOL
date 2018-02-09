@@ -921,6 +921,7 @@ class DeadheadMissionCost(Model):
 
 		self.cost_per_mission = cost_per_mission
 		self.cost_per_time = cost_per_time
+		
 		self.capital_expenses = capital_expenses
 		self.operating_expenses = operating_expenses
 
@@ -935,18 +936,15 @@ class DeadheadMissionCost(Model):
 class VehicleAcquisitionCost(Model):
 	def setup(self,aircraft,mission):
 		
-		t_mission = mission.topvar("t_{mission}")
-		purchase_price = aircraft.topvar("purchase_price")
-		vehicle_life = aircraft.topvar("vehicle_life")
+		t_mission = mission.t_mission
+		purchase_price = aircraft.purchase_price
+		vehicle_life = aircraft.vehicle_life
 		
 		cost_per_time = Variable("cost_per_time","hr**-1",
 			"Amortized vehicle purchase price per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-",
 			"Amortized vehicle acquisition cost per mission")
 
-		self.t_mission = t_mission
-		self.purchase_price = purchase_price
-		self.vehicle_life = vehicle_life
 		self.cost_per_time = cost_per_time
 		self.cost_per_mission = cost_per_mission
 		
@@ -960,14 +958,17 @@ class VehicleAcquisitionCost(Model):
 class AvionicsAcquisitionCost(Model):
 	def setup(self,aircraft,mission):
 		
-		t_mission = mission.topvar("t_{mission}")
-		purchase_price = aircraft.avionics.topvar("purchase_price")
-		vehicle_life = aircraft.topvar("vehicle_life")
+		t_mission = mission.t_mission
+		purchase_price = aircraft.avionics.purchase_price
+		vehicle_life = aircraft.vehicle_life
 		
 		cost_per_time = Variable("cost_per_time","hr**-1",
 			"Amortized avionics purchase price per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-",
 			"Amortized avionics acquisition cost per mission")
+
+		self.cost_per_time = cost_per_time
+		self.cost_per_mission = cost_per_mission
 
 		constraints = []
 
@@ -979,15 +980,17 @@ class AvionicsAcquisitionCost(Model):
 class BatteryAcquisitionCost(Model):
 	def setup(self,battery,mission):
 		
-		t_mission = mission.topvar("t_{mission}")
-
-		purchase_price = battery.topvar("purchase_price")
-		cycle_life = battery.topvar("cycle_life")
+		t_mission = mission.t_mission
+		purchase_price = battery.purchase_price
+		cycle_life = battery.cycle_life
 		
 		cost_per_time = Variable("cost_per_time","hr**-1",
 			"Amortized battery purchase price per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-",
 			"Amortized battery cost per mission")
+
+		self.cost_per_time = cost_per_time
+		self.cost_per_mission = cost_per_mission
 
 		constraints = []
 
@@ -999,7 +1002,7 @@ class BatteryAcquisitionCost(Model):
 class CapitalExpenses(Model):
 	def setup(self,aircraft,mission):
 
-		t_mission = mission.topvar("t_{mission}")
+		t_mission = mission.t_mission
 
 		cost_per_time = Variable("cost_per_time","hr**-1","Capital expenses per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","Capital expenses per mission")
@@ -1009,6 +1012,10 @@ class CapitalExpenses(Model):
 		battery_cost = BatteryAcquisitionCost(aircraft.battery,mission)
 
 		self.costs = [vehicle_cost, avionics_cost, battery_cost]
+
+		self.cost_per_time = cost_per_time
+		self.cost_per_mission = cost_per_mission
+
 		self.vehicle_cost = vehicle_cost
 		self.avionics_cost = avionics_cost
 		self.battery_cost = battery_cost
@@ -1025,7 +1032,7 @@ class CapitalExpenses(Model):
 class PilotCost(Model):
 	def setup(self,mission):
 
-		t_mission = mission.topvar("t_{mission}")
+		t_mission = mission.t_mission
 
 		wrap_rate = Variable("wrap_rate","hr**-1",
 			"Cost per pilot, per unit mission time (including benefits and overhead)")
@@ -1055,7 +1062,7 @@ class PilotCost(Model):
 class MaintenanceCost(Model):
 	def setup(self,mission):
 
-		t_mission = mission.topvar("t_{mission}")
+		t_mission = mission.t_mission
 
 		MMH_FH = Variable("MMH_FH","-","Maintenance man-hours per flight hour")
 		wrap_rate = Variable("wrap_rate","hr**-1",
@@ -1079,15 +1086,16 @@ class MaintenanceCost(Model):
 class EnergyCost(Model):
 	def setup(self,mission):
 
-		t_mission = mission.topvar("t_{mission}")
+		t_mission = mission.t_mission
 		E_charger = mission.time_on_ground.E_charger
 
 		cost_per_energy = Variable("cost_per_energy",0.12,"kWh**-1","Price of electricity")
-
 		cost_per_time = Variable("cost_per_time","hr**-1","Energy cost per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","Energy cost per mission")
 
 		self.cost_per_energy = cost_per_energy
+		self.cost_per_time = cost_per_time
+		self.cost_per_mission = cost_per_mission
 
 		constraints = []
 
@@ -1099,12 +1107,13 @@ class EnergyCost(Model):
 class IndirectOperatingCost(Model):
 	def setup(self,operating_expenses):
 
+		IOC_fraction = Variable("IOC_fraction",0.12,"-","IOC as a fraction of DOC")
 		cost_per_time = Variable("cost_per_time","hr**-1","IOC per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","IOC per mission")
 
-		IOC_fraction = Variable("IOC_fraction",0.12,"-","IOC as a fraction of DOC")
-
 		self.IOC_fraction = IOC_fraction
+		self.cost_per_time = cost_per_time
+		self.cost_per_mission = cost_per_mission
 
 		constraints = []
 
@@ -1116,7 +1125,7 @@ class IndirectOperatingCost(Model):
 class OperatingExpenses(Model):
 	def setup(self,aircraft,mission):
 
-		t_mission = mission.topvar("t_{mission}")
+		t_mission = mission.t_mission
 
 		cost_per_time = Variable("cost_per_time","hr**-1","Operating expenses per unit mission time")
 		cost_per_mission = Variable("cost_per_mission","-","Operating expenses per mission")
@@ -1128,6 +1137,11 @@ class OperatingExpenses(Model):
 
 		self.DOC = DOC
 		self.DOC_per_time = DOC_per_time
+		self.IOC = IOC
+		self.IOC_per_time = IOC_per_time
+
+		self.cost_per_time = cost_per_time
+		self.cost_per_mission = cost_per_mission
 
 		pilot_cost = PilotCost(mission)
 		maintenance_cost = MaintenanceCost(mission)
