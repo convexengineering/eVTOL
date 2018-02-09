@@ -73,6 +73,7 @@ class Structure(Model):
 		W = Variable("W","lbf","Empty weight")
 		weight_fraction = Variable("weight_fraction","-","Empty weight fraction")
 		
+		self.W = W
 		self.weight_fraction = weight_fraction
 
 		return [W == weight_fraction*TOGW]
@@ -91,7 +92,6 @@ class Rotors(Model):
 		N = Variable("N","-","Number of rotors")
 		s = Variable("s",0.1,"-","Propeller solidity")
 		Cl_mean_max = Variable("Cl_{mean_{max}}","-","Maximum allowed mean lift coefficient")
-
 		W = Variable("W",0,"lbf","Rotor weight") #weight model not implemented yet
 
 		self.R = R
@@ -101,6 +101,7 @@ class Rotors(Model):
 		self.N = N
 		self.s = s
 		self.Cl_mean_max = Cl_mean_max
+		self.W = W
 
 		constraints = [A == math.pi*R**2, D==2*R, A_total==N*A,
 			Cl_mean_max == Cl_mean_max]
@@ -142,8 +143,34 @@ class RotorsAero(Model):
 		s = rotors.s
 		Cl_mean_max = rotors.Cl_mean_max
 
-		rho = flightState.topvar("\rho")
-		a = flightState.topvar("a")
+		rho = flightState.rho
+		a = flightState.a
+
+		self.T = T
+		self.T_perRotor = T_perRotor
+		self.T_A = T_A
+		self.Q_perRotor = Q_perRotor
+		self.P = P
+		self.P_perRotor = P_perRotor
+		self.VT = VT
+		self.omega = omega
+		self.MT = MT
+		self.MT_max = MT_max
+		
+		self.CT = CT
+		self.CQ = CQ
+		self.CP = CP
+		self.CPi = CPi
+		self.CPp = CPp
+		self.Cl_mean = Cl_mean
+		self.FOM = FOM
+		
+		self.ki = ki
+		self.Cd0 = Cd0
+		
+		self.p_ratio = p_ratio
+		self.x = x
+		self.k3 = k3
 
 		constraints = [flightState]
 
@@ -217,9 +244,6 @@ class Battery(Model):
 		self.purchase_price = purchase_price
 		self.cycle_life = cycle_life
 
-		self.n = 1. #battery discharge parameter (needed for Peukert effect)
-		
-
 		constraints = []
 
 		constraints += [C==m*C_m, W==m*g]
@@ -233,11 +257,12 @@ class BatteryPerformance(Model):
 		E = Variable("E","kWh","Electrical energy used during segment")
 		P = Variable("P","kW","Power draw during segment")
 		t = Variable("t","s","Time over which battery is providing power")
-		Rt = Variable("Rt",1.,"hr","Battery hour rating")
 
+		self.E = E
+		self.P = P
 		self.t = t
 
-		constraints = [E==P*Rt*((t/Rt)**(1/battery.n)), P<=battery.P_max]
+		constraints = [E==P*t, P<=battery.P_max]
 		return constraints
 
 class Crew(Model):
@@ -254,6 +279,10 @@ class Crew(Model):
 			W = Variable("W","lbf","Total weight")
 			constraints += [W == N_crew*W_oneCrew]
 
+		self.W_oneCrew = W_oneCrew
+		self.N_crew = N_crew
+		self.W = W
+
 		return constraints
 
 class Passengers(Model):
@@ -264,6 +293,7 @@ class Passengers(Model):
 
 		self.W_onePassenger = W_onePassenger
 		self.N_passengers = N_passengers
+		self.W = W
 
 		return [W == N_passengers*W_onePassenger]
 
@@ -285,8 +315,11 @@ class ElectricalSystemPerformance(Model):
 	def setup(self,electricalSystem):
 		P_in = Variable("P_{in}","kW","Input power (from the battery)")
 		P_out = Variable("P_{out}","kW","Output power (to the motor or motors)")
+		eta = electricalSystem.eta
 
-		eta = electricalSystem.topvar("\eta")
+		self.P_in = P_in
+		self.P_out = P_out
+		self.eta = eta
 
 		constraints = []
 		constraints += [P_out == eta*P_in]
@@ -304,6 +337,7 @@ class Avionics(Model):
 			purchase_price = Variable("purchase_price",1,"-",
 				"Purchase price of the avionics (negligibly small)")
 
+		self.purchase_price = purchase_price
 		self.W = W
 
 		constraints = []
@@ -319,6 +353,9 @@ class FlightState(Model):
 		rho = Variable("\rho",rho,"kg/m^3","Air density")
 		a = Variable("a",a,"ft/s","Speed of sound")
 
+		self.rho = rho
+		self.a = a
+
 		constraints = []
 		return constraints
 
@@ -331,7 +368,6 @@ class Hover(Model):
 		P_tailRotor = Variable("P_{tailRotor}","kW","Power used (by tail rotor) during hover segment")
 		tailRotor_power_fraction = Variable("tailRotor_power_fraction",
 			"-","Tail-rotor power as a fraction of lifting-rotors power")
-
 		T = Variable("T","lbf","Total thrust (from rotors) during hover segment")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading during hover segment")
 		t = Variable("t","s","Time in hover segment")
@@ -384,7 +420,7 @@ class LevelFlight(Model):
 		L_D = Variable("L_D","-","Segment lift-to-drag ratio")
 		
 		W = mission.W
-		eta_cruise = aircraft.topvar("\eta_{cruise}")
+		eta_cruise = aircraft.eta_cruise
 		
 		self.E = E
 		self.P_battery = P_battery
@@ -397,8 +433,6 @@ class LevelFlight(Model):
 		self.segment_range = segment_range
 		self.V = V
 		self.L_D = L_D
-		self.W = W
-		self.eta_cruise = eta_cruise
 
 		constraints = []
 		
@@ -461,7 +495,7 @@ class OnDemandSizingMission(Model):
 		V_loiter = Variable("V_{loiter}","mph","Aircraft loiter speed")
 		T_A = Variable("T/A","lbf/ft**2","Disk loading")
 
-		C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
+		C_eff = aircraft.battery.C_eff #effective battery capacity
 
 		self.W = W
 		self.mission_range = mission_range
@@ -501,6 +535,7 @@ class OnDemandSizingMission(Model):
 				#20-minute loiter time, as per VFR rules for helicopters
 				t_loiter = Variable("t_{loiter}",20,"minutes","Loiter time")
 
+			self.t_loiter = t_loiter
 			constraints += [t_loiter == self.fs2.topvar("t")]
 
 		if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
@@ -509,6 +544,7 @@ class OnDemandSizingMission(Model):
 			constraints += [self.fs2.V == V_cruise]
 
 			R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
+			self.R_divert = R_divert
 			constraints += [R_divert == self.fs2.topvar("segment_range")]
 		
 		self.fs3 = Hover(self,aircraft,hoverState)#landing again
@@ -586,7 +622,7 @@ class OnDemandRevenueMission(Model):
     	V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
     	T_A = Variable("T/A","lbf/ft**2","Disk loading")
     	
-        C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
+        C_eff = aircraft.battery.C_eff #effective battery capacity
         
         t_mission = Variable("t_{mission}","minutes","Time to complete mission (including charging)")
         t_flight = Variable("t_{flight}","minutes","Time in flight")
@@ -698,7 +734,7 @@ class OnDemandDeadheadMission(Model):
     	V_cruise = Variable("V_{cruise}","mph","Aircraft cruising speed")
     	T_A = Variable("T/A","lbf/ft**2","Disk loading")
     	
-        C_eff = aircraft.battery.topvar("C_{eff}") #effective battery capacity
+        C_eff = aircraft.battery.C_eff #effective battery capacity
         
         t_mission = Variable("t_{mission}","minutes","Time to complete mission (including charging)")
         t_flight = Variable("t_{flight}","minutes","Time in flight")
@@ -848,7 +884,7 @@ class RevenueMissionCost(Model):
 	#Cost for one mission. Exactly the same code as DeadheadMissionCost.
 	def setup(self,aircraft,mission):
 
-		t_mission = mission.topvar("t_{mission}")
+		t_mission = mission.t_mission
 
 		cost_per_mission = Variable("cost_per_mission","-","Cost per mission")
 		cost_per_time = Variable("cost_per_time","hr**-1","Cost per unit mission time")
@@ -857,6 +893,8 @@ class RevenueMissionCost(Model):
 		operating_expenses = OperatingExpenses(aircraft,mission)
 		expenses = [capital_expenses, operating_expenses]
 
+		self.cost_per_mission = cost_per_mission
+		self.cost_per_time = cost_per_time
 		self.capital_expenses = capital_expenses
 		self.operating_expenses = operating_expenses
 
@@ -872,7 +910,7 @@ class DeadheadMissionCost(Model):
 	#Cost for one mission. Exactly the same code as RevenueMissionCost.
 	def setup(self,aircraft,mission):
 
-		t_mission = mission.topvar("t_{mission}")
+		t_mission = mission.t_mission
 
 		cost_per_mission = Variable("cost_per_mission","-","Cost per mission")
 		cost_per_time = Variable("cost_per_time","hr**-1","Cost per unit mission time")
@@ -881,6 +919,8 @@ class DeadheadMissionCost(Model):
 		operating_expenses = OperatingExpenses(aircraft,mission)
 		expenses = [capital_expenses, operating_expenses]
 
+		self.cost_per_mission = cost_per_mission
+		self.cost_per_time = cost_per_time
 		self.capital_expenses = capital_expenses
 		self.operating_expenses = operating_expenses
 
@@ -904,6 +944,12 @@ class VehicleAcquisitionCost(Model):
 		cost_per_mission = Variable("cost_per_mission","-",
 			"Amortized vehicle acquisition cost per mission")
 
+		self.t_mission = t_mission
+		self.purchase_price = purchase_price
+		self.vehicle_life = vehicle_life
+		self.cost_per_time = cost_per_time
+		self.cost_per_mission = cost_per_mission
+		
 		constraints = []
 
 		constraints += [cost_per_time == purchase_price/vehicle_life]
