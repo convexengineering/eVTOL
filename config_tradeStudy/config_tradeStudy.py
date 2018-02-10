@@ -145,7 +145,7 @@ for i, config in enumerate(configs):
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
 	TOGW = configs[config]["solution"]("TOGW_OnDemandAircraft").to(ureg.lbf).magnitude
-	plt.bar(i,TOGW,align='center',alpha=1,color='k')
+	plt.bar(i,TOGW,align='center',alpha=1,color='k',edgecolor='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
@@ -156,7 +156,7 @@ plt.title("Takeoff Gross Weight",fontsize = 18)
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	W_battery = configs[config]["solution"]("W_OnDemandAircraft/Battery").to(ureg.lbf).magnitude
-	plt.bar(i,W_battery,align='center',alpha=1,color='k')
+	plt.bar(i,W_battery,align='center',alpha=1,color='k',edgecolor='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
@@ -167,7 +167,7 @@ plt.title("Battery Weight",fontsize = 18)
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	cptpp = configs[config]["solution"]("cost_per_trip_per_passenger_OnDemandMissionCost")
-	plt.bar(i,cptpp,align='center',alpha=1,color='k')
+	plt.bar(i,cptpp,align='center',alpha=1,color='k',edgecolor='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
@@ -239,7 +239,7 @@ plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('config_tradeStudy_plot_01.pdf')
 
-'''
+
 #Additional parameters plot
 fig2 = plt.figure(figsize=(12,12), dpi=80)
 plt.show()
@@ -271,18 +271,20 @@ for i, config in enumerate(configs):
 		E_value = E["value"].to(ureg.kWh).magnitude
 		if (i == 0):
 			plt.bar(i,E_value,align='center',bottom=bottom,alpha=1,color=colors[j],
-				label=E["type"])
+				label=E["type"],edgecolor='k')
 		else:
-			plt.bar(i,E_value,align='center',bottom=bottom,alpha=1,color=colors[j])
+			plt.bar(i,E_value,align='center',bottom=bottom,alpha=1,color=colors[j],
+				edgecolor='k')
 		bottom = bottom + E_value
 
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymax = 1.3*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Energy (kWh)', fontsize = 16)
 plt.title("Energy Use",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12, framealpha=1)
 
 
 #Power consumption by mission segment (sizing mission)
@@ -305,24 +307,26 @@ for i, config in enumerate(configs):
 				label = "Reserve"
 
 			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j],
-				label=label)
+				label=label,edgecolor='k')
 		else:
-			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j])
+			plt.bar(i+offset,P_battery[j],align='center',alpha=1,width=width,color=colors[j],
+				edgecolor='k')
 
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymax=1.5*ymax)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Power Consumption",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12)
+plt.legend(loc='upper right', fontsize = 12, framealpha=1)
 
 #Rotor tip speed 
 plt.subplot(3,2,3)
 for i, config in enumerate(configs):
 	sol = configs[config]["solution"]
 	VT = sol("VT_OnDemandSizingMission")[0].to(ureg.ft/ureg.s).magnitude
-	plt.bar(i,VT,align='center',alpha=1,color='k')
+	plt.bar(i,VT,align='center',alpha=1,color='k',edgecolor='k')
 
 plt.grid()
 #plt.ylim(ymin=0.2)
@@ -335,11 +339,12 @@ plt.subplot(3,2,4)
 for i, config in enumerate(configs):
 	sol = configs[config]["solution"]
 	MT = sol("MT_OnDemandSizingMission")[0]
-	plt.bar(i,MT,align='center',alpha=1,color='k')
+	plt.bar(i,MT,align='center',alpha=1,color='k',edgecolor='k')
 
 plt.grid()
 plt.ylim(ymin=0.2)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Tip Mach number', fontsize = 16)
 plt.title("Rotor Tip Mach Number",fontsize = 18)
 
@@ -347,10 +352,11 @@ plt.title("Rotor Tip Mach Number",fontsize = 18)
 plt.subplot(3,2,5)
 for i, config in enumerate(configs):
 	f_peak = configs[config]["f_{peak}"].to(ureg.turn/ureg.s).magnitude
-	plt.bar(i,f_peak,align='center',alpha=1,color='k')
+	plt.bar(i,f_peak,align='center',alpha=1,color='k',edgecolor='k')
 plt.grid()
 plt.yscale('log')
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Peak frequency (Hz)', fontsize = 16)
 plt.title("Vortex-Noise Peak Frequency",fontsize = 18)
 
@@ -359,10 +365,11 @@ plt.subplot(3,2,6)
 for i, config in enumerate(configs):
 	sol = configs[config]["solution"]
 	FOM = sol("FOM_OnDemandSizingMission")[0]
-	plt.bar(i,FOM,align='center',alpha=1,color='k')
+	plt.bar(i,FOM,align='center',alpha=1,color='k',edgecolor='k')
 plt.grid()
 plt.ylim(ymin=0.7)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('FOM (dimensionless)', fontsize = 16)
 plt.title("Rotor Figure of Merit",fontsize = 18)
 
@@ -383,7 +390,7 @@ for i, config in enumerate(configs):
 	
 	cpsm = configs[config]["solution"]("cost_per_seat_mile_OnDemandMissionCost").to(ureg.mile**-1).magnitude
 	
-	p1 = plt.bar(i,cpsm,bottom=0,align='center',alpha=1,color="k")
+	p1 = plt.bar(i,cpsm,bottom=0,align='center',alpha=1,color="k",edgecolor='k')
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
 plt.ylabel('Cost per seat mile ($US/mile)', fontsize = 14)
@@ -397,18 +404,21 @@ for i, config in enumerate(configs):
 	c_avionics = configs[config]["solution"]("purchase_price_OnDemandAircraft/Avionics")/1e6
 	c_battery = configs[config]["solution"]("purchase_price_OnDemandAircraft/Battery")/1e6
 	
-	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="k")
-	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="lightgrey")
-	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="w")
+	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="k",edgecolor='k')
+	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="lightgrey",
+		edgecolor='k')
+	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="w",
+		edgecolor='k')
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Cost ($millions US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymax = 1.5*ymax)
 plt.title("Acquisition Costs",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper right', fontsize = 12)
+	loc='upper right', fontsize = 12, framealpha=1)
 
 plt.subplot(3,2,3)
 for i, config in enumerate(configs):
@@ -416,17 +426,19 @@ for i, config in enumerate(configs):
 	c_revenue = configs[config]["solution"]("revenue_cost_per_trip_OnDemandMissionCost")
 	c_deadhead = configs[config]["solution"]("deadhead_cost_per_trip_OnDemandMissionCost")
 	
-	p1 = plt.bar(i,c_revenue,bottom=0,align='center',alpha=1,color="k")
-	p2 = plt.bar(i,c_deadhead,bottom=c_revenue,align='center',alpha=1,color="lightgrey")
+	p1 = plt.bar(i,c_revenue,bottom=0,align='center',alpha=1,color="k",edgecolor='k')
+	p2 = plt.bar(i,c_deadhead,bottom=c_revenue,align='center',alpha=1,color="lightgrey",
+		edgecolor='k')
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Cost per trip ($US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymax = 1.3*ymax)
 plt.title("Revenue and Deadhead Costs",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Revenue cost","Deadhead cost"),
-	loc='upper right', fontsize = 12)
+	loc='upper right', fontsize = 12, framealpha=1)
 
 plt.subplot(3,2,4)
 for i, config in enumerate(configs):
@@ -434,17 +446,19 @@ for i, config in enumerate(configs):
 	c_capital = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses")
 	c_operating = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	
-	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,color="k")
-	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,color="lightgrey")
+	p1 = plt.bar(i,c_capital,bottom=0,align='center',alpha=1,color="k",edgecolor='k')
+	p2 = plt.bar(i,c_operating,bottom=c_capital,align='center',alpha=1,color="lightgrey",
+		edgecolor='k')
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymax = 1.4*ymax)
 plt.title("Cost breakdown (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0]),("Capital expenses (amortized)","Operating expenses"),
-	loc='upper right', fontsize = 12)
+	loc='upper right', fontsize = 12, framealpha=1)
 
 plt.subplot(3,2,5)
 for i, config in enumerate(configs):
@@ -453,18 +467,21 @@ for i, config in enumerate(configs):
 	c_avionics = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AvionicsAcquisitionCost")
 	c_battery = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/BatteryAcquisitionCost")
 	
-	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="k")
-	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="lightgrey")
-	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="w")
+	p1 = plt.bar(i,c_vehicle,bottom=0,align='center',alpha=1,color="k",edgecolor='k')
+	p2 = plt.bar(i,c_avionics,bottom=c_vehicle,align='center',alpha=1,color="lightgrey",
+		edgecolor='k')
+	p3 = plt.bar(i,c_battery,bottom=c_avionics+c_vehicle, align='center',alpha=1,color="w",
+		edgecolor='k')
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymax = 1.25*ymax)
 plt.title("Capital Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0]),("Vehicle","Avionics","Battery"),
-	loc='upper right', fontsize = 12)
+	loc='upper right', fontsize = 12, framealpha=1)
 
 plt.subplot(3,2,6)
 for i, config in enumerate(configs):
@@ -474,26 +491,31 @@ for i, config in enumerate(configs):
 	c_energy = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	IOC = configs[config]["solution"]("IOC_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses")
 	
-	p1 = plt.bar(i,c_pilot,bottom=0,align='center',alpha=1,color="k")
-	p2 = plt.bar(i,c_maintenance,bottom=c_pilot,align='center',alpha=1,color="lightgrey")
-	p3 = plt.bar(i,c_energy,bottom=c_maintenance+c_pilot, align='center',alpha=1,color="w")
-	p4 = plt.bar(i,IOC,bottom=c_energy+c_maintenance+c_pilot,align='center',alpha=1,color="grey")
+	p1 = plt.bar(i,c_pilot,bottom=0,align='center',alpha=1,color="k",edgecolor='k')
+	p2 = plt.bar(i,c_maintenance,bottom=c_pilot,align='center',alpha=1,color="lightgrey",
+		edgecolor='k')
+	p3 = plt.bar(i,c_energy,bottom=c_maintenance+c_pilot, align='center',alpha=1,color="w",
+		edgecolor='k')
+	p4 = plt.bar(i,IOC,bottom=c_energy+c_maintenance+c_pilot,align='center',alpha=1,color="grey",
+		edgecolor='k')
 
 plt.xticks(y_pos, labels, rotation=-45,fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Cost per mission ($US)', fontsize = 14)
 plt.grid()
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.55*ymax)
+plt.ylim(ymax = 1.75*ymax)
 plt.title("Operating Expenses (revenue mission)",fontsize = 16)
 plt.legend((p1[0],p2[0],p3[0],p4[0]),("Pilot","Maintanance","Energy","IOC"),
-	loc='upper right', fontsize = 12)
+	loc='upper right', fontsize = 12, framealpha=1)
 
 cost_title_str = "Aircraft parameters: aircraft cost ratio = \$%0.0f per lb; battery cost ratio = \$%0.0f per kWh; %s\n" \
-	% (vehicle_cost_per_weight.to(ureg.lbf**-1).magnitude, \
-		battery_cost_per_C.to(ureg.kWh**-1).magnitude, autonomy_string) \
+	% (generic_data["vehicle_cost_per_weight"].to(ureg.lbf**-1).magnitude, \
+		generic_data["battery_cost_per_C"].to(ureg.kWh**-1).magnitude, autonomy_string) \
 	+ "Pilot wrap rate = \$%0.0f/hour; mechanic wrap rate = \$%0.0f/hour; MMH per FH = %0.1f; deadhead ratio = %0.1f" \
-	% (pilot_wrap_rate.to(ureg.hr**-1).magnitude, mechanic_wrap_rate.to(ureg.hr**-1).magnitude, \
-		MMH_FH, deadhead_ratio)
+	% (generic_data["pilot_wrap_rate"].to(ureg.hr**-1).magnitude,
+		generic_data["mechanic_wrap_rate"].to(ureg.hr**-1).magnitude,
+		generic_data["MMH_FH"], generic_data["deadhead_ratio"])
 
 plt.suptitle(cost_title_str,fontsize = 14)
 plt.tight_layout()
@@ -554,5 +576,3 @@ for config in configs:
 	output_data.write("\n")
 
 output_data.close()
-
-'''
