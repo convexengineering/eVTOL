@@ -148,6 +148,7 @@ for i, config in enumerate(configs):
 	plt.bar(i,TOGW,align='center',alpha=1,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Takeoff Gross Weight",fontsize = 18)
 
@@ -158,6 +159,7 @@ for i, config in enumerate(configs):
 	plt.bar(i,W_battery,align='center',alpha=1,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Battery Weight",fontsize = 18)
 
@@ -168,6 +170,7 @@ for i, config in enumerate(configs):
 	plt.bar(i,cptpp,align='center',alpha=1,color='k')
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 18)
 
@@ -180,12 +183,14 @@ for i, config in enumerate(configs):
 
 	if i==0:
 		plt.bar(i-0.2,SPL_sizing,width=0.3,align='center',alpha=1,color='grey',
-			label="Unweighted")
+			label="Unweighted",edgecolor='k')
 		plt.bar(i+0.2,SPL_sizing_A,width=0.3,align='center',alpha=1,color='k',
-			label="A-weighted")
+			label="A-weighted",edgecolor='k')
 	else:
-		plt.bar(i-0.2,SPL_sizing,width=0.3,align='center',alpha=1,color='grey')
-		plt.bar(i+0.2,SPL_sizing_A,width=0.3,align='center',alpha=1,color='k')
+		plt.bar(i-0.2,SPL_sizing,width=0.3,align='center',alpha=1,color='grey',
+			edgecolor='k')
+		plt.bar(i+0.2,SPL_sizing_A,width=0.3,align='center',alpha=1,color='k',
+			edgecolor='k')
 
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
@@ -193,9 +198,10 @@ plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 plt.ylim(ymin = 57)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
-plt.legend(loc="upper right")
+plt.legend(loc="upper right",framealpha=1)
 
 if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
