@@ -13,8 +13,8 @@ class OnDemandAircraft(Model):
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
 		
-		L_D_loiter = Variable("L_D_loiter","-","Loiter L/D ratio (approximation)")
 		L_D_cruise = Variable("L_D_cruise","-","Cruise L/D ratio")
+		L_D_loiter = Variable("L_D_loiter","-","Loiter L/D ratio (approximation)")
 		eta_cruise = Variable("\eta_{cruise}","-","Cruise propulsive efficiency")
 		tailRotor_power_fraction_hover = Variable("tailRotor_power_fraction_hover",
 			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
@@ -38,8 +38,8 @@ class OnDemandAircraft(Model):
 		self.W_empty = W_empty
 		self.C_eff = C_eff
 		self.g = g
-		self.L_D_loiter = L_D_loiter
 		self.L_D_cruise = L_D_cruise
+		self.L_D_loiter = L_D_loiter
 		self.eta_cruise = eta_cruise
 		self.tailRotor_power_fraction_hover = tailRotor_power_fraction_hover
 		self.tailRotor_power_fraction_levelFlight = tailRotor_power_fraction_levelFlight

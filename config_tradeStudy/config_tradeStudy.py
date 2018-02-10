@@ -350,11 +350,15 @@ plt.title("Rotor Tip Mach Number",fontsize = 18)
 
 #Vortex-noise peak frequency
 plt.subplot(3,2,5)
+
 for i, config in enumerate(configs):
 	f_peak = configs[config]["f_{peak}"].to(ureg.turn/ureg.s).magnitude
-	plt.bar(i,f_peak,align='center',alpha=1,color='k',edgecolor='k')
+	plt.bar(i,f_peak,align='center',alpha=1,color='k',edgecolor='k',
+		log=True)
 plt.grid()
-plt.yscale('log')
+#plt.yscale('log')
+#[ymin,ymax] = plt.gca().get_ylim()
+#plt.ylim(ymin=0.7*ymin, ymax=1.3*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('Peak frequency (Hz)', fontsize = 16)
