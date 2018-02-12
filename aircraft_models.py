@@ -28,12 +28,6 @@ class OnDemandAircraft(Model):
 
 		self.autonomousEnabled = autonomousEnabled
 
-		self.rotors = Rotors()
-		self.battery = Battery()
-		self.structure = Structure()
-		self.electricalSystem = ElectricalSystem()
-		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
-		
 		self.TOGW = TOGW
 		self.W_empty = W_empty
 		self.C_eff = C_eff
@@ -48,7 +42,11 @@ class OnDemandAircraft(Model):
 		self.purchase_price = purchase_price
 		self.vehicle_life = vehicle_life
 
-		self.structure.subinplace({self.structure.topvar("TOGW"):TOGW})
+		self.rotors = Rotors()
+		self.battery = Battery()
+		self.structure = Structure(self)
+		self.electricalSystem = ElectricalSystem()
+		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
 
 		self.components = [self.rotors,self.battery,self.structure,self.electricalSystem,self.avionics]
 		
@@ -66,10 +64,10 @@ class OnDemandAircraft(Model):
 		return constraints
 
 class Structure(Model):
-	def setup(self):
+	def setup(self,aircraft):
 		
-		TOGW = Variable("TOGW","lbf",
-			"Aircraft takeoff gross weight (requires substitution or subinplace)")
+		TOGW = aircraft.TOGW
+		
 		W = Variable("W","lbf","Empty weight")
 		weight_fraction = Variable("weight_fraction","-","Empty weight fraction")
 		
