@@ -1185,10 +1185,10 @@ def test():
 		Aircraft.tailRotor_power_fraction_hover: 0.0001,
 		Aircraft.tailRotor_power_fraction_levelFlight: 0.0001,
 		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
+		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
 		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
 		Aircraft.rotors.N: 12, #number of propellers
 		Aircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
-		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
 		Aircraft.structure.weight_fraction: 0.55, #empty weight fraction
 		Aircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
 	})

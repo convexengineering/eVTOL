@@ -13,18 +13,6 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
 
-#General data
-
-B = generic_data["B"] #number of rotor blades
-delta_S = generic_data["delta_S"] #observer acoustic distance
-
-reserve_type = generic_data["reserve_type"]
-autonomousEnabled = generic_data["autonomousEnabled"]
-
-sizing_mission_type = generic_data["sizing_mission"]["type"]
-revenue_mission_type = generic_data["revenue_mission"]["type"]
-deadhead_mission_type = generic_data["deadhead_mission"]["type"]
-
 
 # Delete some configurations
 configs = configuration_data.copy()
@@ -44,23 +32,23 @@ for config in configs:
 
 	problem_subDict = {}
 	
-	Aircraft = OnDemandAircraft(autonomousEnabled=autonomousEnabled)
+	Aircraft = OnDemandAircraft(autonomousEnabled=generic_data["autonomousEnabled"])
 	problem_subDict.update({
 		Aircraft.L_D_cruise: c["L/D"], #estimated L/D in cruise
 		Aircraft.eta_cruise: generic_data["\eta_{cruise}"], #propulsive efficiency in cruise
 		Aircraft.tailRotor_power_fraction_hover: c["tailRotor_power_fraction_hover"],
 		Aircraft.tailRotor_power_fraction_levelFlight: c["tailRotor_power_fraction_levelFlight"],
 		Aircraft.cost_per_weight: generic_data["vehicle_cost_per_weight"], #vehicle cost per unit empty weight
+		Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
 		Aircraft.battery.cost_per_C: generic_data["battery_cost_per_C"], #battery cost per unit energy capacity
 		Aircraft.rotors.N: c["N"], #number of propellers
 		Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
-		Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
 		Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
 		Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
 	})
 
-	SizingMission = OnDemandSizingMission(Aircraft,mission_type=sizing_mission_type,
-		reserve_type=reserve_type)
+	SizingMission = OnDemandSizingMission(Aircraft,mission_type=generic_data["sizing_mission"]["type"],
+		reserve_type=generic_data["reserve_type"])
 	problem_subDict.update({
 		SizingMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
 		SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
@@ -69,7 +57,7 @@ for config in configs:
 		SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_passengers"],#Number of passengers
 	})
 
-	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
+	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
 	problem_subDict.update({
 		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
 		RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
@@ -78,7 +66,7 @@ for config in configs:
 		RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
 	})
 
-	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=deadhead_mission_type)
+	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=generic_data["deadhead_mission"]["type"])
 	problem_subDict.update({
 		DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
 		DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
@@ -112,6 +100,9 @@ for config in configs:
 	s = solution("s")
 	Cl_mean = solution("Cl_{mean_{max}}")
 	N = solution("N")
+
+	B = generic_data["B"]
+	delta_S = generic_data["delta_S"]
 
 	#Unweighted
 	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
@@ -202,17 +193,17 @@ plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(loc="upper right",framealpha=1,fontsize=12)
 
-if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
+if generic_data["reserve_type"] == "FAA_aircraft" or generic_data["reserve_type"] == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if reserve_type == "FAA_aircraft":
+	if generic_data["reserve_type"] == "FAA_aircraft":
 		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_heli":
+	elif generic_data["reserve_type"] == "FAA_heli":
 		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
-elif reserve_type == "Uber":
+elif generic_data["reserve_type"] == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
-if autonomousEnabled:
+if generic_data["autonomousEnabled"]:
 	autonomy_string = "autonomy enabled"
 else:
 	autonomy_string = "pilot required"
@@ -220,15 +211,15 @@ else:
 title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
 	% (generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
 	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (sizing_mission_type, generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
+	% (generic_data["sizing_mission"]["type"], generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
 	 generic_data["sizing_mission"]["N_passengers"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
 	+ reserve_type_string + "\n"\
 	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (revenue_mission_type, generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	% (generic_data["revenue_mission"]["type"], generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
 	 generic_data["revenue_mission"]["N_passengers"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
 	 generic_data["charger_power"].to(ureg.kW).magnitude) \
 	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
-	% (deadhead_mission_type, generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	% (generic_data["deadhead_mission"]["type"], generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
 	 generic_data["deadhead_mission"]["N_passengers"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
 	 generic_data["deadhead_ratio"])
 
