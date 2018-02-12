@@ -1254,8 +1254,10 @@ if __name__=="__main__":
 	revenue_mission_type="piloted"
 	deadhead_mission_type="autonomous"
 
+	problem_subDict = {}
+	
 	Aircraft = OnDemandAircraft(autonomousEnabled=True)
-	Aircraft_subDict = {
+	problem_subDict.update({
 		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
 		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
 		Aircraft.tailRotor_power_fraction_hover: 0.0001,
@@ -1267,42 +1269,38 @@ if __name__=="__main__":
 		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
 		Aircraft.structure.weight_fraction: 0.55, #empty weight fraction
 		Aircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
-	}
-	Aircraft.substitutions.update(Aircraft_subDict)
+	})
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_type=sizing_mission_type,
 		reserve_type=reserve_type)
-	sizingMission_subDict = {
+	problem_subDict.update({
 		SizingMission.mission_range: 87*ureg.nautical_mile,#mission range
 		SizingMission.V_cruise: 200*ureg.mph,#cruising speed
 		SizingMission.t_hover: 120*ureg.s,#hover time
 		SizingMission.T_A: 15.*ureg("lbf")/ureg("ft")**2,#disk loading
 		SizingMission.passengers.N_passengers: 3,#Number of passengers
-	}
-	SizingMission.substitutions.update(sizingMission_subDict)
+	})
 
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
-	revenueMission_subDict = {
+	problem_subDict.update({
 		RevenueMission.mission_range: 30*ureg.nautical_mile,#mission range
 		RevenueMission.V_cruise: 200*ureg.mph,#cruising speed
 		RevenueMission.t_hover: 30*ureg.s,#hover time
 		RevenueMission.passengers.N_passengers: 2,#Number of passengers
 		RevenueMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
-	}
-	RevenueMission.substitutions.update(revenueMission_subDict)
+	})
 
 	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=deadhead_mission_type)
-	deadheadMission_subDict = {
+	problem_subDict.update({
 		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
 		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
 		DeadheadMission.t_hover: 30*ureg.s,#hover time
 		DeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
 		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
-	}
-	DeadheadMission.substitutions.update(deadheadMission_subDict)
+	})
 
 	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
-	missionCost_subDict = {
+	problem_subDict.update({
 		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
 		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
 		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
@@ -1310,11 +1308,11 @@ if __name__=="__main__":
 		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
 		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
 		MissionCost.deadhead_ratio: 0.2, #deadhead ratio
-	}
-	MissionCost.substitutions.update(missionCost_subDict)
-
+	})
+	
 	problem = Model(MissionCost["cost_per_trip"],
 		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+	problem.substitutions.update(problem_subDict)
 	solution = problem.solve(verbosity=0)
 
 	delta_S = 500*ureg.ft
