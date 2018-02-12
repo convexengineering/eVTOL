@@ -4,18 +4,18 @@ Note: T, Q, and P are per rotor; SPL is for the entire vehicle.
 
 Configuration 	N 	R (m)	T (N)		Q (Nm)		P (W)
 Lift + cruise	8	0.903	1.842e+03	1.947e+02	4.043e+04
-Compound heli	1	4.383	1.301e+04	6.120e+03	1.604e+05
+Compound heli	1	4.595	1.429e+04	7.052e+03	1.762e+05
 Tilt wing	8	0.885	1.766e+03	1.828e+02	3.876e+04
 Tilt rotor	12	0.693	1.083e+03	8.781e+01	2.377e+04
 
 Configuration 	VT (m/s)	omega (rpm)	MT	FOM
 Lift + cruise	187.6		1982		0.551	0.780
-Compound heli	114.9		250		0.338	0.761
+Compound heli	114.9		239		0.338	0.761
 Tilt wing	187.6		2025		0.551	0.780
 Tilt rotor	187.6		2585		0.551	0.780
 
 Configuration 	f_peak (Hz)	SPL (dB)	SPL (dBA)
 Lift + cruise	2338.2		72.9		72.0
-Compound heli	332.2		62.8		63.8
+Compound heli	316.9		63.3		64.2
 Tilt wing	2388.0		72.7		71.8
 Tilt rotor	3049.2		72.3		70.7

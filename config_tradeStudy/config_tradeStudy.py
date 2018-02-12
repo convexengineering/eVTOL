@@ -41,9 +41,11 @@ for config in configs:
 	print "Solving configuration: " + config
 
 	c = configs[config]
+
+	problem_subDict = {}
 	
 	Aircraft = OnDemandAircraft(autonomousEnabled=autonomousEnabled)
-	Aircraft_subDict = {
+	problem_subDict.update({
 		Aircraft.L_D_cruise: c["L/D"], #estimated L/D in cruise
 		Aircraft.eta_cruise: generic_data["\eta_{cruise}"], #propulsive efficiency in cruise
 		Aircraft.tailRotor_power_fraction_hover: c["tailRotor_power_fraction_hover"],
@@ -55,42 +57,38 @@ for config in configs:
 		Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
 		Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
 		Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
-	}
-	Aircraft.substitutions.update(Aircraft_subDict)
+	})
 
 	SizingMission = OnDemandSizingMission(Aircraft,mission_type=sizing_mission_type,
 		reserve_type=reserve_type)
-	sizingMission_subDict = {
+	problem_subDict.update({
 		SizingMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
 		SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
 		SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
 		SizingMission.T_A: c["T/A"],#disk loading
 		SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_passengers"],#Number of passengers
-	}
-	SizingMission.substitutions.update(sizingMission_subDict)
+	})
 
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
-	revenueMission_subDict = {
+	problem_subDict.update({
 		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
 		RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
 		RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
 		RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_passengers"],#Number of passengers
 		RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-	}
-	RevenueMission.substitutions.update(revenueMission_subDict)
+	})
 
 	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=deadhead_mission_type)
-	deadheadMission_subDict = {
+	problem_subDict.update({
 		DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
 		DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
 		DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
 		DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_passengers"],#Number of passengers
 		DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-	}
-	DeadheadMission.substitutions.update(deadheadMission_subDict)
+	})
 
 	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
-	missionCost_subDict = {
+	problem_subDict.update({
 		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
 		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
 		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
@@ -98,11 +96,11 @@ for config in configs:
 		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
 		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
 		MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
-	}
-	MissionCost.substitutions.update(missionCost_subDict)
+	})
 
 	problem = Model(MissionCost["cost_per_trip"],
 		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+	problem.substitutions.update(problem_subDict)
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
 	
@@ -195,13 +193,14 @@ for i, config in enumerate(configs):
 SPL_req = 62
 plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
 	color="black", linewidth=3, linestyle="-")
+plt.xlim(xmin=np.min(y_pos)-1,xmax=np.max(y_pos)+1)
 plt.ylim(ymin = 57)
 plt.grid()
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('SPL (dB)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
-plt.legend(loc="upper right",framealpha=1)
+plt.legend(loc="upper right",framealpha=1,fontsize=12)
 
 if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
@@ -329,7 +328,6 @@ for i, config in enumerate(configs):
 	plt.bar(i,VT,align='center',alpha=1,color='k',edgecolor='k')
 
 plt.grid()
-#plt.ylim(ymin=0.2)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.ylabel('Tip speed (ft/s)', fontsize = 16)
 plt.title("Rotor Tip Speed",fontsize = 18)
@@ -353,12 +351,12 @@ plt.subplot(3,2,5)
 
 for i, config in enumerate(configs):
 	f_peak = configs[config]["f_{peak}"].to(ureg.turn/ureg.s).magnitude
-	plt.bar(i,f_peak,align='center',alpha=1,color='k',edgecolor='k',
-		log=True)
+	plt.bar(i,f_peak,align='center',alpha=1,color='k',bottom=0,edgecolor='k')
+	#plt.bar(i,f_peak,align='center',alpha=1,color='k',edgecolor='k',log=True)
 plt.grid()
-#plt.yscale('log')
+plt.yscale('log',nonposy='clip')
 #[ymin,ymax] = plt.gca().get_ylim()
-#plt.ylim(ymin=0.7*ymin, ymax=1.3*ymax)
+plt.ylim(ymin=1e2,ymax=1e4)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('Peak frequency (Hz)', fontsize = 16)
