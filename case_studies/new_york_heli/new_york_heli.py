@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
 
 import numpy as np
 from gpkit import Model, ureg
+from gpkit.constraints.bounded import Bounded
 from matplotlib import pyplot as plt
 from aircraft_models import OnDemandAircraft 
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
@@ -123,7 +124,7 @@ for config in configs:
 		})
 
 		problem = Model(MissionCost["cost_per_trip"],
-			[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+			Bounded([Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost]))
 		problem.substitutions.update(problem_subDict)
 		solution = problem.solve(verbosity=0)
 		configs[config][case]["solution"] = solution
