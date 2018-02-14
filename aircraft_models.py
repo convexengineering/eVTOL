@@ -3,6 +3,7 @@
 import math
 import numpy as np
 from gpkit import Variable, Model, Vectorize, ureg
+from gpkit.constraints.bounded import Bounded
 from standard_atmosphere import stdatmo
 
 class OnDemandAircraft(Model):
@@ -1307,7 +1308,7 @@ if __name__=="__main__":
 	})
 	
 	problem = Model(MissionCost["cost_per_trip"],
-		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+		Bounded([Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost]))
 	problem.substitutions.update(problem_subDict)
 	solution = problem.solve(verbosity=0)
 
@@ -1340,7 +1341,8 @@ if __name__=="__main__":
 	if reserve_type == "Uber":
 		num = solution("R_{divert}_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
 		reserve_type_string = " (%0.1f-nm diversion distance)" % num
-	
+
+	'''
 	print
 	print "Concept representative analysis"
 	print
@@ -1451,3 +1453,4 @@ if __name__=="__main__":
 		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	
 	#print solution.summary()
+	'''
