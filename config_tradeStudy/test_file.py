@@ -41,6 +41,7 @@ def test(generic_data, configuration_data, config):
 		SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_passengers"],#Number of passengers
 	})
 
+	'''
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
 	problem_subDict.update({
 		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
@@ -69,9 +70,11 @@ def test(generic_data, configuration_data, config):
 		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
 		MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
 	})
+	'''
 
-	problem = Model(MissionCost["cost_per_trip"],
-		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+	#problem = Model(MissionCost["cost_per_trip"],
+	#	[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+	problem = Model(Aircraft["TOGW"],[Aircraft, SizingMission])
 	problem.substitutions.update(problem_subDict)
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
@@ -82,18 +85,18 @@ def test(generic_data, configuration_data, config):
 
 if __name__=="__main__":
 
-	for i in range(1,41):
+	for i in range(1,51):
 		print "Test run %0.0f" % i
 		
-		#configs = configuration_data.copy()
-		#del configs["Tilt duct"]
-		#del configs["Multirotor"]
-		#del configs["Autogyro"]
-		#del configs["Helicopter"]
-		#del configs["Coaxial heli"]
+		configs = configuration_data.copy()
+		del configs["Tilt duct"]
+		del configs["Multirotor"]
+		del configs["Autogyro"]
+		del configs["Helicopter"]
+		del configs["Coaxial heli"]
 
-		config_array = ["Lift + cruise","Lift + cruise"]
+		#config_array = ["Lift + cruise","Lift + cruise"]
 
-		for config in config_array:
+		for config in configs:
 			print "\tSolving configuration: " + config
 			solution = test(generic_data, configuration_data, config)
