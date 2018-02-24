@@ -42,6 +42,7 @@ def test(generic_data, configuration_data, config):
 	})
 
 	'''
+
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
 	problem_subDict.update({
 		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
@@ -68,9 +69,10 @@ def test(generic_data, configuration_data, config):
 		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
 		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
 		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
-		MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
+		MissionCost.NdNr: 0.25,
 	})
 	'''
+	
 
 	#problem = Model(MissionCost["cost_per_trip"],
 	#	[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
@@ -85,7 +87,7 @@ def test(generic_data, configuration_data, config):
 
 if __name__=="__main__":
 
-	for i in range(1,51):
+	for i in range(1,10001):
 		print "Test run %0.0f" % i
 		
 		configs = configuration_data.copy()
@@ -99,4 +101,4 @@ if __name__=="__main__":
 
 		for config in configs:
 			print "\tSolving configuration: " + config
-			solution = test(generic_data, configuration_data, config)
+			solution = test(generic_data, configuration_data, "Lift + cruise")
