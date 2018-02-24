@@ -54,7 +54,6 @@ del configs["Coaxial heli"]
 del configs["Compound heli"]
 
 sizing_plot_config = "Lift + cruise" #pull other data from this configuration
-sizing_plot_weight_fraction = configs[sizing_plot_config]["weight_fraction"]
 config = sizing_plot_config 
 
 c = configs[config]
@@ -86,7 +85,7 @@ for i, T_A in enumerate(T_A_array[:,0]):
 			SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
 			SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
 			SizingMission.T_A: T_A,#disk loading
-			SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_passengers"],#Number of passengers
+			SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_{passengers}"],#Number of passengers
 		})
 
 		RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
@@ -94,7 +93,7 @@ for i, T_A in enumerate(T_A_array[:,0]):
 			RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
 			RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
 			RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
-			RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_passengers"],#Number of passengers
+			RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_{passengers}"],#Number of passengers
 			RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
 		})
 
@@ -103,7 +102,7 @@ for i, T_A in enumerate(T_A_array[:,0]):
 			DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
 			DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
 			DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
-			DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_passengers"],#Number of passengers
+			DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_{passengers}"],#Number of passengers
 			DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
 		})
 
@@ -202,7 +201,7 @@ for i,T_A in enumerate(T_A_array[:,0]):
 	x = cptpp_row[-1]
 	y = SPL_A_row[-1]
 	label = "T/A = %0.1f lbf/ft$^2$" % T_A.to(ureg.lbf/ureg.ft**2).magnitude
-	plt.text(x-18,y-0.2,label,fontsize=16,rotation=0)
+	plt.text(x-18.5,y-0.2,label,fontsize=16,rotation=0)
 
 #Configuration data
 for i,config in enumerate(configs):
@@ -228,34 +227,39 @@ plt.xlabel('Cost per trip, per passenger', fontsize = 20)
 plt.ylabel('SPL (dBA)', fontsize = 20)
 plt.legend(numpoints = 1,loc='upper left',fontsize = 15)
 
-if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
+if generic_data["reserve_type"] == "FAA_aircraft" or generic_data["reserve_type"] == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if reserve_type == "FAA_aircraft":
+	if generic_data["reserve_type"] == "FAA_aircraft":
 		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter)" % num
-	elif reserve_type == "FAA_heli":
+	elif generic_data["reserve_type"] == "FAA_heli":
 		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter)" % num
-elif reserve_type == "Uber":
+elif generic_data["reserve_type"] == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
-if autonomousEnabled:
+if generic_data["autonomousEnabled"]:
 	autonomy_string = "autonomy enabled"
 else:
 	autonomy_string = "pilot required"
 
+
 title_str = "Aircraft parameters: empty weight fraction = %0.2f; battery energy density = %0.0f Wh/kg; cruising speed = %0.0f mph\n" \
-	% (sizing_plot_weight_fraction, C_m.to(ureg.Wh/ureg.kg).magnitude,V_cruise.to(ureg.mph).magnitude) \
+	% (c["weight_fraction"], generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude,\
+		c["V_{cruise}"].to(ureg.mph).magnitude) \
 	+ "%0.0f rotors; %0.0f rotor blades; mean lift coefficient = %0.1f; %s. %s configuration.\n" \
-	% (N, B, Cl_mean_max, autonomy_string,sizing_plot_config) \
-	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
-	+ reserve_type_string + "\n" \
-	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
-		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f\n" \
-	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
-		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
+	% (c["N"], B, c["Cl_{mean_{max}}"], autonomy_string, sizing_plot_config) \
+	+ "Sizing mission (%s): range = %0.0f nmi; %0.0f passengers; %0.0fs hover time; reserve type = " \
+	% (generic_data["sizing_mission"]["type"], generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
+	 generic_data["sizing_mission"]["N_{passengers}"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
+	+ reserve_type_string + "\n"\
+	+ "Revenue mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	% (generic_data["revenue_mission"]["type"], generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	 generic_data["revenue_mission"]["N_{passengers}"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["charger_power"].to(ureg.kW).magnitude) \
+	+ "Deadhead mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	% (generic_data["deadhead_mission"]["type"], generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	 generic_data["deadhead_mission"]["N_{passengers}"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["deadhead_ratio"])
 
 plt.title(title_str,fontsize = 13)
 plt.tight_layout()

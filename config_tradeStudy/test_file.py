@@ -42,7 +42,7 @@ def test(generic_data, configuration_data, config):
 		SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_passengers"],#Number of passengers
 	})
 
-	'''
+	
 	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
 	problem_subDict.update({
 		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
@@ -72,11 +72,11 @@ def test(generic_data, configuration_data, config):
 		MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
 		#MissionCost.NdNr: 0.25,
 	})
-	'''
 	
-	#problem = Model(MissionCost["cost_per_trip"],
-	#	[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
-	problem = Model(Aircraft["TOGW"],[Aircraft, SizingMission])
+	
+	problem = Model(MissionCost["cost_per_trip"],
+		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
+	#problem = Model(Aircraft["TOGW"],[Aircraft, SizingMission])
 	problem.substitutions.update(problem_subDict)
 	
 	try:
@@ -91,23 +91,26 @@ def test(generic_data, configuration_data, config):
 
 if __name__=="__main__":
 
-	for i in range(1,21):
-		print "Test run %0.0f" % i
+	#deadhead_N_passengers_array = [0.5 0.1 0.01 0.001 0.0001 0.00001]
+	deadhead_N_passengers_array = [0.5, 0.1, 0.01, 0.001, 0.0001, 0.00001]
+
+	for np in deadhead_N_passengers_array:
+		for i in range(1,51):
+			#print "Test run %0.0f" % i
 		
-		configs = configuration_data.copy()
-		del configs["Tilt duct"]
-		del configs["Multirotor"]
-		del configs["Autogyro"]
-		del configs["Helicopter"]
-		del configs["Coaxial heli"]
+			'''
+			configs = configuration_data.copy()
+			del configs["Tilt duct"]
+			del configs["Multirotor"]
+			del configs["Autogyro"]
+			del configs["Helicopter"]
+			del configs["Coaxial heli"]
 
-		#config_array = ["Lift + cruise","Lift + cruise"]
-
-		for config in configs:
-			print "\tSolving configuration: " + config
+			#config_array = ["Lift + cruise","Lift + cruise"]
+			'''
+			generic_data["deadhead_mission"]["N_passengers"] = np
 			solution = test(generic_data, configuration_data, "Lift + cruise")
-			if type(solution) == Model: break
 
-		if type(solution) == Model:
-			print "Run failed."
-			break
+		print "Cost per trip is $%0.2f with %0.5f deadhead passengers. %0.0f iterations."\
+			% (solution("cost_per_trip"), solution("N_{passengers}_OnDemandDeadheadMission/Passengers"), i)
+

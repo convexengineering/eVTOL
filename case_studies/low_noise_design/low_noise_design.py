@@ -153,7 +153,7 @@ for config in configs:
 			SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
 			SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
 			SizingMission.T_A: c["T/A"],#disk loading
-			SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_passengers"],#Number of passengers
+			SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_{passengers}"],#Number of passengers
 		})
 
 		RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
@@ -161,7 +161,7 @@ for config in configs:
 			RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
 			RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
 			RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
-			RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_passengers"],#Number of passengers
+			RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_{passengers}"],#Number of passengers
 			RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
 		})
 
@@ -170,7 +170,7 @@ for config in configs:
 			DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
 			DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
 			DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
-			DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_passengers"],#Number of passengers
+			DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_{passengers}"],#Number of passengers
 			DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
 		})
 
@@ -222,7 +222,7 @@ for config in configs:
 		configs[config][case]["SPL_A"] = SPL
 		
 
-'''
+
 # Plotting commands
 plt.ion()
 fig1 = plt.figure(figsize=(12,12), dpi=80)
@@ -366,18 +366,19 @@ else:
 
 title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %s\n" \
 	% (generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude, autonomy_string) \
-	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
+	+ "Sizing mission (%s): range = %0.0f nmi; %0.0f passengers; %0.0fs hover time; reserve type = " \
 	% (generic_data["sizing_mission"]["type"], generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
-	 generic_data["sizing_mission"]["N_passengers"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
+	 generic_data["sizing_mission"]["N_{passengers}"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
 	+ reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	+ "Revenue mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
 	% (generic_data["revenue_mission"]["type"], generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["revenue_mission"]["N_passengers"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["revenue_mission"]["N_{passengers}"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
 	 generic_data["charger_power"].to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	+ "Deadhead mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
 	% (generic_data["deadhead_mission"]["type"], generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["deadhead_mission"]["N_passengers"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["deadhead_mission"]["N_{passengers}"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
 	 generic_data["deadhead_ratio"])
+
 plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
@@ -491,4 +492,3 @@ plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('low_noise_design_plot_02.pdf')
-'''
