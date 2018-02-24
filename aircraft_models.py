@@ -53,14 +53,14 @@ class OnDemandAircraft(Model):
 		
 		constraints = []
 		
-		constraints += [g == self.battery.topvar("g")]
+		constraints += [g == self.battery.g]
 		constraints += [self.components]#all constraints implemented at component level
 		
 		constraints += [L_D_loiter == ((3**0.5)/2.)*L_D_cruise]
 
-		constraints += [C_eff == self.battery.topvar("C_{eff}")]#battery-capacity constraint
-		constraints += [W_empty >= sum(c.topvar("W") for c in self.components)]#weight constraint
-		constraints += [purchase_price == cost_per_weight*self.structure.topvar("W")]
+		constraints += [C_eff == self.battery.C_eff]#battery-capacity constraint
+		constraints += [W_empty >= sum(c.W for c in self.components)]#weight constraint
+		constraints += [purchase_price == cost_per_weight*self.structure.W]
 
 		return constraints
 
@@ -389,12 +389,12 @@ class Hover(Model):
 		constraints = []
 		constraints += [self.rotorPerf, self.batteryPerf, self.electricalSystemPerf]
 		
-		constraints += [P_rotors==self.rotorPerf.topvar("P"),T==self.rotorPerf.topvar("T"),
-			T_A==self.rotorPerf.topvar("T/A")]
-		constraints += [self.electricalSystemPerf.topvar("P_{in}") == P_battery,
-			self.electricalSystemPerf.topvar("P_{out}") >= P_rotors + P_tailRotor]
-		constraints += [E==self.batteryPerf.topvar("E"),t==self.batteryPerf.topvar("t"),
-			P_battery==self.batteryPerf.topvar("P")]
+		constraints += [P_rotors==self.rotorPerf.P,T==self.rotorPerf.T,
+			T_A==self.rotorPerf.T_A]
+		constraints += [self.electricalSystemPerf.P_in == P_battery,
+			self.electricalSystemPerf.P_out >= P_rotors + P_tailRotor]
+		constraints += [E==self.batteryPerf.E,t==self.batteryPerf.t,
+			P_battery==self.batteryPerf.P]
 		constraints += [T == W]
 
 		constraints += [P_tailRotor == tailRotor_power_fraction*P_rotors]
@@ -440,10 +440,10 @@ class LevelFlight(Model):
 
 		constraints += [self.batteryPerf, self.electricalSystemPerf]
 
-		constraints += [E==self.batteryPerf.topvar("E"), P_battery==self.batteryPerf.topvar("P"),
-			t==self.batteryPerf.topvar("t")]
-		constraints += [self.electricalSystemPerf.topvar("P_{in}") == P_battery,
-			self.electricalSystemPerf.topvar("P_{out}") >= P_cruise + P_tailRotor]
+		constraints += [E==self.batteryPerf.E, P_battery==self.batteryPerf.P,
+			t==self.batteryPerf.t]
+		constraints += [self.electricalSystemPerf.P_in == P_battery,
+			self.electricalSystemPerf.P_out >= P_cruise + P_tailRotor]
 		constraints += [segment_range==V*t,eta_cruise*P_cruise==T*V,T==D,W==L_D*D]
 
 		constraints += [P_tailRotor == tailRotor_power_fraction*P_cruise]
@@ -535,7 +535,7 @@ class OnDemandSizingMission(Model):
 				t_loiter = Variable("t_{loiter}",20,"minutes","Loiter time")
 
 			self.t_loiter = t_loiter
-			constraints += [t_loiter == self.fs2.topvar("t")]
+			constraints += [t_loiter == self.fs2.t]
 
 		if reserve_type == "Uber":#2-nautical-mile diversion distance; used by McDonald & German
 
@@ -544,7 +544,7 @@ class OnDemandSizingMission(Model):
 
 			R_divert = Variable("R_{divert}",2,"nautical_mile","Diversion distance")
 			self.R_divert = R_divert
-			constraints += [R_divert == self.fs2.topvar("segment_range")]
+			constraints += [R_divert == self.fs2.segment_range]
 		
 		self.fs3 = Hover(self,aircraft,hoverState)#landing again
 
@@ -573,38 +573,38 @@ class OnDemandSizingMission(Model):
 
 		constraints += [self.flight_segments]
 		constraints += [self.crew, self.passengers]
-		constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
-			+ self.crew.topvar("W")]
-		constraints += [aircraft.topvar("TOGW") >= W]
+		constraints += [W >= aircraft.W_empty + self.passengers.W \
+			+ self.crew.W]
+		constraints += [aircraft.TOGW >= W]
 		
-		constraints += [mission_range == self.fs1.topvar("segment_range")]
+		constraints += [mission_range == self.fs1.segment_range]
 		constraints += [hoverState]
 		
 		constraints += [V_loiter == ((1/3.)**(1/4.))*V_cruise]
 
-		constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
+		constraints += [E_mission >= sum(c.E for c in self.flight_segments)]
 		constraints += [C_eff >= E_mission]
 
 		constraints += [aircraft.tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
 			for i,segment in enumerate(self.levelFlight_segments)]
 		constraints += [aircraft.tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
 			for i,segment in enumerate(self.hover_segments)]
-		constraints += [t_hover == segment.topvar("t") for i,segment in enumerate(self.hover_segments)]
+		constraints += [t_hover == segment.t for i,segment in enumerate(self.hover_segments)]
 
-		constraints += [P_battery[i] == segment.topvar("P_{battery}") for i,segment in enumerate(self.flight_segments)]
-		constraints += [E[i] == segment.topvar("E") for i,segment in enumerate(self.flight_segments)]
+		constraints += [P_battery[i] == segment.P_battery for i,segment in enumerate(self.flight_segments)]
+		constraints += [E[i] == segment.E for i,segment in enumerate(self.flight_segments)]
 
-		constraints += [CT[i] == segment.rotorPerf.topvar("CT") for i,segment in enumerate(self.hover_segments)]
-		constraints += [CP[i] == segment.rotorPerf.topvar("CP") for i,segment in enumerate(self.hover_segments)]
-		constraints += [Q_perRotor[i] == segment.rotorPerf.topvar("Q_perRotor") for i,segment in enumerate(self.hover_segments)]
-		constraints += [T_perRotor[i] == segment.rotorPerf.topvar("T_perRotor") for i,segment in enumerate(self.hover_segments)]
-		constraints += [P[i] == segment.rotorPerf.topvar("P") for i,segment in enumerate(self.hover_segments)]
-		constraints += [P_perRotor[i] == segment.rotorPerf.topvar("P_perRotor") for i,segment in enumerate(self.hover_segments)]
-		constraints += [VT[i] == segment.rotorPerf.topvar("VT") for i,segment in enumerate(self.hover_segments)]
-		constraints += [omega[i] == segment.rotorPerf.topvar("\omega") for i,segment in enumerate(self.hover_segments)]
-		constraints += [MT[i] == segment.rotorPerf.topvar("MT") for i,segment in enumerate(self.hover_segments)]
-		constraints += [FOM[i] == segment.rotorPerf.topvar("FOM") for i,segment in enumerate(self.hover_segments)]
-		constraints += [p_ratio[i] == segment.rotorPerf.topvar("p_{ratio}") for i,segment in enumerate(self.hover_segments)]
+		constraints += [CT[i] == segment.rotorPerf.CT for i,segment in enumerate(self.hover_segments)]
+		constraints += [CP[i] == segment.rotorPerf.CP for i,segment in enumerate(self.hover_segments)]
+		constraints += [Q_perRotor[i] == segment.rotorPerf.Q_perRotor for i,segment in enumerate(self.hover_segments)]
+		constraints += [T_perRotor[i] == segment.rotorPerf.T_perRotor for i,segment in enumerate(self.hover_segments)]
+		constraints += [P[i] == segment.rotorPerf.P for i,segment in enumerate(self.hover_segments)]
+		constraints += [P_perRotor[i] == segment.rotorPerf.P_perRotor for i,segment in enumerate(self.hover_segments)]
+		constraints += [VT[i] == segment.rotorPerf.VT for i,segment in enumerate(self.hover_segments)]
+		constraints += [omega[i] == segment.rotorPerf.omega for i,segment in enumerate(self.hover_segments)]
+		constraints += [MT[i] == segment.rotorPerf.MT for i,segment in enumerate(self.hover_segments)]
+		constraints += [FOM[i] == segment.rotorPerf.FOM for i,segment in enumerate(self.hover_segments)]
+		constraints += [p_ratio[i] == segment.rotorPerf.p_ratio for i,segment in enumerate(self.hover_segments)]
 
 		return constraints
 
@@ -683,40 +683,40 @@ class OnDemandRevenueMission(Model):
         constraints += [self.segments]
         constraints += [self.crew,self.passengers]
 
-        constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
-        	+ self.crew.topvar("W")]
-        constraints += [aircraft.topvar("TOGW") >= W]
+        constraints += [W >= aircraft.W_empty + self.passengers.W \
+        	+ self.crew.W]
+        constraints += [aircraft.TOGW >= W]
         
-        constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
+        constraints += [mission_range == self.fs1.segment_range]
+        constraints += [p_ratio == self.fs0.rotorPerf.p_ratio]
         constraints += hoverState
 
-        constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
+        constraints += [E_mission >= sum(c.E for c in self.flight_segments)]
         constraints += [C_eff >= E_mission]
 
         constraints += [aircraft.tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
         	for i,segment in enumerate(self.levelFlight_segments)]
         constraints += [aircraft.tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
         	for i,segment in enumerate(self.hover_segments)]
-        constraints += [t_hover == segment.topvar("t") for i,segment in enumerate(self.hover_segments)]
+        constraints += [t_hover == segment.t for i,segment in enumerate(self.hover_segments)]
 
-        constraints += [t_flight >= sum(c.topvar("t") for c in self.flight_segments)]
-        constraints += [t_mission >= t_flight + self.time_on_ground.topvar("t")]
+        constraints += [t_flight >= sum(c.t for c in self.flight_segments)]
+        constraints += [t_mission >= t_flight + self.time_on_ground.t]
 
-        constraints += [P_battery[i] == segment.topvar("P_{battery}") for i,segment in enumerate(self.flight_segments)]
-        constraints += [E[i] == segment.topvar("E") for i,segment in enumerate(self.flight_segments)]
+        constraints += [P_battery[i] == segment.P_battery for i,segment in enumerate(self.flight_segments)]
+        constraints += [E[i] == segment.E for i,segment in enumerate(self.flight_segments)]
 
-        constraints += [CT[i] == segment.rotorPerf.topvar("CT") for i,segment in enumerate(self.hover_segments)]
-        constraints += [CP[i] == segment.rotorPerf.topvar("CP") for i,segment in enumerate(self.hover_segments)]
-        constraints += [Q_perRotor[i] == segment.rotorPerf.topvar("Q_perRotor") for i,segment in enumerate(self.hover_segments)]
-        constraints += [T_perRotor[i] == segment.rotorPerf.topvar("T_perRotor") for i,segment in enumerate(self.hover_segments)]
-        constraints += [P[i] == segment.rotorPerf.topvar("P") for i,segment in enumerate(self.hover_segments)]
-        constraints += [P_perRotor[i] == segment.rotorPerf.topvar("P_perRotor") for i,segment in enumerate(self.hover_segments)]
-        constraints += [VT[i] == segment.rotorPerf.topvar("VT") for i,segment in enumerate(self.hover_segments)]
-        constraints += [omega[i] == segment.rotorPerf.topvar("\omega") for i,segment in enumerate(self.hover_segments)]
-        constraints += [MT[i] == segment.rotorPerf.topvar("MT") for i,segment in enumerate(self.hover_segments)]
-        constraints += [FOM[i] == segment.rotorPerf.topvar("FOM") for i,segment in enumerate(self.hover_segments)]
-        constraints += [p_ratio[i] == segment.rotorPerf.topvar("p_{ratio}") for i,segment in enumerate(self.hover_segments)]
+        constraints += [CT[i] == segment.rotorPerf.CT for i,segment in enumerate(self.hover_segments)]
+        constraints += [CP[i] == segment.rotorPerf.CP for i,segment in enumerate(self.hover_segments)]
+        constraints += [Q_perRotor[i] == segment.rotorPerf.Q_perRotor for i,segment in enumerate(self.hover_segments)]
+        constraints += [T_perRotor[i] == segment.rotorPerf.T_perRotor for i,segment in enumerate(self.hover_segments)]
+        constraints += [P[i] == segment.rotorPerf.P for i,segment in enumerate(self.hover_segments)]
+        constraints += [P_perRotor[i] == segment.rotorPerf.P_perRotor for i,segment in enumerate(self.hover_segments)]
+        constraints += [VT[i] == segment.rotorPerf.VT for i,segment in enumerate(self.hover_segments)]
+        constraints += [omega[i] == segment.rotorPerf.omega for i,segment in enumerate(self.hover_segments)]
+        constraints += [MT[i] == segment.rotorPerf.MT for i,segment in enumerate(self.hover_segments)]
+        constraints += [FOM[i] == segment.rotorPerf.FOM for i,segment in enumerate(self.hover_segments)]
+        constraints += [p_ratio[i] == segment.rotorPerf.p_ratio for i,segment in enumerate(self.hover_segments)]
 
         return constraints
 
@@ -795,40 +795,40 @@ class OnDemandDeadheadMission(Model):
         constraints += [self.segments]
         constraints += [self.crew,self.passengers]
 
-        constraints += [W >= aircraft.topvar("W_{empty}") + self.passengers.topvar("W") \
-        	+ self.crew.topvar("W")]
-        constraints += [aircraft.topvar("TOGW") >= W]
+        constraints += [W >= aircraft.W_empty + self.passengers.W \
+        	+ self.crew.W]
+        constraints += [aircraft.TOGW >= W]
         
-        constraints += [mission_range == self.fs1.topvar("segment_range")]
-        constraints += [p_ratio == self.fs0.rotorPerf.topvar("p_{ratio}")]
+        constraints += [mission_range == self.fs1.segment_range]
+        constraints += [p_ratio == self.fs0.rotorPerf.p_ratio]
         constraints += hoverState
 
-        constraints += [E_mission >= sum(c.topvar("E") for c in self.flight_segments)]
+        constraints += [E_mission >= sum(c.E for c in self.flight_segments)]
         constraints += [C_eff >= E_mission]
 
         constraints += [aircraft.tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
         	for i,segment in enumerate(self.levelFlight_segments)]
         constraints += [aircraft.tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
         	for i,segment in enumerate(self.hover_segments)]
-        constraints += [t_hover == segment.topvar("t") for i,segment in enumerate(self.hover_segments)]
+        constraints += [t_hover == segment.t for i,segment in enumerate(self.hover_segments)]
 
-        constraints += [t_flight >= sum(c.topvar("t") for c in self.flight_segments)]
-        constraints += [t_mission >= t_flight + self.time_on_ground.topvar("t")]
+        constraints += [t_flight >= sum(c.t for c in self.flight_segments)]
+        constraints += [t_mission >= t_flight + self.time_on_ground.t]
 
-        constraints += [P_battery[i] == segment.topvar("P_{battery}") for i,segment in enumerate(self.flight_segments)]
-        constraints += [E[i] == segment.topvar("E") for i,segment in enumerate(self.flight_segments)]
+        constraints += [P_battery[i] == segment.P_battery for i,segment in enumerate(self.flight_segments)]
+        constraints += [E[i] == segment.E for i,segment in enumerate(self.flight_segments)]
 
-        constraints += [CT[i] == segment.rotorPerf.topvar("CT") for i,segment in enumerate(self.hover_segments)]
-        constraints += [CP[i] == segment.rotorPerf.topvar("CP") for i,segment in enumerate(self.hover_segments)]
-        constraints += [Q_perRotor[i] == segment.rotorPerf.topvar("Q_perRotor") for i,segment in enumerate(self.hover_segments)]
-        constraints += [T_perRotor[i] == segment.rotorPerf.topvar("T_perRotor") for i,segment in enumerate(self.hover_segments)]
-        constraints += [P[i] == segment.rotorPerf.topvar("P") for i,segment in enumerate(self.hover_segments)]
-        constraints += [P_perRotor[i] == segment.rotorPerf.topvar("P_perRotor") for i,segment in enumerate(self.hover_segments)]
-        constraints += [VT[i] == segment.rotorPerf.topvar("VT") for i,segment in enumerate(self.hover_segments)]
-        constraints += [omega[i] == segment.rotorPerf.topvar("\omega") for i,segment in enumerate(self.hover_segments)]
-        constraints += [MT[i] == segment.rotorPerf.topvar("MT") for i,segment in enumerate(self.hover_segments)]
-        constraints += [FOM[i] == segment.rotorPerf.topvar("FOM") for i,segment in enumerate(self.hover_segments)]
-        constraints += [p_ratio[i] == segment.rotorPerf.topvar("p_{ratio}") for i,segment in enumerate(self.hover_segments)]
+        constraints += [CT[i] == segment.rotorPerf.CT for i,segment in enumerate(self.hover_segments)]
+        constraints += [CP[i] == segment.rotorPerf.CP for i,segment in enumerate(self.hover_segments)]
+        constraints += [Q_perRotor[i] == segment.rotorPerf.Q_perRotor for i,segment in enumerate(self.hover_segments)]
+        constraints += [T_perRotor[i] == segment.rotorPerf.T_perRotor for i,segment in enumerate(self.hover_segments)]
+        constraints += [P[i] == segment.rotorPerf.P for i,segment in enumerate(self.hover_segments)]
+        constraints += [P_perRotor[i] == segment.rotorPerf.P_perRotor for i,segment in enumerate(self.hover_segments)]
+        constraints += [VT[i] == segment.rotorPerf.VT for i,segment in enumerate(self.hover_segments)]
+        constraints += [omega[i] == segment.rotorPerf.omega for i,segment in enumerate(self.hover_segments)]
+        constraints += [MT[i] == segment.rotorPerf.MT for i,segment in enumerate(self.hover_segments)]
+        constraints += [FOM[i] == segment.rotorPerf.FOM for i,segment in enumerate(self.hover_segments)]
+        constraints += [p_ratio[i] == segment.rotorPerf.p_ratio for i,segment in enumerate(self.hover_segments)]
 
         return constraints
 
@@ -836,8 +836,8 @@ class OnDemandMissionCost(Model):
 	#Includes both revenue and deadhead missions
 	def setup(self,aircraft,revenue_mission,deadhead_mission):
 
-		N_passengers = revenue_mission.passengers.topvar("N_{passengers}")
-		trip_distance = revenue_mission.topvar("mission_range")
+		N_passengers = revenue_mission.passengers.N_passengers
+		trip_distance = revenue_mission.mission_range
 
 		cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
 		cpt_revenue = Variable("revenue_cost_per_trip","-",
@@ -870,8 +870,8 @@ class OnDemandMissionCost(Model):
 
 		constraints += [NdNr >= deadhead_ratio*(NdNr+1)]
 		
-		constraints += [cpt_revenue == revenue_mission_costs.topvar("cost_per_mission")]
-		constraints += [cpt_deadhead == NdNr*deadhead_mission_costs.topvar("cost_per_mission")]
+		constraints += [cpt_revenue == revenue_mission_costs.cost_per_mission]
+		constraints += [cpt_deadhead == NdNr*deadhead_mission_costs.cost_per_mission]
 		constraints += [cpt >= cpt_revenue + cpt_deadhead]
 		
 		constraints += [cpt == cptpp*N_passengers]
@@ -900,7 +900,7 @@ class RevenueMissionCost(Model):
 		constraints = []
 		
 		constraints += [expenses]
-		constraints += [cost_per_mission >= sum(c.topvar("cost_per_mission") for c in expenses)]
+		constraints += [cost_per_mission >= sum(c.cost_per_mission for c in expenses)]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
@@ -927,7 +927,7 @@ class DeadheadMissionCost(Model):
 		constraints = []
 		
 		constraints += [expenses]
-		constraints += [cost_per_mission >= sum(c.topvar("cost_per_mission") for c in expenses)]
+		constraints += [cost_per_mission >= sum(c.cost_per_mission for c in expenses)]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
@@ -1022,7 +1022,7 @@ class CapitalExpenses(Model):
 		constraints = []
 		constraints += [self.costs]
 		
-		constraints += [cost_per_mission >= sum(c.topvar("cost_per_mission") for c in self.costs)]
+		constraints += [cost_per_mission >= sum(c.cost_per_mission for c in self.costs)]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
 
 		return constraints
@@ -1155,12 +1155,12 @@ class OperatingExpenses(Model):
 		constraints = []
 		constraints += [pilot_cost, maintenance_cost, energy_cost, indirect_operating_cost]
 
-		constraints += [DOC >= pilot_cost.topvar("cost_per_mission") 
-			+ maintenance_cost.topvar("cost_per_mission") + energy_cost.topvar("cost_per_mission")]
+		constraints += [DOC >= pilot_cost.cost_per_mission 
+			+ maintenance_cost.cost_per_mission + energy_cost.cost_per_mission]
 		constraints += [DOC_per_time == DOC/t_mission]
 
-		constraints += [IOC == indirect_operating_cost.topvar("cost_per_mission")]
-		constraints += [IOC_per_time == indirect_operating_cost.topvar("cost_per_time")]
+		constraints += [IOC == indirect_operating_cost.cost_per_mission]
+		constraints += [IOC_per_time == indirect_operating_cost.cost_per_time]
 
 		constraints += [cost_per_mission >= DOC + IOC]
 		constraints += [cost_per_mission == t_mission*cost_per_time]
@@ -1308,7 +1308,7 @@ if __name__=="__main__":
 	})
 	
 	problem = Model(MissionCost["cost_per_trip"],
-		Bounded([Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost]))
+		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
 	problem.substitutions.update(problem_subDict)
 	solution = problem.solve(verbosity=0)
 
@@ -1342,7 +1342,7 @@ if __name__=="__main__":
 		num = solution("R_{divert}_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
 		reserve_type_string = " (%0.1f-nm diversion distance)" % num
 
-	'''
+	
 	print
 	print "Concept representative analysis"
 	print
@@ -1453,4 +1453,4 @@ if __name__=="__main__":
 		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
 	
 	#print solution.summary()
-	'''
+	
