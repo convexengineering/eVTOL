@@ -28,19 +28,19 @@ generic_data["delta_S"] = 500*ureg.ft
 generic_data["sizing_mission"] = {}
 generic_data["sizing_mission"]["type"] = "piloted"
 generic_data["sizing_mission"]["N_passengers"] = 3
-generic_data["sizing_mission"]["range"] = 50*ureg.nautical_mile
+generic_data["sizing_mission"]["range"] = 50.*ureg.nautical_mile
 generic_data["sizing_mission"]["t_{hover}"] = 120*ureg.s
 
 generic_data["revenue_mission"] = {}
 generic_data["revenue_mission"]["type"] = "piloted"
 generic_data["revenue_mission"]["N_passengers"] = 2
-generic_data["revenue_mission"]["range"] = 30*ureg.nautical_mile
+generic_data["revenue_mission"]["range"] = 30.*ureg.nautical_mile
 generic_data["revenue_mission"]["t_{hover}"] = 30*ureg.s
 
 generic_data["deadhead_mission"] = {}
 generic_data["deadhead_mission"]["type"] = "autonomous"
 generic_data["deadhead_mission"]["N_passengers"] = 0.00001
-generic_data["deadhead_mission"]["range"] = 30*ureg.nautical_mile
+generic_data["deadhead_mission"]["range"] = 30.*ureg.nautical_mile
 generic_data["deadhead_mission"]["t_{hover}"] = 30*ureg.s
 
 

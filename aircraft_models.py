@@ -517,7 +517,6 @@ class OnDemandSizingMission(Model):
 		self.fs1 = LevelFlight(self,aircraft) #fly to destination
 		self.fs2 = LevelFlight(self,aircraft) #reserve
 
-		constraints += [self.fs0.T_A == T_A]
 		constraints += [self.fs1.L_D == aircraft.L_D_cruise]
 		constraints += [self.fs1.V == V_cruise]
 
@@ -585,12 +584,13 @@ class OnDemandSizingMission(Model):
 		constraints += [E_mission >= sum(c.E for c in self.flight_segments)]
 		constraints += [C_eff >= E_mission]
 
+		constraints += [T_A == segment.rotorPerf.T_A for i,segment in enumerate(self.hover_segments)]
 		constraints += [aircraft.tailRotor_power_fraction_levelFlight == segment.tailRotor_power_fraction \
 			for i,segment in enumerate(self.levelFlight_segments)]
 		constraints += [aircraft.tailRotor_power_fraction_hover == segment.tailRotor_power_fraction \
 			for i,segment in enumerate(self.hover_segments)]
 		constraints += [t_hover == segment.t for i,segment in enumerate(self.hover_segments)]
-
+		
 		constraints += [P_battery[i] == segment.P_battery for i,segment in enumerate(self.flight_segments)]
 		constraints += [E[i] == segment.E for i,segment in enumerate(self.flight_segments)]
 
@@ -1340,7 +1340,7 @@ if __name__=="__main__":
 		reserve_type_string = " (%0.0f-minute loiter time)" % num
 	if reserve_type == "Uber":
 		num = solution("R_{divert}_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
-		reserve_type_string = " (%0.1f-nm diversion distance)" % num
+		reserve_type_string = " (%0.1f-nmi diversion distance)" % num
 
 	
 	print
@@ -1364,7 +1364,7 @@ if __name__=="__main__":
 	print "Noise weighting type: %s" % noise_weighting
 	print
 	print "Sizing Mission (%s)" % sizing_mission_type
-	print "Mission range: %0.0f nm" % \
+	print "Mission range: %0.0f nmi" % \
 		solution("mission_range_OnDemandSizingMission").to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
 		solution("N_{passengers}_OnDemandSizingMission/Passengers")
@@ -1374,7 +1374,7 @@ if __name__=="__main__":
 	print "SPL in hover: %0.1f dB" % SPL_dict["Sizing"]
 	print
 	print "Revenue-Generating Mission (%s)" % revenue_mission_type
-	print "Mission range: %0.0f nm" % \
+	print "Mission range: %0.0f nmi" % \
 		solution("mission_range_OnDemandRevenueMission").to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
 		solution("N_{passengers}_OnDemandRevenueMission/Passengers")
@@ -1389,7 +1389,7 @@ if __name__=="__main__":
 	print "SPL in hover: %0.1f dB" % SPL_dict["Revenue"]
 	print
 	print "Deadhead Mission (%s)" % deadhead_mission_type
-	print "Mission range: %0.0f nm" % \
+	print "Mission range: %0.0f nmi" % \
 		solution("mission_range_OnDemandDeadheadMission").to(ureg.nautical_mile).magnitude
 	print "Number of passengers: %0.1f" % \
 		solution("N_{passengers}_OnDemandDeadheadMission/Passengers")
