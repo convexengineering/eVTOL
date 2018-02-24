@@ -9,75 +9,89 @@ from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 
-def test():
-	#String inputs
-	reserve_type="FAA_heli"
-	sizing_mission_type="piloted"
-	revenue_mission_type="piloted"
-	deadhead_mission_type="autonomous"
+def test(generic_data, configuration_data, config):
+
+	configs = configuration_data.copy()
+	c = configs[config]
 
 	problem_subDict = {}
 	
-	Aircraft = OnDemandAircraft(autonomousEnabled=True)
+	Aircraft = OnDemandAircraft(autonomousEnabled=generic_data["autonomousEnabled"])
 	problem_subDict.update({
-		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
-		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
-		Aircraft.tailRotor_power_fraction_hover: 0.0001,
-		Aircraft.tailRotor_power_fraction_levelFlight: 0.0001,
-		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
-		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
-		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
-		Aircraft.rotors.N: 12, #number of propellers
-		Aircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
-		Aircraft.structure.weight_fraction: 0.55, #empty weight fraction
-		Aircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
+		Aircraft.L_D_cruise: c["L/D"], #estimated L/D in cruise
+		Aircraft.eta_cruise: generic_data["\eta_{cruise}"], #propulsive efficiency in cruise
+		Aircraft.tailRotor_power_fraction_hover: c["tailRotor_power_fraction_hover"],
+		Aircraft.tailRotor_power_fraction_levelFlight: c["tailRotor_power_fraction_levelFlight"],
+		Aircraft.cost_per_weight: generic_data["vehicle_cost_per_weight"], #vehicle cost per unit empty weight
+		Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
+		Aircraft.battery.cost_per_C: generic_data["battery_cost_per_C"], #battery cost per unit energy capacity
+		Aircraft.rotors.N: c["N"], #number of propellers
+		Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
+		Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
+		Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
 	})
 
-	SizingMission = OnDemandSizingMission(Aircraft,mission_type=sizing_mission_type,
-		reserve_type=reserve_type)
+	SizingMission = OnDemandSizingMission(Aircraft,mission_type=generic_data["sizing_mission"]["type"],
+		reserve_type=generic_data["reserve_type"])
 	problem_subDict.update({
-		SizingMission.mission_range: 87*ureg.nautical_mile,#mission range
-		SizingMission.V_cruise: 200*ureg.mph,#cruising speed
-		SizingMission.t_hover: 120*ureg.s,#hover time
-		SizingMission.T_A: 15.*ureg("lbf")/ureg("ft")**2,#disk loading
-		SizingMission.passengers.N_passengers: 3,#Number of passengers
+		SizingMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
+		SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
+		SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
+		SizingMission.T_A: c["T/A"],#disk loading
+		SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_passengers"],#Number of passengers
 	})
 
-	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
+	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
 	problem_subDict.update({
-		RevenueMission.mission_range: 30*ureg.nautical_mile,#mission range
-		RevenueMission.V_cruise: 200*ureg.mph,#cruising speed
-		RevenueMission.t_hover: 30*ureg.s,#hover time
-		RevenueMission.passengers.N_passengers: 2,#Number of passengers
-		RevenueMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
+		RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
+		RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
+		RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_passengers"],#Number of passengers
+		RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
 	})
 
-	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=deadhead_mission_type)
+	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=generic_data["deadhead_mission"]["type"])
 	problem_subDict.update({
-		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
-		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
-		DeadheadMission.t_hover: 30*ureg.s,#hover time
-		DeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
-		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
+		DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
+		DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
+		DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
+		DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_passengers"],#Number of passengers
+		DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
 	})
 
 	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
 	problem_subDict.update({
-		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
-		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
-		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
-		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
-		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
-		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
-		MissionCost.deadhead_ratio: 0.2, #deadhead ratio
+		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
+		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
+		MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
 	})
-	
+
 	problem = Model(MissionCost["cost_per_trip"],
 		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
 	problem.substitutions.update(problem_subDict)
 	solution = problem.solve(verbosity=0)
+	configs[config]["solution"] = solution
 	return solution
 
-for i in range(1,51):
-	print "Test run %0.0f" % i
-	solution = test()
+	problem_subDict = None
+
+if __name__=="__main__":
+
+	for i in range(1,21):
+		print "Test run %0.0f" % i
+		
+		#configs = configuration_data.copy()
+		#del configs["Tilt duct"]
+		#del configs["Multirotor"]
+		#del configs["Autogyro"]
+		#del configs["Helicopter"]
+		#del configs["Coaxial heli"]
+
+		config_array = ["Lift + cruise","Compound heli","Tilt wing","Tilt rotor"]
+
+		for config in config_array:
+			solution = test(generic_data, configuration_data, config)
