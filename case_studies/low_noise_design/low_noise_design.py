@@ -11,7 +11,7 @@ from aircraft_models import OnDemandAircraft
 from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
 from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
-from copy import deepcopy
+from copy import copy, deepcopy
 from collections import OrderedDict
 from noise_models import vortex_noise
 
@@ -24,7 +24,7 @@ for config in configuration_data:
 	configs[config] = OrderedDict()
 	for case in case_array:
 		
-		configs[config][case] = configuration_data[config].copy()
+		configs[config][case] = deepcopy(configuration_data[config])
 
 		if config == "Lift + cruise":
 			if case == "Baseline":
@@ -222,6 +222,7 @@ for config in configs:
 		configs[config][case]["SPL_A"] = SPL
 		
 
+'''
 # Plotting commands
 plt.ion()
 fig1 = plt.figure(figsize=(12,12), dpi=80)
@@ -490,3 +491,4 @@ plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.98,bottom=0.10,top=0.87)
 plt.savefig('low_noise_design_plot_02.pdf')
+'''
