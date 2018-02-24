@@ -78,10 +78,11 @@ def test(generic_data, configuration_data, config):
 	return solution
 
 	problem_subDict = None
+	problem = None
 
 if __name__=="__main__":
 
-	for i in range(1,21):
+	for i in range(1,41):
 		print "Test run %0.0f" % i
 		
 		#configs = configuration_data.copy()
@@ -91,7 +92,8 @@ if __name__=="__main__":
 		#del configs["Helicopter"]
 		#del configs["Coaxial heli"]
 
-		config_array = ["Lift + cruise","Compound heli","Tilt wing","Tilt rotor"]
+		config_array = ["Lift + cruise","Lift + cruise"]
 
 		for config in config_array:
+			print "\tSolving configuration: " + config
 			solution = test(generic_data, configuration_data, config)
