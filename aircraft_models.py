@@ -18,9 +18,9 @@ class OnDemandAircraft(Model):
 		L_D_loiter = Variable("L_D_loiter","-","Loiter L/D ratio (approximation)")
 		eta_cruise = Variable("\eta_{cruise}","-","Cruise propulsive efficiency")
 		tailRotor_power_fraction_hover = Variable("tailRotor_power_fraction_hover",
-			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
+			0.001,"-","Tail-rotor power as a fraction of lifting-rotors power")
 		tailRotor_power_fraction_levelFlight = Variable("tailRotor_power_fraction_levelFlight",
-			0.0001,"-","Tail-rotor power as a fraction of lifting-rotors power")
+			0.001,"-","Tail-rotor power as a fraction of lifting-rotors power")
 
 		cost_per_weight = Variable("cost_per_weight","lbf**-1",
 			"Cost per unit empty weight of the aircraft")
@@ -1181,8 +1181,8 @@ def test():
 	problem_subDict.update({
 		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
 		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
-		Aircraft.tailRotor_power_fraction_hover: 0.0001,
-		Aircraft.tailRotor_power_fraction_levelFlight: 0.0001,
+		Aircraft.tailRotor_power_fraction_hover: 0.001,
+		Aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
 		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
 		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
@@ -1216,7 +1216,7 @@ def test():
 		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
 		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
 		DeadheadMission.t_hover: 30*ureg.s,#hover time
-		DeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
+		DeadheadMission.passengers.N_passengers: 0.001,#Number of passengers
 		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
 	})
 
@@ -1257,8 +1257,8 @@ if __name__=="__main__":
 	problem_subDict.update({
 		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
 		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
-		Aircraft.tailRotor_power_fraction_hover: 0.0001,
-		Aircraft.tailRotor_power_fraction_levelFlight: 0.0001,
+		Aircraft.tailRotor_power_fraction_hover: 0.001,
+		Aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
 		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
 		Aircraft.rotors.N: 12, #number of propellers
@@ -1292,7 +1292,7 @@ if __name__=="__main__":
 		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
 		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
 		DeadheadMission.t_hover: 30*ureg.s,#hover time
-		DeadheadMission.passengers.N_passengers: 0.00001,#Number of passengers
+		DeadheadMission.passengers.N_passengers: 0.001,#Number of passengers
 		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
 	})
 
