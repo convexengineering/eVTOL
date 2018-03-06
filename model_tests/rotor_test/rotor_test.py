@@ -11,14 +11,13 @@ from standard_atmosphere import stdatmo
 from aircraft_models import Rotors, FlightState, RotorsAero
 
 def rotors_analysis_function(T=2000*ureg("lbf"),VT="unconstrained",h=0*ureg.ft,
-	N=12,R=1.804*ureg("ft"),s=0.1,Cl_mean_max=1.4,SPL_requirement=100.,
-	print_summary="No"):
+	N=12,R=1.804*ureg("ft"),s=0.1,Cl_mean_max=1.4,print_summary="No"):
 	
 	#Function uses GPKit models as the backend to analyze a rotor.
-	testRotor = Rotors(N=N,s=s,Cl_mean_max=Cl_mean_max)
-	testRotor.substitutions.update({"R":R})
+	testRotor = Rotors()
+	testRotor.substitutions.update({"R":R,"N":N,"s":s,"Cl_{mean_{max}}":Cl_mean_max})
 	testState = FlightState(h=h)
-	testRotor_AeroAnalysis = testRotor.performance(testState,SPL_req=SPL_requirement)
+	testRotor_AeroAnalysis = testRotor.performance(testState)
 	testRotor_AeroAnalysis.substitutions.update({"T":T.to(ureg.lbf).magnitude})
 
 	if VT != "unconstrained":
@@ -49,10 +48,9 @@ if __name__ == "__main__":
 	R = 1.804*ureg.ft
 	s = 0.1
 	Cl_mean_max = 1.
-	SPL_requirement = 100 #constraint not really enforced
 
 	[VT_computed,P,FOM,CL_mean,SPL] = rotors_analysis_function(T=T,VT=VT,N=N,R=R,s=s,
-		Cl_mean_max=Cl_mean_max,SPL_requirement=SPL_requirement)
+		Cl_mean_max=Cl_mean_max)
 
 	print
 	print "Analysis representative of the Joby S2"

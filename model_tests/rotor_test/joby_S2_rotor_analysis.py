@@ -15,7 +15,6 @@ from matplotlib import pyplot as plt
 
 N = 12
 s = 0.1
-SPL_requirement = 100 #constraint not really enforced
 W_hover = 2000*ureg.lbf 
 R = 1.804*ureg.ft 
 h=0*ureg.ft
@@ -25,8 +24,7 @@ Mtip_max = 0.9 #maximum tip Mach number
 
 #find the lowest tip speed that works (limited by CLmean constraint)
 low_data = rotors_analysis_function(T=W_hover,VT="unconstrained",h=h,N=N,
-	R=R,s=s,Cl_mean_max=Cl_mean_max,SPL_requirement=SPL_requirement,
-	print_summary="No")
+	R=R,s=s,Cl_mean_max=Cl_mean_max,print_summary="No")
 VT_min = low_data[0]
 
 #find the highest tip speed that works (limited by tip Mach number)
@@ -44,8 +42,7 @@ SPL_array = np.zeros(np.size(VT_array))
 for i, VT in enumerate(VT_array):
 
 	[VTo,P,FOM,Cl_mean,SPL] = rotors_analysis_function(T=W_hover,VT=VT,
-		h=h,N=N,R=R,s=s,Cl_mean_max=Cl_mean_max,SPL_requirement=SPL_requirement,
-		print_summary="No")
+		h=h,N=N,R=R,s=s,Cl_mean_max=Cl_mean_max,print_summary="No")
 	P_array[i] = P.to(ureg.hp).magnitude
 	FOM_array[i] = FOM
 	Cl_mean_array[i] = Cl_mean
