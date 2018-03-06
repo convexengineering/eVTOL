@@ -14,12 +14,14 @@ from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
 
 
+B = generic_data["B"]
+delta_S = generic_data["delta_S"]
+
 # Delete some configurations
 configs = configuration_data.copy()
 del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
-
 del configs["Helicopter"]
 del configs["Coaxial heli"]
 
