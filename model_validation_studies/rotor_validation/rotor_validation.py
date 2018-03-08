@@ -2,7 +2,7 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
 
 import numpy as np
 from gpkit import Variable, Model, Vectorize, ureg
@@ -44,23 +44,38 @@ gp_model_data["CT"] = np.linspace(0.002,0.02,16)
 gp_model_data["FOM"] = np.zeros([np.size(gp_model_data["CT"]),np.size(gp_model_data["ki"])])
 gp_model_data["CP"] = np.zeros([np.size(gp_model_data["CT"]),np.size(gp_model_data["ki"])])
 
-gp_model_Rotor = Rotors(N=gp_model_data["N"],s=gp_model_data["s"])
-gp_model_Rotor.substitutions.update({"R":gp_model_data["R"]})
-
 gp_model_State = FlightState(h=0*ureg.ft)
 
 for i,CT in enumerate(gp_model_data["CT"]):
 	for j,ki in enumerate(gp_model_data["ki"]):
-		gp_model_Rotor_AeroAnalysis = gp_model_Rotor.performance(gp_model_State,
-			ki=ki,Cd0=gp_model_data["Cd0"])
-		gp_model_Rotor_AeroAnalysis.substitutions.update({"CT":CT})
-		gp_model_Rotor_AeroAnalysis.substitutions.update({"VT":20*ureg.ft/ureg.s})
+
+		gp_model_subDict = {}
+
+		gp_model_Rotor = Rotors()
+		gp_model_subDict.update({
+			gp_model_Rotor.N: gp_model_data["N"],
+			gp_model_Rotor.s: gp_model_data["s"],
+			gp_model_Rotor.R: gp_model_data["R"],
+			gp_model_Rotor.Cl_mean_max: 2.0,#not needed
+
+		})
+
+		gp_model_Rotor_AeroAnalysis = gp_model_Rotor.performance(gp_model_State)
+		gp_model_subDict.update({
+			gp_model_Rotor_AeroAnalysis.ki: ki,
+			gp_model_Rotor_AeroAnalysis.Cd0: gp_model_data["Cd0"],
+			gp_model_Rotor_AeroAnalysis.CT: CT,
+			gp_model_Rotor_AeroAnalysis.VT: 20*ureg.ft/ureg.s,
+		})
+
 		gp_model_Model = Model(gp_model_Rotor_AeroAnalysis["P"],\
 			[gp_model_Rotor,gp_model_Rotor_AeroAnalysis,gp_model_State])
+		gp_model_Model.substitutions.update(gp_model_subDict)
 		gp_model_Solution = gp_model_Model.solve(verbosity=0)
 
 		gp_model_data["FOM"][i,j] = gp_model_Solution("FOM")
 		gp_model_data["CP"][i,j] = gp_model_Solution("CP")
+
 
 
 #Plotting commands
@@ -86,10 +101,14 @@ plt.plot(test_data["CT"],test_data["FOM"],color="black",marker='o',linestyle="no
 plt.grid()
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xticks(np.arange(xmin, xmax, 0.005),fontsize=12)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.yticks(np.arange(ymin, 1.1*ymax, 0.1),fontsize=12)
 plt.xlabel('Thrust coefficient', fontsize = 20)
 plt.ylabel('Figure of merit', fontsize = 20)
 plt.title("Figure of Merit",fontsize = 24)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 18)
+plt.legend(numpoints = 1,loc='lower right', fontsize = 18,framealpha=1)
 
 
 plt.subplot(1,2,2)
@@ -104,15 +123,19 @@ plt.plot(test_data["CT"],test_data["CP"],color="black",marker='o',linestyle="non
 plt.grid()
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xticks(np.arange(xmin, xmax, 0.005),fontsize=12)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.yticks(np.arange(ymin, 1.1*ymax, 0.0005),fontsize=12)
 plt.xlabel('Thrust coefficient', fontsize = 20)
 plt.ylabel('Power coefficient', fontsize = 20)
 plt.title("Power Coefficient",fontsize = 24)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 18)
+plt.legend(numpoints = 1,loc='lower right', fontsize = 18,framealpha=1)
 
 
 title_str = "Rotor Aerodynamic Model Validation (s = %0.3f; $C_{d_0}$ = %0.2f)"\
 	% (gp_model_data["s"], gp_model_data["Cd0"])
 plt.suptitle(title_str,fontsize = 26)
 plt.tight_layout()
-plt.subplots_adjust(left=0.06,right=0.98,bottom=0.1,top=0.86)
+plt.subplots_adjust(left=0.06,right=0.98,bottom=0.1,top=0.85)
 plt.savefig('rotor_validation_plot_01.pdf')

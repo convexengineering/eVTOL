@@ -2,7 +2,7 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
 
 import math
 import numpy as np
@@ -129,6 +129,8 @@ for j, heli in enumerate(test_data):
 		[ymin,ymax] = plt.gca().get_ylim()
 		plt.ylim(ymin=ymin-1,ymax=ymax+1)
 		plt.grid()
+		plt.xticks(fontsize=12)
+		plt.yticks(fontsize=12)
 		plt.xlabel(r'Thrust (lbf $\times \; 10^3$)', fontsize = 16)
 		plt.ylabel('SPL (dB)', fontsize = 16)
 		
@@ -136,7 +138,7 @@ for j, heli in enumerate(test_data):
 			+ " (%0.0f rpm; max error = %0.1f dB)" \
 			% (omega, max_SPL_error)
 		plt.title(title_str,fontsize = 18)
-		plt.legend(numpoints = 2,loc='lower right', fontsize = 14)
+		plt.legend(numpoints = 2,loc='lower right', fontsize = 14,framealpha=1)
 		
 
 title_str = "Noise Model Validation ($\Delta S$ = %0.0f ft)" \
