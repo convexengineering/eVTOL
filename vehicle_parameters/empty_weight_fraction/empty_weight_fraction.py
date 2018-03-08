@@ -1,4 +1,4 @@
-# Sweep to evaluate the sensitivity of each design to number of rotors
+# Sweep to evaluate the sensitivity of each design to empty weight fraction
 
 import os
 import sys
@@ -21,33 +21,25 @@ del configs["Autogyro"]
 del configs["Helicopter"]
 del configs["Coaxial heli"]
 
+
+weight_fraction_array = np.linspace(0.4,0.6,10)
+
+
 #Optimize remaining configurations
 for config in configs:
 	
 	print "Solving configuration: " + config
 
 	c = configs[config]
-	
-	#Parameter of interest
-	if (config == "Helicopter") or (config == "Coaxial heli"):
-		N_values = np.array([1,2])
-	elif (config == "Compound heli") or (config == "Autogyro"):
-		N_values = np.array([1,2])
-	elif (config == "Tilt wing") or (config == "Tilt rotor") \
-	or (config == "Lift + cruise") or (config == "Multirotor"):
-		N_values = np.linspace(2,16,8)
-	elif (config == "Tilt duct"):
-		N_values = np.linspace(20,40,11)
-	
-	configs[config]["N_values"] = N_values
-	configs[config]["TOGW"] = np.zeros(np.size(N_values))
-	configs[config]["W_{battery}"] = np.zeros(np.size(N_values))
-	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(N_values))
-	configs[config]["f_{peak}"] = np.zeros(np.size(N_values))
-	configs[config]["SPL_A"] = np.zeros(np.size(N_values))
+	configs[config]["weight_fraction_array"] = weight_fraction_array
+	configs[config]["TOGW"] = np.zeros(np.size(weight_fraction_array))
+	configs[config]["W_{battery}"] = np.zeros(np.size(weight_fraction_array))
+	configs[config]["cost_per_trip_per_passenger"] = np.zeros(np.size(weight_fraction_array))
+	configs[config]["f_{peak}"] = np.zeros(np.size(weight_fraction_array))
+	configs[config]["SPL_A"] = np.zeros(np.size(weight_fraction_array))
 
-	for i,N in enumerate(N_values):
-
+	for i,weight_fraction in enumerate(weight_fraction_array):
+		
 		problem_subDict = {}
 	
 		Aircraft = OnDemandAircraft(autonomousEnabled=generic_data["autonomousEnabled"])
@@ -59,9 +51,9 @@ for config in configs:
 			Aircraft.cost_per_weight: generic_data["vehicle_cost_per_weight"], #vehicle cost per unit empty weight
 			Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
 			Aircraft.battery.cost_per_C: generic_data["battery_cost_per_C"], #battery cost per unit energy capacity
-			Aircraft.rotors.N: N, #number of rotors
+			Aircraft.rotors.N: c["N"], #number of propellers
 			Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
-			Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
+			Aircraft.structure.weight_fraction: weight_fraction, #empty weight fraction
 			Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
 		})
 
@@ -155,72 +147,74 @@ style["markersize"] = 10
 plt.subplot(2,2,1)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["N_values"],c["TOGW"].to(ureg.lbf).magnitude,
+	plt.plot(c["weight_fraction_array"],c["TOGW"].to(ureg.lbf).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-[ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymin=0,ymax=1.1*ymax)
-plt.xticks(fontsize=12)
+plt.xlim(xmin=np.min(c["weight_fraction_array"]),xmax=np.max(c["weight_fraction_array"]))
+plt.ylim(ymin=0)
 plt.yticks(fontsize=12)
-plt.xlabel('Number of rotors', fontsize = 16)
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xticks(np.arange(xmin, 1.001*xmax, 0.05),fontsize=12)
+plt.xlabel('Empty weight fraction', fontsize = 16)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.title("Takeoff Gross Weight",fontsize = 20)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 12,framealpha=1)
-
+plt.legend(numpoints = 1,loc='upper left', fontsize = 12,framealpha=1)
 
 #Trip cost per passenger
 plt.subplot(2,2,2)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["N_values"],c["cost_per_trip_per_passenger"],
+	plt.plot(c["weight_fraction_array"],c["cost_per_trip_per_passenger"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-axes = plt.gca()
-[ymin,ymax] = axes.get_ylim()
-plt.ylim(ymin=0,ymax=1.1*ymax)
-plt.xticks(fontsize=12)
+plt.xlim(xmin=np.min(c["weight_fraction_array"]),xmax=np.max(c["weight_fraction_array"]))
+plt.ylim(ymin=0)
 plt.yticks(fontsize=12)
-plt.xlabel('Number of rotors', fontsize = 16)
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xticks(np.arange(xmin, 1.001*xmax, 0.05),fontsize=12)
+plt.xlabel('Empty weight fraction', fontsize = 16)
 plt.ylabel('Cost ($US)', fontsize = 16)
 plt.title("Cost per Trip, per Passenger",fontsize = 20)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 12,framealpha=1)
-
+plt.legend(numpoints = 1,loc='upper left', fontsize = 12,framealpha=1)
 
 #Vortex-noise peak frequency
 plt.subplot(2,2,3)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["N_values"],c["f_{peak}"].to(ureg.turn/ureg.s).magnitude,
+	plt.plot(c["weight_fraction_array"],c["f_{peak}"].to(ureg.turn/ureg.s).magnitude,
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
 plt.yscale('log',nonposy='clip')
-plt.ylim(ymin=1e2,ymax=1e4)
-plt.xticks(fontsize=12)
+plt.xlim(xmin=np.min(c["weight_fraction_array"]),xmax=np.max(c["weight_fraction_array"]))
+plt.ylim(ymin=1e2,ymax=2e4)
 plt.yticks(fontsize=12)
-plt.xlabel('Number of rotors', fontsize = 16)
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xticks(np.arange(xmin, 1.001*xmax, 0.05),fontsize=12)
+plt.xlabel('Empty weight fraction', fontsize = 16)
 plt.ylabel('Peak Frequency (Hz)', fontsize = 16)
 plt.title("Vortex-Noise Peak Frequency",fontsize = 20)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 12,framealpha=1)
-
+plt.legend(numpoints = 1,loc='upper right', fontsize = 12,framealpha=1)
 
 #Sound pressure level (in hover)
 plt.subplot(2,2,4)
 for i, config in enumerate(configs):
 	c = configs[config]
-	plt.plot(c["N_values"],c["SPL_A"],
+	plt.plot(c["weight_fraction_array"],c["SPL_A"],
 		color="black",linewidth=1.5,linestyle=style["linestyle"][i],marker=style["marker"][i],
 		fillstyle=style["fillstyle"][i],markersize=style["markersize"],label=config)
 plt.grid()
-plt.xticks(fontsize=12)
+plt.xlim(xmin=np.min(c["weight_fraction_array"]),xmax=np.max(c["weight_fraction_array"]))
+plt.ylim(ymax=78)
 plt.yticks(fontsize=12)
-plt.xlabel('Number of rotors', fontsize = 16)
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xticks(np.arange(xmin, 1.001*xmax, 0.05),fontsize=12)
+plt.xlabel('Empty weight fraction', fontsize = 16)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.title("Sound Pressure Level in Hover",fontsize = 20)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 12,framealpha=1)
-
+plt.legend(numpoints = 1,loc='upper left', fontsize = 12,framealpha=1)
 
 if generic_data["reserve_type"] == "FAA_aircraft" or generic_data["reserve_type"] == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
@@ -254,5 +248,5 @@ title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f ro
 
 plt.suptitle(title_str,fontsize = 13.0)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.98,bottom=0.05,top=0.87)
-plt.savefig('number_of_rotors_plot_01.pdf')
+plt.subplots_adjust(left=0.08,right=0.98,bottom=0.05,top=0.87)
+plt.savefig('empty_weight_fraction_plot_01.pdf')
