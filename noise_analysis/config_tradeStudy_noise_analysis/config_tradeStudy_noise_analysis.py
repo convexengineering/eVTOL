@@ -13,43 +13,15 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from noise_models import rotational_noise, vortex_noise, noise_weighting
 
-import matplotlib as mpl
-mpl.style.use("classic")
+# Delete some configurations
+configs = configuration_data.copy()
+del configs["Tilt duct"]
+del configs["Multirotor"]
+del configs["Autogyro"]
+del configs["Helicopter"]
+del configs["Coaxial heli"]
 
-#General data
-eta_cruise = generic_data["\eta_{cruise}"] 
-eta_electric = generic_data["\eta_{electric}"]
-C_m = generic_data["C_m"]
-n = generic_data["n"]
-B = generic_data["B"]
-x = 500*ureg.ft
-
-reserve_type = generic_data["reserve_type"]
-autonomousEnabled = generic_data["autonomousEnabled"]
-charger_power = generic_data["charger_power"]
-
-vehicle_cost_per_weight = generic_data["vehicle_cost_per_weight"]
-battery_cost_per_C = generic_data["battery_cost_per_C"]
-pilot_wrap_rate = generic_data["pilot_wrap_rate"]
-mechanic_wrap_rate = generic_data["mechanic_wrap_rate"]
-MMH_FH = generic_data["MMH_FH"]
-deadhead_ratio = generic_data["deadhead_ratio"]
-
-sizing_mission_type = generic_data["sizing_mission"]["type"]
-sizing_N_passengers = generic_data["sizing_mission"]["N_passengers"]
-sizing_mission_range = generic_data["sizing_mission"]["range"]
-sizing_t_hover = generic_data["sizing_mission"]["t_{hover}"]
-
-revenue_mission_type = generic_data["revenue_mission"]["type"]
-revenue_N_passengers = generic_data["revenue_mission"]["N_passengers"]
-revenue_mission_range = generic_data["revenue_mission"]["range"]
-revenue_t_hover = generic_data["revenue_mission"]["t_{hover}"]
-
-deadhead_mission_type = generic_data["deadhead_mission"]["type"]
-deadhead_N_passengers = generic_data["deadhead_mission"]["N_passengers"]
-deadhead_mission_range = generic_data["deadhead_mission"]["range"]
-deadhead_t_hover = generic_data["deadhead_mission"]["t_{hover}"]
-
+#Optimize remaining configurations
 # Delete some configurations
 configs = configuration_data.copy()
 del configs["Tilt duct"]
@@ -65,50 +37,71 @@ for config in configs:
 
 	c = configs[config]
 
-	V_cruise = c["V_{cruise}"]
-	L_D_cruise = c["L/D"]
-	T_A = c["T/A"]
-	Cl_mean_max = c["Cl_{mean_{max}}"]
-	N = c["N"]
-	loiter_type = c["loiter_type"]
-	tailRotor_power_fraction_hover = c["tailRotor_power_fraction_hover"]
-	tailRotor_power_fraction_levelFlight = c["tailRotor_power_fraction_levelFlight"]
-	weight_fraction = c["weight_fraction"]
-
-	Aircraft = OnDemandAircraft(N=N,L_D_cruise=L_D_cruise,eta_cruise=eta_cruise,C_m=C_m,
-		Cl_mean_max=Cl_mean_max,weight_fraction=weight_fraction,n=n,eta_electric=eta_electric,
-		cost_per_weight=vehicle_cost_per_weight,cost_per_C=battery_cost_per_C,
-		autonomousEnabled=autonomousEnabled)
-
-	SizingMission = OnDemandSizingMission(Aircraft,mission_range=sizing_mission_range,
-		V_cruise=V_cruise,N_passengers=sizing_N_passengers,t_hover=sizing_t_hover,
-		reserve_type=reserve_type,mission_type=sizing_mission_type,loiter_type=loiter_type,
-		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
-		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
-	SizingMission.substitutions.update({SizingMission.fs0.topvar("T/A"):T_A})
+	problem_subDict = {}
 	
-	RevenueMission = OnDemandRevenueMission(Aircraft,mission_range=revenue_mission_range,
-		V_cruise=V_cruise,N_passengers=revenue_N_passengers,t_hover=revenue_t_hover,
-		charger_power=charger_power,mission_type=revenue_mission_type,
-		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
-		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
+	Aircraft = OnDemandAircraft(autonomousEnabled=generic_data["autonomousEnabled"])
+	problem_subDict.update({
+		Aircraft.L_D_cruise: c["L/D"], #estimated L/D in cruise
+		Aircraft.eta_cruise: generic_data["\eta_{cruise}"], #propulsive efficiency in cruise
+		Aircraft.tailRotor_power_fraction_hover: c["tailRotor_power_fraction_hover"],
+		Aircraft.tailRotor_power_fraction_levelFlight: c["tailRotor_power_fraction_levelFlight"],
+		Aircraft.cost_per_weight: generic_data["vehicle_cost_per_weight"], #vehicle cost per unit empty weight
+		Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
+		Aircraft.battery.cost_per_C: generic_data["battery_cost_per_C"], #battery cost per unit energy capacity
+		Aircraft.rotors.N: c["N"], #number of propellers
+		Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
+		Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
+		Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
+	})
 
-	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_range=deadhead_mission_range,
-		V_cruise=V_cruise,N_passengers=deadhead_N_passengers,t_hover=deadhead_t_hover,
-		charger_power=charger_power,mission_type=deadhead_mission_type,
-		tailRotor_power_fraction_hover=tailRotor_power_fraction_hover,
-		tailRotor_power_fraction_levelFlight=tailRotor_power_fraction_levelFlight)
+	SizingMission = OnDemandSizingMission(Aircraft,mission_type=generic_data["sizing_mission"]["type"],
+		reserve_type=generic_data["reserve_type"])
+	problem_subDict.update({
+		SizingMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
+		SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
+		SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
+		SizingMission.T_A: c["T/A"],#disk loading
+		SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_{passengers}"],#Number of passengers
+	})
 
-	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission,
-		pilot_wrap_rate=pilot_wrap_rate,mechanic_wrap_rate=mechanic_wrap_rate,MMH_FH=MMH_FH,
-		deadhead_ratio=deadhead_ratio)
-	
+	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
+	problem_subDict.update({
+		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
+		RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
+		RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
+		RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_{passengers}"],#Number of passengers
+		RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
+	})
+
+	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=generic_data["deadhead_mission"]["type"])
+	problem_subDict.update({
+		DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
+		DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
+		DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
+		DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_{passengers}"],#Number of passengers
+		DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
+	})
+
+	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
+	problem_subDict.update({
+		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
+		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
+		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
+		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
+		MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
+	})
+
 	problem = Model(MissionCost["cost_per_trip"],
 		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
-	
+	problem.substitutions.update(problem_subDict)
 	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
-	
+
+
+B = generic_data["B"]
+x = 500*ureg.ft
 
 #Noise computations for varying theta (delta-S = constant)
 print
@@ -257,6 +250,8 @@ for config in configs:
 		configs[config]["y"]["total"]["SPL_A"][i] = 10*np.log10(p_ratio_squared_A)
 
 
+
+
 # Plotting commands
 plt.ion()
 
@@ -295,15 +290,17 @@ for i, config in enumerate(configs):
 	ax.bar(rotational_f.to(ureg.turn/ureg.s).magnitude,rotational_SPL,align="center",
 		color='k',width=0.2*rotational_f.to(ureg.turn/ureg.s).magnitude,
 		label="Rotational noise")
-	'''ax.bar(1.15*rotational_f.to(ureg.turn/ureg.s).magnitude,rotational_SPL_A,align="center",
-		color='grey',width=0.3*rotational_f.to(ureg.turn/ureg.s).magnitude,
-		label="A-weighted rotational noise")'''
+	#ax.bar(1.15*rotational_f.to(ureg.turn/ureg.s).magnitude,rotational_SPL_A,align="center",
+	#	color='grey',width=0.3*rotational_f.to(ureg.turn/ureg.s).magnitude,
+	#	label="A-weighted rotational noise")
 	
 	ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum,
 		'k-',linewidth=2,label="Vortex noise")
-	'''ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_A_spectrum,
-		'k-.',linewidth=2,label="A-weighted vortex noise")'''
+	#ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_A_spectrum,
+	#	'k-.',linewidth=2,label="A-weighted vortex noise")
 
+	plt.xticks(fontsize=12)
+	plt.yticks(fontsize=12)
 	plt.xlabel('Frequency (Hz)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	
@@ -322,35 +319,38 @@ for i, config in enumerate(configs):
 
 	lines, labels = ax.get_legend_handles_labels()
 	lines2, labels2 = ax2.get_legend_handles_labels()
-	ax2.legend(lines + lines2, labels + labels2, fontsize=13,loc="lower right")
+	ax2.legend(lines + lines2, labels + labels2, fontsize=13,loc="lower right", framealpha=1)
 
 
-if reserve_type == "FAA_aircraft" or reserve_type == "FAA_heli":
+if generic_data["reserve_type"] == "FAA_aircraft" or generic_data["reserve_type"] == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if reserve_type == "FAA_aircraft":
+	if generic_data["reserve_type"] == "FAA_aircraft":
 		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
-	elif reserve_type == "FAA_heli":
+	elif generic_data["reserve_type"] == "FAA_heli":
 		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
-elif reserve_type == "Uber":
+elif generic_data["reserve_type"] == "Uber":
 	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
 	reserve_type_string = " (%0.0f-nm diversion distance)" % num
 
-if autonomousEnabled:
+if generic_data["autonomousEnabled"]:
 	autonomy_string = "autonomy enabled"
 else:
 	autonomy_string = "pilot required"
 
 title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (C_m.to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
-	+ "Sizing mission (%s): range = %0.0f nm; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (sizing_mission_type, sizing_mission_range.to(ureg.nautical_mile).magnitude, sizing_N_passengers, sizing_t_hover.to(ureg.s).magnitude) \
+	% (generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
+	+ "Sizing mission (%s): range = %0.0f nmi; %0.0f passengers; %0.0fs hover time; reserve type = " \
+	% (generic_data["sizing_mission"]["type"], generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
+	 generic_data["sizing_mission"]["N_{passengers}"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
 	+ reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (revenue_mission_type, revenue_mission_range.to(ureg.nautical_mile).magnitude, \
-		revenue_N_passengers, revenue_t_hover.to(ureg.s).magnitude, charger_power.to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nm; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
-	% (deadhead_mission_type, deadhead_mission_range.to(ureg.nautical_mile).magnitude, \
-		deadhead_N_passengers, deadhead_t_hover.to(ureg.s).magnitude, deadhead_ratio)
+	+ "Revenue mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
+	% (generic_data["revenue_mission"]["type"], generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	 generic_data["revenue_mission"]["N_{passengers}"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["charger_power"].to(ureg.kW).magnitude) \
+	+ "Deadhead mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
+	% (generic_data["deadhead_mission"]["type"], generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
+	 generic_data["deadhead_mission"]["N_{passengers}"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
+	 generic_data["deadhead_ratio"])
 
 
 plt.suptitle(title_str,fontsize = 13)
@@ -397,10 +397,12 @@ for i, config in enumerate(configs):
 
 	plt.ylim(ymin = 0,ymax=np.max(SPL_vortex)+10)
 	plt.grid()
+	plt.xticks(fontsize=12)
+	plt.yticks(fontsize=12)
 	plt.xlabel('$\Theta$ (degrees)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.title(config, fontsize = 18)
-	plt.legend(loc="lower left",fontsize=12)
+	plt.legend(loc="lower left",fontsize=12, framealpha=1)
 
 plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
@@ -433,10 +435,12 @@ for i, config in enumerate(configs):
 	
 	plt.grid()
 	plt.ylim(ymin=0,ymax=max(SPL_total_A)+10)
+	plt.xticks(fontsize=12)
+	plt.yticks(fontsize=12)
 	plt.xlabel('y (feet)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.title(config, fontsize = 18)
-	plt.legend(loc="lower right")
+	plt.legend(loc="lower right", fontsize=13,framealpha=1)
 
 plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
@@ -472,6 +476,8 @@ for i, theta_desired in enumerate(theta_plot_values):
 
 	plt.grid()
 	plt.ylim(ymin=SPL_min)
+	plt.xticks(fontsize=12)
+	plt.yticks(fontsize=12)
 	plt.xlabel('f (Hz)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	subtitle_str = config + " ($\Theta$ = %0.1f$^\circ$)" % theta.to(ureg.degree).magnitude
