@@ -28,6 +28,7 @@ boeing_data["Lift + cruise"]["TOGW"] = 3710*ureg.lbf
 boeing_data["Lift + cruise"]["W_{battery}"] = 948*ureg.lbf
 boeing_data["Lift + cruise"]["P_{cruise}"] = 199*ureg.hp
 boeing_data["Lift + cruise"]["P_{hover}"] = 389*ureg.hp
+boeing_data["Lift + cruise"]["VT_{hover}"] = 518*ureg.ft/ureg.s
 
 boeing_data["Tilt rotor"] = {}
 boeing_data["Tilt rotor"]["V_{cruise}"] = 150*ureg("mph")
@@ -37,6 +38,7 @@ boeing_data["Tilt rotor"]["TOGW"] = 3930*ureg.lbf
 boeing_data["Tilt rotor"]["W_{battery}"] = 965*ureg.lbf
 boeing_data["Tilt rotor"]["P_{cruise}"] = 187*ureg.hp
 boeing_data["Tilt rotor"]["P_{hover}"] = 542*ureg.hp
+boeing_data["Tilt rotor"]["VT_{hover}"] = 481*ureg.ft/ureg.s
 
 boeing_data["Helicopter"] = {}
 boeing_data["Helicopter"]["V_{cruise}"] = 150*ureg("mph")
@@ -46,6 +48,7 @@ boeing_data["Helicopter"]["TOGW"] = 3470*ureg.lbf
 boeing_data["Helicopter"]["W_{battery}"] = 1170*ureg.lbf
 boeing_data["Helicopter"]["P_{cruise}"] = 250*ureg.hp
 boeing_data["Helicopter"]["P_{hover}"] = 347*ureg.hp
+boeing_data["Helicopter"]["VT_{hover}"] = 683*ureg.ft/ureg.s
 
 boeing_data["Helicopter"]["tailRotor_power_fraction_hover"] = 0.08
 boeing_data["Helicopter"]["tailRotor_power_fraction_levelFlight"] = 0.08
