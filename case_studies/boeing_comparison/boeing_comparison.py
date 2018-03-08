@@ -13,9 +13,6 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
 
-#import matplotlib as mpl
-#mpl.style.use("classic")
-
 #Data from the Boeing study
 boeing_data = {}
 
