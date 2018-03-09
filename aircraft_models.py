@@ -570,6 +570,9 @@ class OnDemandSizingMission(Model):
 			FOM = Variable("FOM","-","Figure of merit")
 			p_ratio = Variable("p_{ratio}","-","Sound pressure ratio in hover")
 
+		self.VT = VT
+		self.omega = omega
+
 		constraints += [self.flight_segments]
 		constraints += [self.crew, self.passengers]
 		constraints += [W >= aircraft.W_empty + self.passengers.W \
