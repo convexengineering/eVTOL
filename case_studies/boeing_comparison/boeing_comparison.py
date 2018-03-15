@@ -128,8 +128,8 @@ for config in configs:
 
 		if case == "GP model (with $\omega$ constraint)":
 			problem_subDict.update({
-				SizingMission.VT[i]: boeing_data[config]["VT_{hover}"] for i in range(np.size(SizingMission.VT))
-				#SizingMission.omega[i]: boeing_data[config]["\omega_{hover}"] for i in range(np.size(SizingMission.omega))
+				#SizingMission.VT[i]: boeing_data[config]["VT_{hover}"] for i in range(np.size(SizingMission.VT))
+				SizingMission.omega[i]: boeing_data[config]["\omega_{hover}"] for i in range(np.size(SizingMission.omega))
 			})
 
 		RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
@@ -226,7 +226,7 @@ legend_labels = list(case_array)
 legend_labels.append("Boeing data")
 
 #Takeoff gross weight
-plt.subplot(2,2,1)
+plt.subplot(3,2,1)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
@@ -250,12 +250,12 @@ plt.yticks(fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.3*ymax)
+plt.ylim(ymax = 1.7*ymax)
 plt.title("Takeoff Gross Weight",fontsize = 18)
 plt.legend(legend_labels,loc='upper left',framealpha=1, fontsize = 12)
 
 #Battery weight
-plt.subplot(2,2,2)
+plt.subplot(3,2,2)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
@@ -279,12 +279,69 @@ plt.yticks(fontsize=12)
 plt.ylabel('Weight (lbf)', fontsize = 16)
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.3*ymax)
+plt.ylim(ymax = 1.4*ymax)
 plt.title("Battery Weight",fontsize = 18)
 plt.legend(legend_labels,loc='upper left',framealpha=1, fontsize = 12)
 
+#Rotor tip speed
+plt.subplot(3,2,3)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+
+		VT_sizing = c["solution"]("VT_OnDemandSizingMission").to(ureg.ft/ureg.s).magnitude
+
+		if (i == 0):
+			label = legend_labels[j]
+			plt.bar(i+offset,VT_sizing,align='center',alpha=1,width=width,color=colors[j],
+				edgecolor='k',label=label)
+		else:
+			plt.bar(i+offset,VT_sizing,align='center',alpha=1,width=width,color=colors[j],
+				edgecolor='k')
+	plt.bar(i+offset_array[-1],boeing_data[config]["VT_{hover}"].to(ureg.ft/ureg.s).magnitude,
+		align='center',alpha=1,width=width,color=colors[-1],edgecolor='k')
+
+plt.grid()
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
+plt.ylabel('Tip speed (ft/s)', fontsize = 16)
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax = 1.4*ymax)
+plt.title("Rotor Tip Speed",fontsize = 18)
+plt.legend(legend_labels,loc='upper left',framealpha=1, fontsize = 12)
+
+#Sound pressure level in hover
+plt.subplot(3,2,4)
+for i,config in enumerate(configs):
+	for j,case in enumerate(configs[config]):
+		c = configs[config][case]
+		offset = offset_array[j]
+
+		SPL_sizing_A = c["SPL_sizing_A"]
+
+		if (i == 0):
+			label = legend_labels[j]
+			plt.bar(i+offset,SPL_sizing_A,align='center',alpha=1,width=width,color=colors[j],
+				edgecolor='k',label=label)
+		else:
+			plt.bar(i+offset,SPL_sizing_A,align='center',alpha=1,width=width,color=colors[j],
+				edgecolor='k')
+	#plt.bar(i+offset_array[-1],boeing_data[config]["VT_{hover}"].to(ureg.ft/ureg.s).magnitude,align='center',alpha=1,width=width,color=colors[-1],edgecolor='k')
+
+plt.grid()
+plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
+plt.yticks(fontsize=12)
+plt.ylabel('SPL (dBA)', fontsize = 16)
+plt.xlim(xmin=xmin,xmax=xmax)
+plt.ylim(ymin=60, ymax = 80)
+plt.title("Sound Pressure Level in Hover",fontsize = 18)
+plt.legend(legend_labels[:-1],loc='upper left',framealpha=1, fontsize = 12)
+
+
 #Power consumption (cruise)
-plt.subplot(2,2,3)
+plt.subplot(3,2,5)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
@@ -310,10 +367,10 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Cruise Power (sizing mission)",fontsize = 18)
-plt.legend(loc='upper left',framealpha=1, fontsize = 12)
+plt.legend(legend_labels,loc='upper left',framealpha=1, fontsize = 12)
 
 #Power consumption (hover)
-plt.subplot(2,2,4)
+plt.subplot(3,2,6)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]
@@ -334,12 +391,12 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.2*ymax)
+plt.ylim(ymax = 1.4*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
 plt.title("Hover Power (sizing mission)",fontsize = 18)
-plt.legend(loc='upper left',framealpha=1, fontsize = 12)
+plt.legend(legend_labels,loc='upper left',framealpha=1, fontsize = 12)
 
 if generic_data["reserve_type"] == "FAA_aircraft" or generic_data["reserve_type"] == "FAA_heli":
 	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
