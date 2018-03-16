@@ -125,7 +125,7 @@ class RotorsAero(Model):
 		CP = Variable("CP","-","Power coefficient")
 		CPi = Variable("CPi","-","Induced (ideal) power coefficient")
 		CPp = Variable("CPp","-","Profile power coefficient")
-		Cl_mean = Variable("Cl_mean","-","Mean lift coefficient")
+		Cl_mean = Variable("Cl_{mean}","-","Mean lift coefficient")
 		FOM = Variable("FOM","-","Figure of merit")
 
 		ki = Variable("ki",1.2,"-","Induced power factor")

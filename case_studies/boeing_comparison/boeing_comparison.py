@@ -126,6 +126,12 @@ for config in configs:
 			SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_{passengers}"],#Number of passengers
 		})
 
+		#Ensure total payload weight is exactly 800 lbf
+		problem_subDict.update({
+			SizingMission.crew.W_oneCrew: 200*ureg.lbf
+		})
+
+
 		if case == "GP model (with $\omega$ constraint)":
 			problem_subDict.update({
 				#SizingMission.VT[i]: boeing_data[config]["VT_{hover}"] for i in range(np.size(SizingMission.VT))
@@ -335,7 +341,7 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.xlim(xmin=xmin,xmax=xmax)
-plt.ylim(ymin=60, ymax = 80)
+plt.ylim(ymin=60, ymax = 78)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(legend_labels[:-1],loc='upper left',framealpha=1, fontsize = 12)
 
@@ -362,7 +368,7 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.2*ymax)
+plt.ylim(ymax = 1.5*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
@@ -391,7 +397,7 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.4*ymax)
+plt.ylim(ymax = 1.6*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
