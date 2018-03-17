@@ -14,11 +14,12 @@ from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
 from copy import deepcopy
 from collections import OrderedDict
+from standard_atmosphere import stdatmo
 
 #Data from the Boeing study
 boeing_data = {}
 
-boeing_data["C_m"] = (400/0.8)*ureg.Wh/ureg.kg
+boeing_data["C_m"] = 400*ureg.Wh/ureg.kg
 boeing_data["sizing_mission"] = {}
 boeing_data["sizing_mission"]["range"] = 87*ureg.nautical_mile
 
@@ -58,7 +59,7 @@ boeing_data["Helicopter"]["P_{hover}"] = 347*ureg.hp
 boeing_data["Helicopter"]["VT_{hover}"] = 683*ureg.ft/ureg.s
 boeing_data["Helicopter"]["R"] = 16.5*ureg.ft
 
-boeing_data["Helicopter"]["tailRotor_power_fraction_hover"] = 0.08
+boeing_data["Helicopter"]["tailRotor_power_fraction_hover"] = 0.10
 boeing_data["Helicopter"]["tailRotor_power_fraction_levelFlight"] = 0.08
 
 #Generic data
@@ -71,11 +72,18 @@ configs = OrderedDict()
 config_array = ["Lift + cruise", "Tilt rotor","Helicopter"]
 case_array = ["GP model","GP model (with $\omega$ constraint)"]
 
+#Atmospheric data (needed for thrust coefficient)
+rho = stdatmo(h=0*ureg.ft)["\rho"] #air density
+
 for config in config_array:
 	
 	configs[config] = OrderedDict()
 	boeing_data[config]["\omega_{hover}"] = boeing_data[config]["VT_{hover}"]/boeing_data[config]["R"]
 	boeing_data[config]["\omega_{hover}"] = boeing_data[config]["\omega_{hover}"].to(ureg.rpm)
+	
+	#Thrust coefficient
+	boeing_data[config]["CT"] = boeing_data[config]["T/A"]/(0.5*rho*boeing_data[config]["VT_{hover}"]**2)
+	boeing_data[config]["CT"] = boeing_data[config]["CT"].to(ureg.dimensionless)
 	
 	for case in case_array:
 		configs[config][case] = configuration_data[config].copy()
@@ -87,6 +95,13 @@ for config in config_array:
 		if config == "Helicopter":
 			configs[config][case]["tailRotor_power_fraction_hover"] = boeing_data["Helicopter"]["tailRotor_power_fraction_hover"]
 			configs[config][case]["tailRotor_power_fraction_levelFlight"] = boeing_data["Helicopter"]["tailRotor_power_fraction_levelFlight"]
+
+#Set rotor solidities
+for case in case_array:
+	configs["Lift + cruise"][case]["s"] = 0.1
+	configs["Tilt rotor"][case]["s"] = configs["Lift + cruise"][case]["s"]*boeing_data["Tilt rotor"]["CT"]/boeing_data["Lift + cruise"]["CT"]
+	configs["Tilt rotor"][case]["s"] = configs["Tilt rotor"][case]["s"].magnitude
+	configs["Helicopter"][case]["s"] = 0.1
 
 configs["Tilt rotor"]["GP model (with $\omega$ constraint)"]["Cl_{mean_{max}}"] = 2.0
 print "TILT ROTOR MEAN LIFT COEFFICIENT MODIFIED."
@@ -114,6 +129,12 @@ for config in configs:
 			Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
 			Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
 			Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
+		})
+		
+		#Allow battery to use all of its energy, and set solidity
+		problem_subDict.update({
+			Aircraft.battery.usable_energy_fraction: 1.,
+			Aircraft.rotors.s: c["s"],
 		})
 
 		SizingMission = OnDemandSizingMission(Aircraft,mission_type=generic_data["sizing_mission"]["type"],
@@ -397,7 +418,7 @@ for i,config in enumerate(configs):
 plt.grid()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.6*ymax)
+plt.ylim(ymax = 1.8*ymax)
 plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('Power (kW)', fontsize = 16)
