@@ -362,7 +362,7 @@ plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
 plt.yticks(fontsize=12)
 plt.ylabel('SPL (dBA)', fontsize = 16)
 plt.xlim(xmin=xmin,xmax=xmax)
-plt.ylim(ymin=60, ymax = 78)
+plt.ylim(ymin=62, ymax = 74)
 plt.title("Sound Pressure Level in Hover",fontsize = 18)
 plt.legend(legend_labels[:-1],loc='upper left',framealpha=1, fontsize = 12)
 
