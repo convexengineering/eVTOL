@@ -200,8 +200,8 @@ for i,val in enumerate(legend_labels):
 		raise ValueError("Revenue and deadhead missions must be the same length.")
 
 
-#Takeoff gross weight
-plt.subplot(2,2,1)
+# 
+plt.subplot(1,3,1)
 for i,config in enumerate(configs):
 	for j,case in enumerate(configs[config]):
 		c = configs[config][case]

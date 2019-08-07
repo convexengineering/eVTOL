@@ -142,6 +142,7 @@ for config in configs:
 		configs[config][time_frame]["solution"] = solution
 
 		configs[config][time_frame]["TOGW"] = solution("TOGW_OnDemandAircraft")
+		configs[config][time_frame]["TOGM"] = solution("TOGM_OnDemandAircraft")
 		configs[config][time_frame]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
 		configs[config][time_frame]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
 		configs[config][time_frame]["cost_per_seat_mile"] = solution("cost_per_seat_mile_OnDemandMissionCost")
@@ -203,49 +204,94 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(12,12), dpi=80)
+fig1 = plt.figure(figsize=(12, 7), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
 y_pos = np.arange(len(configs))
 labels = [""]*len(configs)
 for i, config in enumerate(configs):
-	labels[i] = config
+	if config == "Compound heli":
+		labels[i] = config.replace(" ", "\n")  # Replace spaces with newlines
+	else:
+		labels[i] = config
 
-xmin = np.min(y_pos) - 0.7
-xmax = np.max(y_pos) + 0.7
+style = {}
+style["rotation"]         = -45
+style["legend_ncols"]     = 2
+style["bar_width_wide"]   = 0.7
+style["bar_width_medium"] = 0.3
+style["bar_width_narrow"] = 0.2
+style["offsets"]          = [-0.25, 0, 0.25]
+style["colors"]           = ["grey", "w", "k", "lightgrey"]
 
-offset_array = [-0.3,0,0.3]
-width = 0.2
-colors = ["grey", "w", "k"]
+style["fontsize"] = {}
+style["fontsize"]["xticks"]     = 14
+style["fontsize"]["yticks"]     = 14
+style["fontsize"]["xlabel"]     = 18
+style["fontsize"]["ylabel"]     = 16
+style["fontsize"]["title"]      = 16
+style["fontsize"]["legend"]     = 11
+style["fontsize"]["text_label"] = 18
 
-#Maximum takeoff weight
-plt.subplot(2,2,1)
-for i,config in enumerate(configs):
-	for j,time_frame in enumerate(configs[config]):
-		c = configs[config][time_frame]
-		offset = offset_array[j]
-		TOGW = c["TOGW"].to(ureg.lbf).magnitude
+#Maximum takeoff mass
+plt.subplot(2,3,1)
+for i, config in enumerate(configs):
+	for j, time_frame in enumerate(configs[config]):
+		
+		c      = configs[config][time_frame]
+		offset = style["offsets"][j]
+		TOGM   = c["TOGM"].to(ureg.kg).magnitude
 
-		if (i == 0):
-			label = time_frame
-			plt.bar(i+offset,TOGW,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k',label=label)
+		if i==0:
+			plt.bar(i+offset, TOGM, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k', label=time_frame)
 		else:
-			plt.bar(i+offset,TOGW,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k')
+			plt.bar(i+offset, TOGM, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
 
 plt.grid()
+[xmin,xmax] = plt.gca().get_xlim()
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.1*ymax)
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.yticks(fontsize=12)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Takeoff Gross Weight",fontsize = 18)
-plt.legend(loc='upper right',framealpha=1,fontsize = 12)
+plt.ylim(ymax=1.0*ymax)
+plt.xticks(y_pos, labels, rotation=style["rotation"], fontsize=style["fontsize"]["xticks"])
+plt.yticks(fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Mass (kg)', fontsize=style["fontsize"]["ylabel"])
+plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
+plt.legend(loc='lower right', framealpha=1, fontsize=style["fontsize"]["legend"])
 
 
+# Cost per seat km
+plt.subplot(2,3,2)
+for i, config in enumerate(configs):
+	for j, time_frame in enumerate(configs[config]):
+		
+		c      = configs[config][time_frame]
+		offset = style["offsets"][j]
+		cpsk   = c["cost_per_seat_mile"].to(ureg.mile**-1).magnitude
+
+		if i==0:
+			plt.bar(i+offset, cpsk, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k', label=time_frame)
+		else:
+			plt.bar(i+offset, cpsk, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
+
+plt.grid()
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.3*ymax)
+plt.xticks(y_pos, labels, rotation=style["rotation"], fontsize=style["fontsize"]["xticks"])
+plt.yticks(fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Cost ($US/km)', fontsize=style["fontsize"]["ylabel"])
+plt.title("Cost per Seat Kilometer", fontsize=style["fontsize"]["title"])
+plt.legend(loc='upper right', framealpha=1, fontsize=style["fontsize"]["legend"])
+
+
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.08,right=0.99,bottom=0.10,top=0.88)
+plt.savefig('time_frame_plot_01.pdf')
+
+"""
 #Battery weight
 plt.subplot(2,2,2)
 for i,config in enumerate(configs):
@@ -459,3 +505,4 @@ plt.suptitle(title_str,fontsize = 14)
 plt.tight_layout()
 plt.subplots_adjust(left=0.07,right=0.99,bottom=0.10,top=0.88)
 plt.savefig('time_frame_plot_02_costBreakdown.pdf')
+"""

@@ -13,7 +13,7 @@ from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
 from study_input_data import generic_data, configuration_data
 from noise_models import vortex_noise
 from scipy.interpolate import interp2d
-
+from copy import deepcopy
 
 #Data from Boeing study
 boeing_data = {}
@@ -33,8 +33,8 @@ boeing_data["Helicopter"]["T/A"] = 4.1*ureg("lbf")/ureg("ft")**2
 '''
 
 #Instantiate arrays
-numrows = 6
-L_D_array = np.linspace(7,15,numrows)
+numrows = 4
+L_D_array = np.linspace(9,15,numrows)
 T_A_array = np.linspace(4,16,numrows)
 L_D_array, T_A_array = np.meshgrid(L_D_array, T_A_array)
 T_A_array = T_A_array*ureg.lbf/ureg.ft**2
@@ -45,7 +45,7 @@ SPL_array = np.zeros(np.shape(L_D_array))
 SPL_A_array = np.zeros(np.shape(L_D_array))
 
 #Optimize 
-configs = configuration_data.copy()
+configs = deepcopy(configuration_data)
 del configs["Tilt duct"]
 del configs["Multirotor"]
 del configs["Autogyro"]
@@ -147,33 +147,38 @@ for i, T_A in enumerate(T_A_array[:,0]):
 			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
 			weighting="A")
 
-TOGW_array = TOGW_array*ureg.lbf
+		print "T/A = %0.4f lbf/ft^2; L/D = %0.4f; cptpp = $%0.2f" \
+			% (solution("T/A_OnDemandSizingMission").to(ureg.lbf/ureg.ft**2).magnitude, solution("L_D_cruise"), solution("cost_per_trip_per_passenger"))
 
+		# print "cptpp values: $%0.2f, $%0.2f, $%0.2f" % (cptpp_array[i,j], solution("cost_per_trip_per_passenger"), solution("cost_per_trip_per_passenger_OnDemandMissionCost"))
+
+
+TOGW_array = TOGW_array*ureg.lbf
 
 #Add Boeing inputs to configs
 for config in boeing_data:
-	label = config + " (Boeing)"
+	label = config + " (Duffy et al.)"
 	configs[label] = boeing_data[config]
 
 	
 #Set up the bilinear interpolation functions
-cptpp_interp = interp2d(L_D_array,T_A_array.to(ureg.lbf/ureg.ft**2).magnitude,\
+cptpp_interp = interp2d(L_D_array,T_A_array.to(ureg.N/ureg.m**2).magnitude,\
 	cptpp_array,kind="cubic")
-SPL_A_interp = interp2d(L_D_array,T_A_array.to(ureg.lbf/ureg.ft**2).magnitude,\
+SPL_A_interp = interp2d(L_D_array,T_A_array.to(ureg.N/ureg.m**2).magnitude,\
 	SPL_A_array,kind="cubic")
 	
 	
 #Estimated cptpp and SPL_A
 for config in configs:
 	L_D = configs[config]["L/D"]
-	T_A = configs[config]["T/A"].to(ureg.lbf/ureg.ft**2)
+	T_A = configs[config]["T/A"].to(ureg.N/ureg.m**2)
 	
 	configs[config]["cptpp"] = cptpp_interp(L_D,T_A)
 	configs[config]["SPL_A"] = SPL_A_interp(L_D,T_A)
 
 #Generate sizing plot
 plt.ion()
-fig1 = plt.figure(figsize=(12,12), dpi=80)
+fig1 = plt.figure(figsize=(11,5), dpi=80)
 plt.show()
 
 style = {}
@@ -190,7 +195,7 @@ for i,L_D in enumerate(L_D_array[0,:]):
 	x = cptpp_row[0]
 	y = SPL_A_row[0]
 	label = "L/D = %0.1f" % L_D
-	plt.text(x+0.3,y-0.3,label,fontsize=16,rotation=-45)
+	plt.text(x-5,y-1,label,fontsize=16,rotation=45)
 
 #Second set of lines
 for i,T_A in enumerate(T_A_array[:,0]):
@@ -200,70 +205,35 @@ for i,T_A in enumerate(T_A_array[:,0]):
 	
 	x = cptpp_row[-1]
 	y = SPL_A_row[-1]
-	label = "T/A = %0.1f lbf/ft$^2$" % T_A.to(ureg.lbf/ureg.ft**2).magnitude
-	plt.text(x-18.5,y-0.2,label,fontsize=16,rotation=0)
+	label = "T/A = %0.0f N/m$^2$" % T_A.to(ureg.N/ureg.m**2).magnitude
+	plt.text(x-11,y-0.2,label,fontsize=16,rotation=0)
 
 #Configuration data
 for i,config in enumerate(configs):
 	cptpp = configs[config]["cptpp"]
 	SPL_A = configs[config]["SPL_A"]
 	plt.plot(cptpp,SPL_A,'k',marker=style["marker"][i],fillstyle=style["fillstyle"][i],\
-		markersize=style["markersize"],markeredgewidth=3,label=config)
+		linestyle="None", markersize=style["markersize"],markeredgewidth=3,label=config)
 	
 plt.grid()
 [xmin,xmax] = plt.gca().get_xlim()
-plt.xlim(xmin=xmin-15,xmax=xmax+1)
+plt.xlim(xmin=xmin-10,xmax=xmax+3)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymin=ymin-1.5)
+plt.ylim(ymin=ymin-5,ymax=ymax+1)
 
 locs,labels = plt.xticks()
 new_xticks = [""]*len(locs)
 for i,loc in enumerate(locs):
-	new_xticks[i] = "\$%0.2f" % loc
+	new_xticks[i] = "\$%0.0f" % loc
 plt.xticks(locs,new_xticks,fontsize=16)
 plt.yticks(fontsize=18)
 
-plt.xlabel('Cost per trip, per passenger', fontsize = 20)
+plt.xlabel('Cost per trip, per passenger', fontsize=20)
 plt.ylabel('SPL (dBA)', fontsize = 20)
-plt.legend(numpoints = 1,loc='upper left',fontsize = 15)
+plt.legend(numpoints = 1,loc='lower right', framealpha=1, fontsize = 14)
 
-if generic_data["reserve_type"] == "FAA_aircraft" or generic_data["reserve_type"] == "FAA_heli":
-	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if generic_data["reserve_type"] == "FAA_aircraft":
-		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter)" % num
-	elif generic_data["reserve_type"] == "FAA_heli":
-		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter)" % num
-elif generic_data["reserve_type"] == "Uber":
-	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
-	reserve_type_string = " (%0.0f-nm diversion distance)" % num
-
-if generic_data["autonomousEnabled"]:
-	autonomy_string = "autonomy enabled"
-else:
-	autonomy_string = "pilot required"
-
-
-title_str = "Aircraft parameters: empty weight fraction = %0.2f; battery energy density = %0.0f Wh/kg; cruising speed = %0.0f mph\n" \
-	% (c["weight_fraction"], generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude,\
-		c["V_{cruise}"].to(ureg.mph).magnitude) \
-	+ "%0.0f rotors; %0.0f rotor blades; mean lift coefficient = %0.1f; %s. %s configuration.\n" \
-	% (c["N"], B, c["Cl_{mean_{max}}"], autonomy_string, sizing_plot_config) \
-	+ "Sizing mission (%s): range = %0.0f nmi; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (generic_data["sizing_mission"]["type"], generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
-	 generic_data["sizing_mission"]["N_{passengers}"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
-	+ reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (generic_data["revenue_mission"]["type"], generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["revenue_mission"]["N_{passengers}"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
-	 generic_data["charger_power"].to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
-	% (generic_data["deadhead_mission"]["type"], generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["deadhead_mission"]["N_{passengers}"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
-	 generic_data["deadhead_ratio"])
-
-plt.title(title_str,fontsize = 13)
 plt.tight_layout()
-plt.subplots_adjust(left=0.07,right=0.945,bottom=0.06,top=0.89)
+plt.subplots_adjust(left=0.10,right=0.97,bottom=0.14,top=0.97)
 plt.savefig('sizing_plot_01.pdf')
 
 

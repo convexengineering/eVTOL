@@ -81,15 +81,48 @@ for i,CT in enumerate(gp_model_data["CT"]):
 #Plotting commands
 
 plt.ion()
-fig1 = plt.figure(figsize=(12,6), dpi=80)
+fig1 = plt.figure(figsize=(5,8), dpi=80)
 plt.show()
 
 style = {}
 style["linestyle"] = ["-","--"]
 style["markersize"] = 10
 
+style["fontsize"] = {}
+style["fontsize"]["xticks"]     = 16
+style["fontsize"]["yticks"]     = 16
+style["fontsize"]["xlabel"]     = 18
+style["fontsize"]["ylabel"]     = 18
+style["fontsize"]["title"]      = 24
+style["fontsize"]["suptitle"]   = 20
+style["fontsize"]["legend"]     = 16
+style["fontsize"]["text_label"] = 18
+
+
+# Power Coefficient
+ax = plt.subplot(2,1,1)
+for i,ki in enumerate(gp_model_data["ki"]):
+	data_label = "GP model ($k_i$ = %0.2f)" % ki
+	plt.plot(gp_model_data["CT"], gp_model_data["CP"][:,i],color="black",
+		linestyle=style["linestyle"][i],linewidth=2,label=data_label)
+
+plt.plot(test_data["CT"], test_data["CP"],color="black",marker='o',linestyle="none",
+	fillstyle="full",markersize=style["markersize"],label="Test data")
+
+plt.grid()
+plt.xlim(xmin=0)
+plt.ylim(ymin=0)
+[xmin,xmax] = plt.gca().get_xlim()
+plt.xticks(np.arange(xmin, xmax, 0.005),fontsize=style["fontsize"]["xticks"])
+[ymin,ymax] = plt.gca().get_ylim()
+plt.yticks(np.arange(ymin, 1.1*ymax, 0.0005),fontsize=style["fontsize"]["yticks"])
+ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+plt.xlabel('Thrust coefficient', fontsize=style["fontsize"]["xlabel"])
+plt.ylabel('Power coefficient', fontsize=style["fontsize"]["ylabel"])
+plt.title("Power Coefficient",fontsize=style["fontsize"]["title"])
+
 #Figure of Merit
-plt.subplot(1,2,1)
+plt.subplot(2,1,2)
 for i,ki in enumerate(gp_model_data["ki"]):
 	data_label = "GP model ($k_i$ = %0.2f)" % ki
 	plt.plot(gp_model_data["CT"],gp_model_data["FOM"][:,i],color="black",
@@ -102,40 +135,15 @@ plt.grid()
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
 [xmin,xmax] = plt.gca().get_xlim()
-plt.xticks(np.arange(xmin, xmax, 0.005),fontsize=12)
+plt.xticks(np.arange(xmin, xmax, 0.005), fontsize=style["fontsize"]["xticks"])
 [ymin,ymax] = plt.gca().get_ylim()
-plt.yticks(np.arange(ymin, 1.1*ymax, 0.1),fontsize=12)
-plt.xlabel('Thrust coefficient', fontsize = 20)
-plt.ylabel('Figure of merit', fontsize = 20)
-plt.title("Figure of Merit",fontsize = 24)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 18,framealpha=1)
+plt.yticks(np.arange(ymin, 1.1*ymax, 0.1),fontsize=style["fontsize"]["yticks"])
+plt.xlabel('Thrust coefficient', fontsize=style["fontsize"]["xlabel"])
+plt.ylabel('Figure of merit', fontsize=style["fontsize"]["ylabel"])
+plt.title("Figure of Merit",fontsize = style["fontsize"]["title"])
+plt.legend(numpoints = 1,loc='lower right', fontsize=style["fontsize"]["legend"],framealpha=1)
 
 
-plt.subplot(1,2,2)
-for i,ki in enumerate(gp_model_data["ki"]):
-	data_label = "GP model ($k_i$ = %0.2f)" % ki
-	plt.plot(gp_model_data["CT"],gp_model_data["CP"][:,i],color="black",
-		linestyle=style["linestyle"][i],linewidth=2,label=data_label)
-
-plt.plot(test_data["CT"],test_data["CP"],color="black",marker='o',linestyle="none",
-	fillstyle="full",markersize=style["markersize"],label="Test data")
-
-plt.grid()
-plt.xlim(xmin=0)
-plt.ylim(ymin=0)
-[xmin,xmax] = plt.gca().get_xlim()
-plt.xticks(np.arange(xmin, xmax, 0.005),fontsize=12)
-[ymin,ymax] = plt.gca().get_ylim()
-plt.yticks(np.arange(ymin, 1.1*ymax, 0.0005),fontsize=12)
-plt.xlabel('Thrust coefficient', fontsize = 20)
-plt.ylabel('Power coefficient', fontsize = 20)
-plt.title("Power Coefficient",fontsize = 24)
-plt.legend(numpoints = 1,loc='lower right', fontsize = 18,framealpha=1)
-
-
-title_str = "Rotor Aerodynamic Model Validation (s = %0.3f; $C_{d_0}$ = %0.2f)"\
-	% (gp_model_data["s"], gp_model_data["Cd0"])
-plt.suptitle(title_str,fontsize = 26)
 plt.tight_layout()
-plt.subplots_adjust(left=0.06,right=0.98,bottom=0.1,top=0.85)
+plt.subplots_adjust(left=0.18,right=0.95,bottom=0.08,top=0.95)
 plt.savefig('rotor_validation_plot_01.pdf')

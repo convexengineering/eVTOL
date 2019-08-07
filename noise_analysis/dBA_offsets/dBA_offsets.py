@@ -48,7 +48,7 @@ for i,f_peak in enumerate(f_peak_array):
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(12,6), dpi=80)
+fig1 = plt.figure(figsize=(6, 5), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 

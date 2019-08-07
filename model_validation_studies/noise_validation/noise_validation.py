@@ -79,52 +79,50 @@ for heli in test_data:
 	t_c = heli_info[heli]["t_c"]
 	St = heli_info[heli]["St"]
 	
-	for i,data in enumerate(test_data[heli]):
+	for j,data in enumerate(test_data[heli]):
 	
-		test_data[heli][i]["SPL_calculated"] = np.zeros(np.size(test_data[heli][i]["T"]))
+		test_data[heli][j]["SPL_calculated"] = np.zeros(np.size(test_data[heli][j]["T"]))
 		
-		omega_rad_s = test_data[heli][i]["omega"].to(ureg.radian/ureg.s)
+		omega_rad_s = test_data[heli][j]["omega"].to(ureg.radian/ureg.s)
 		omega_rad_s = (omega_rad_s.magnitude)*ureg.s**-1
 		VT = omega_rad_s*R
 		
-		for j,T in enumerate(test_data[heli][i]["T"]):
+		for k,T in enumerate(test_data[heli][j]["T"]):
 		
 			CT = (T / (0.5*rho*(VT**2)*A)).to(ureg.dimensionless)
 			Cl_mean = 3*CT/s
 			
 			f_peak, SPL, spectrum = vortex_noise(T_perRotor=T,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
 					N=1,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=t_c,St=St,weighting="None")
-			test_data[heli][i]["SPL_calculated"][j] = SPL
+			test_data[heli][j]["SPL_calculated"][k] = SPL
 
 
 #Plotting commands
 
 plt.ion()
-fig1 = plt.figure(figsize=(12,12), dpi=80)
+fig1 = plt.figure(figsize=(11, 6), dpi=80)
 plt.show()
 
-style = {}
-style["linestyle"] = ["-","--","-."]
+style               = {}
+style["linestyle"]  = ["-","--","-."]
 style["markersize"] = 10
 
 
-for j, heli in enumerate(test_data):
+for i, heli in enumerate(test_data):
 	
-	for i,data in enumerate(test_data[heli]):
+	for j, data in enumerate(test_data[heli]):
 		
-		plt.subplot(3,2,2*i+j+1)
+		plt.subplot(2,3,3*i+j+1)
 	
-		omega = test_data[heli][i]["omega"].to(ureg.rpm).magnitude
+		omega          = test_data[heli][j]["omega"].to(ureg.rpm).magnitude
+		T              = test_data[heli][j]["T"].to(ureg.lbf).magnitude/1e3
+		SPL_calculated = test_data[heli][j]["SPL_calculated"]
+		SPL_measured   = test_data[heli][j]["SPL_measured"]
 		
-		T = test_data[heli][i]["T"].to(ureg.lbf).magnitude/1e3
-		SPL_calculated = test_data[heli][i]["SPL_calculated"]
-		SPL_measured = test_data[heli][i]["SPL_measured"]
-		max_SPL_error = np.max(np.abs(SPL_calculated-SPL_measured))
+		max_SPL_error  = np.max(np.abs(SPL_calculated-SPL_measured))
 		
-		plt.plot(T,SPL_calculated,color="black",linestyle="-",linewidth=2,
-			marker="o",markersize=style["markersize"],label="Calculated")
-		plt.plot(T,SPL_measured,color="black",linestyle="-",linewidth=2,
-			marker="s",markersize=style["markersize"],label="Measured")
+		plt.plot(T,SPL_calculated, color="black", linestyle="-", linewidth=2, marker="o", markersize=style["markersize"], label="Calculated")
+		plt.plot(T,SPL_measured,   color="black", linestyle="-", linewidth=2, marker="s", markersize=style["markersize"], label="Measured")
 		
 		[ymin,ymax] = plt.gca().get_ylim()
 		plt.ylim(ymin=ymin-1,ymax=ymax+1)
@@ -135,15 +133,14 @@ for j, heli in enumerate(test_data):
 		plt.ylabel('SPL (dB)', fontsize = 16)
 		
 		title_str = heli \
-			+ " (%0.0f rpm; max error = %0.1f dB)" \
+			+ " at %0.0f rpm \n(max error = %0.1f dB)" \
 			% (omega, max_SPL_error)
-		plt.title(title_str,fontsize = 18)
-		plt.legend(numpoints = 2,loc='lower right', fontsize = 14,framealpha=1)
+		plt.title(title_str,fontsize = 16)
+		
+		if i == j == 0:
+			plt.legend(numpoints = 2,loc='lower right', fontsize = 14,framealpha=1)
 		
 
-title_str = "Noise Model Validation ($\Delta S$ = %0.0f ft)" \
-	% generic_inputs["delta_S"].to(ureg.ft).magnitude
-plt.suptitle(title_str,fontsize = 26)
 plt.tight_layout()
-plt.subplots_adjust(left=0.06,right=0.98,bottom=0.05,top=0.92)
+plt.subplots_adjust(left=0.06,right=0.99,bottom=0.09,top=0.90)
 plt.savefig('noise_validation_plot_01.pdf')

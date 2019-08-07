@@ -39,7 +39,7 @@ generic_data["revenue_mission"]["t_{hover}"] = 30*ureg.s
 
 generic_data["deadhead_mission"] = {}
 generic_data["deadhead_mission"]["type"] = "autonomous"
-generic_data["deadhead_mission"]["N_{passengers}"] = 0.001
+generic_data["deadhead_mission"]["N_{passengers}"] = 0.002
 generic_data["deadhead_mission"]["range"] = 30.*ureg.nautical_mile
 generic_data["deadhead_mission"]["t_{hover}"] = 30*ureg.s
 
@@ -51,8 +51,8 @@ configs_OutOfOrder["Multirotor"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Multirotor"]["Cl_{mean_{max}}"] = 0.6
 configs_OutOfOrder["Multirotor"]["N"] = 8
 configs_OutOfOrder["Multirotor"]["loiter_type"] = "level_flight"
-configs_OutOfOrder["Multirotor"]["tailRotor_power_fraction_hover"] = 0.001
-configs_OutOfOrder["Multirotor"]["tailRotor_power_fraction_levelFlight"] = 0.001
+configs_OutOfOrder["Multirotor"]["tailRotor_power_fraction_hover"] = 0.002
+configs_OutOfOrder["Multirotor"]["tailRotor_power_fraction_levelFlight"] = 0.002
 configs_OutOfOrder["Multirotor"]["weight_fraction"] = 0.43
 
 configs_OutOfOrder["Autogyro"] = {}
@@ -62,8 +62,8 @@ configs_OutOfOrder["Autogyro"]["T/A"] = 3.75*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Autogyro"]["Cl_{mean_{max}}"] = 0.8
 configs_OutOfOrder["Autogyro"]["N"] = 1
 configs_OutOfOrder["Autogyro"]["loiter_type"] = "level_flight"
-configs_OutOfOrder["Autogyro"]["tailRotor_power_fraction_hover"] = 0.001
-configs_OutOfOrder["Autogyro"]["tailRotor_power_fraction_levelFlight"] = 0.001
+configs_OutOfOrder["Autogyro"]["tailRotor_power_fraction_hover"] = 0.002
+configs_OutOfOrder["Autogyro"]["tailRotor_power_fraction_levelFlight"] = 0.002
 configs_OutOfOrder["Autogyro"]["weight_fraction"] = 0.5
 
 configs_OutOfOrder["Helicopter"] = {}
@@ -84,8 +84,8 @@ configs_OutOfOrder["Tilt duct"]["T/A"] = 40*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Tilt duct"]["Cl_{mean_{max}}"] = 1.0
 configs_OutOfOrder["Tilt duct"]["N"] = 36
 configs_OutOfOrder["Tilt duct"]["loiter_type"] = "level_flight"
-configs_OutOfOrder["Tilt duct"]["tailRotor_power_fraction_hover"] = 0.001
-configs_OutOfOrder["Tilt duct"]["tailRotor_power_fraction_levelFlight"] = 0.001
+configs_OutOfOrder["Tilt duct"]["tailRotor_power_fraction_hover"] = 0.002
+configs_OutOfOrder["Tilt duct"]["tailRotor_power_fraction_levelFlight"] = 0.002
 configs_OutOfOrder["Tilt duct"]["weight_fraction"] = 0.55
 
 configs_OutOfOrder["Coaxial heli"] = {}
@@ -95,8 +95,8 @@ configs_OutOfOrder["Coaxial heli"]["T/A"] = 7*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Coaxial heli"]["Cl_{mean_{max}}"] = 0.6
 configs_OutOfOrder["Coaxial heli"]["N"] = 2
 configs_OutOfOrder["Coaxial heli"]["loiter_type"] = "level_flight"
-configs_OutOfOrder["Coaxial heli"]["tailRotor_power_fraction_hover"] = 0.001
-configs_OutOfOrder["Coaxial heli"]["tailRotor_power_fraction_levelFlight"] = 0.001
+configs_OutOfOrder["Coaxial heli"]["tailRotor_power_fraction_hover"] = 0.002
+configs_OutOfOrder["Coaxial heli"]["tailRotor_power_fraction_levelFlight"] = 0.002
 configs_OutOfOrder["Coaxial heli"]["weight_fraction"] = 0.43
 
 configs_OutOfOrder["Lift + cruise"] = {}
@@ -106,8 +106,8 @@ configs_OutOfOrder["Lift + cruise"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Lift + cruise"]["Cl_{mean_{max}}"] = 1.0
 configs_OutOfOrder["Lift + cruise"]["N"] = 8
 configs_OutOfOrder["Lift + cruise"]["loiter_type"] = "level_flight"
-configs_OutOfOrder["Lift + cruise"]["tailRotor_power_fraction_hover"] = 0.001
-configs_OutOfOrder["Lift + cruise"]["tailRotor_power_fraction_levelFlight"] = 0.001
+configs_OutOfOrder["Lift + cruise"]["tailRotor_power_fraction_hover"] = 0.002
+configs_OutOfOrder["Lift + cruise"]["tailRotor_power_fraction_levelFlight"] = 0.002
 configs_OutOfOrder["Lift + cruise"]["weight_fraction"] = 0.53
 
 configs_OutOfOrder["Tilt wing"] = {}
@@ -117,8 +117,8 @@ configs_OutOfOrder["Tilt wing"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Tilt wing"]["Cl_{mean_{max}}"] = 1.0
 configs_OutOfOrder["Tilt wing"]["N"] = 8
 configs_OutOfOrder["Tilt wing"]["loiter_type"] = "level_flight"
-configs_OutOfOrder["Tilt wing"]["tailRotor_power_fraction_hover"] = 0.001
-configs_OutOfOrder["Tilt wing"]["tailRotor_power_fraction_levelFlight"] = 0.001
+configs_OutOfOrder["Tilt wing"]["tailRotor_power_fraction_hover"] = 0.002
+configs_OutOfOrder["Tilt wing"]["tailRotor_power_fraction_levelFlight"] = 0.002
 configs_OutOfOrder["Tilt wing"]["weight_fraction"] = 0.55
 
 configs_OutOfOrder["Compound heli"] = {}
@@ -139,8 +139,8 @@ configs_OutOfOrder["Tilt rotor"]["T/A"] = 15*ureg("lbf")/ureg("ft")**2
 configs_OutOfOrder["Tilt rotor"]["Cl_{mean_{max}}"] = 1.0
 configs_OutOfOrder["Tilt rotor"]["N"] = 12
 configs_OutOfOrder["Tilt rotor"]["loiter_type"] = "level_flight"
-configs_OutOfOrder["Tilt rotor"]["tailRotor_power_fraction_hover"] = 0.001
-configs_OutOfOrder["Tilt rotor"]["tailRotor_power_fraction_levelFlight"] = 0.001
+configs_OutOfOrder["Tilt rotor"]["tailRotor_power_fraction_hover"] = 0.002
+configs_OutOfOrder["Tilt rotor"]["tailRotor_power_fraction_levelFlight"] = 0.002
 configs_OutOfOrder["Tilt rotor"]["weight_fraction"] = 0.55
 
 #Put configurations in desired order

@@ -7,9 +7,19 @@ from gpkit.constraints.bounded import Bounded
 from standard_atmosphere import stdatmo
 
 class OnDemandAircraft(Model):
+	
 	def setup(self,autonomousEnabled=False):
+
+		self.rotors           = rotors           = Rotors()
+		self.battery          = battery          = Battery()
+		self.structure        = structure        = Structure(self)
+		self.electricalSystem = electricalSystem = ElectricalSystem()
+		self.avionics         = avionics         = Avionics(autonomousEnabled=autonomousEnabled)
+
+
 		
-		TOGW = Variable("TOGW","lbf","Aircraft takeoff gross weight")
+		TOGW    = Variable("TOGW", "lbf", "Aircraft takeoff gross weight")
+		TOGM    = Variable("TOGM", "kg",  "Aircraft takeoff gross mass")
 		W_empty = Variable("W_{empty}","lbf","Weight without passengers or crew")
 		C_eff = Variable("C_{eff}","kWh","Effective battery capacity")
 		g = Variable("g",9.807,"m/s**2","Gravitational acceleration")
@@ -43,13 +53,10 @@ class OnDemandAircraft(Model):
 		self.purchase_price = purchase_price
 		self.vehicle_life = vehicle_life
 
-		self.rotors = Rotors()
-		self.battery = Battery()
-		self.structure = Structure(self)
-		self.electricalSystem = ElectricalSystem()
-		self.avionics = Avionics(autonomousEnabled=autonomousEnabled)
+		
 
-		self.components = [self.rotors,self.battery,self.structure,self.electricalSystem,self.avionics]
+		self.components      = [self.rotors,self.battery,self.structure,self.electricalSystem,self.avionics]
+		self.mass_components = [self.battery,self.structure]
 		
 		constraints = []
 		
@@ -60,7 +67,9 @@ class OnDemandAircraft(Model):
 
 		constraints += [C_eff == self.battery.C_eff]#battery-capacity constraint
 		constraints += [W_empty >= sum(c.W for c in self.components)]#weight constraint
+		constraints += [c.W == g * c.m for c in self.mass_components]#weight constraint
 		constraints += [purchase_price == cost_per_weight*self.structure.W]
+		constraints += [TOGW == g * TOGM]
 
 		return constraints
 
@@ -70,9 +79,11 @@ class Structure(Model):
 		TOGW = aircraft.TOGW
 		
 		W = Variable("W","lbf","Empty weight")
+		m = Variable("m","kg","Empty mass")
 		weight_fraction = Variable("weight_fraction","-","Empty weight fraction")
 		
 		self.W = W
+		self.m = m
 		self.weight_fraction = weight_fraction
 
 		return [W == weight_fraction*TOGW]
@@ -245,7 +256,7 @@ class Battery(Model):
 
 		constraints = []
 
-		constraints += [C==m*C_m, W==m*g]
+		constraints += [C==m*C_m]
 		constraints += [C_eff == usable_energy_fraction*C, P_max==P_m*m]
 		constraints += [purchase_price == cost_per_C*C]
 
@@ -1260,8 +1271,8 @@ if __name__=="__main__":
 	problem_subDict.update({
 		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
 		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
-		Aircraft.tailRotor_power_fraction_hover: 0.001,
-		Aircraft.tailRotor_power_fraction_levelFlight: 0.001,
+		Aircraft.tailRotor_power_fraction_hover: 0.1, #  TODO: fix.
+		Aircraft.tailRotor_power_fraction_levelFlight: 0.1, #  TODO: fix.
 		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
 		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
 		Aircraft.rotors.N: 12, #number of propellers
@@ -1295,7 +1306,7 @@ if __name__=="__main__":
 		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
 		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
 		DeadheadMission.t_hover: 30*ureg.s,#hover time
-		DeadheadMission.passengers.N_passengers: 0.001,#Number of passengers
+		DeadheadMission.passengers.N_passengers: 0.1,#Number of passengers TODO: fix.
 		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
 	})
 
@@ -1313,8 +1324,16 @@ if __name__=="__main__":
 	problem = Model(MissionCost["cost_per_trip"],
 		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
 	problem.substitutions.update(problem_subDict)
-	solution = problem.solve(verbosity=0)
 
+	for i in range(20):
+		solution = problem.solve(verbosity=0)
+
+		cpsk = solution("cost_per_seat_mile").to(ureg.km**-1).magnitude
+
+		print "Cost per seat km: $%0.2f" % cpsk
+
+
+	"""
 	delta_S = 500*ureg.ft
 	noise_weighting = "A"
 	B = 5
@@ -1454,6 +1473,7 @@ if __name__=="__main__":
 		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/MaintenanceCost")
 	print "Energy cost, per trip: $%0.2f" % \
 		solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/EnergyCost")
+	"""
 	
 	#print solution.summary()
 	

@@ -487,3 +487,95 @@ plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_04.pdf')
+
+
+
+# Plot showing noise spectra (both rotational & vortex) for a sample value of y. Lift+cruise vehicle only.
+fig5 = plt.figure(figsize=(6,5), dpi=80)
+plt.rc('axes', axisbelow=True)
+plt.show()
+
+ax = plt.subplot(1,1,1)
+ax.set_axisbelow(True)
+
+#Find value of y closest to that desired
+y_desired = 200*ureg.m
+idx = (np.abs(y_array - y_desired)).argmin()
+y_selected = y_array[idx]
+
+c = configs["Lift + cruise"]
+	
+#Rotational noise (1st harmonic only)
+rotational_f     = c["y"]["rotational"]["spectrum"][idx]["f"][0]
+rotational_SPL   = c["y"]["rotational"]["spectrum"][idx]["SPL"][0]
+rotational_SPL_A = noise_weighting(rotational_f,rotational_SPL)
+
+#Vortex noise
+vortex_f_spectrum     = c["y"]["vortex"]["spectrum"][idx]["f"]
+vortex_SPL_spectrum   = c["y"]["vortex"]["spectrum"][idx]["SPL"]
+vortex_SPL_A_spectrum = noise_weighting(vortex_f_spectrum,vortex_SPL_spectrum)
+
+#A-weighting spectrum
+f_min_rev_per_s = rotational_f.to(ureg.turn/ureg.s).magnitude
+f_max_rev_per_s = np.max(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude)
+f_dBA_offset    = np.linspace(f_min_rev_per_s,f_max_rev_per_s,100)*ureg.turn/ureg.s
+dBA_offset      = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
+
+ax.bar(rotational_f.to(ureg.turn/ureg.s).magnitude,rotational_SPL,align="center", color='k', width=0.3*rotational_f.to(ureg.turn/ureg.s).magnitude, label="Rotational noise")
+ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum, 'k-',linewidth=2,label="Vortex noise")
+plt.grid(zorder=0)
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+plt.xlabel('Frequency (Hz)', fontsize=16)
+plt.ylabel('SPL (dB)', fontsize = 16)
+	
+#ymax = np.max(SPL_spectrum) + 5
+#plt.ylim(ymax=ymax)
+
+ax2 = ax.twinx()
+ax2.set_axisbelow(True)
+ax2.plot(f_dBA_offset.to(ureg.turn/ureg.s).magnitude,dBA_offset,'k--',linewidth=2,
+	label="A-weighting offset")
+plt.ylabel('SPL offset (dBA)', fontsize=16)
+	
+plt.xscale('log')
+ax2.tick_params(axis="y", labelsize=16)
+subtitle_str = "Noise spectrum at y = %0.0f m \n(lift + cruise configuration)" % y_selected.to(ureg.m).magnitude
+plt.title(subtitle_str, fontsize = 18)
+
+lines, labels = ax.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax2.legend(lines + lines2, labels + labels2, fontsize=16, loc="lower right", framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.12,right=0.85,bottom=0.14,top=0.88)
+plt.savefig('config_tradeStudy_noise_analysis_plot_05.pdf')
+
+
+# Plot showing A-weighted noise. Lift+cruise vehicle only.
+fig6 = plt.figure(figsize=(6,5), dpi=80)
+plt.rc('axes', axisbelow=True)
+plt.show()
+
+f_fund           = c["y"]["rotational"]["f_fund"][0]
+SPL_rotational   = c["y"]["rotational"]["SPL"]
+SPL_rotational_A = c["y"]["rotational_A"]["SPL"]
+SPL_vortex_A     = c["y"]["vortex_A"]["SPL"]
+SPL_total_A      = c["y"]["total"]["SPL_A"]
+	
+plt.plot(y_array.to(ureg.m).magnitude,  SPL_rotational_A, 'k--',linewidth=3, label="Rotational noise")
+plt.plot(y_array.to(ureg.m).magnitude,  SPL_vortex_A,     linestyle="none",color="k",marker="o",fillstyle="full",markersize=10,label="Vortex noise")
+plt.plot(y_array.to(ureg.m).magnitude,  SPL_total_A,      'k-',linewidth=3, label="Total")
+	
+plt.grid()
+plt.ylim(ymin=0,ymax=max(SPL_total_A)+10)
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+plt.xlabel('y (m)', fontsize= 16)
+plt.ylabel('SPL (dBA)', fontsize=16)
+plt.title("SPL vs. Observer Location \n(lift + cruise configuration)", fontsize=18)
+plt.legend(loc="lower right", fontsize=16,framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.12,right=0.99,bottom=0.13,top=0.88)
+plt.savefig('config_tradeStudy_noise_analysis_plot_06.pdf')
