@@ -2,17 +2,18 @@ Tabulated Data by Configuration
 
 Configuration		Lift + cruise	Compound heli	Tilt wing	Tilt rotor	Units
 
-Takeoff mass		1505.0		1457.6		1442.4		1326.7		kg
-Empty mass		797.6		728.8		793.3		729.7		kg
-Battery mass		349.0		370.5		290.8		238.7		kg
-Mission time		26.0		27.0		24.0		22.2		minutes
+Max takeoff mass	1504		1475		1441		1326		kg
+Airframe mass		796.9		737.7		792.7		729.2		kg
+Battery mass		348.3		379.4		290.2		238.3		kg
+Mission time		26.0		27.3		24.0		22.2		minutes
 Flight time		14.8		14.8		14.8		14.8		minutes
-Charging time		11.2		12.2		9.2		7.4		minutes
-Trip cost per passenger	64.5		66.7		57.7		51.2		dimensionless
-Cost per seat km	1.16		1.20		1.04		0.92		km**-1
+Charging time		11.1		12.5		9.2		7.4		minutes
+Trip cost per passenger	66.0		69.5		59.1		52.4		dimensionless
+Cost per passenger-km	1.19		1.25		1.06		0.94		km**-1
+Acquisition cost	731		690		718		661		$thousands
 Rotor tip speed		187.6		114.9		187.6		187.6		m/s
 Rotor tip Mach number	0.55		0.34		0.55		0.55		dimensionless
 Rotor figure of merit	0.78		0.76		0.78		0.78		dimensionless
 Hover SPL (unweighted)	72.9		63.3		72.7		72.3		dimensionless
 Hover SPL (A-weighted)	72.0		64.2		71.8		70.7		dimensionless
-Peak frequency		2336		317		2386		3047		turn/s
+Peak frequency		2337		315		2387		3048		turn/s

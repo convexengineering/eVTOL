@@ -1,13 +1,12 @@
-#Top-level aircraft model.
+# Cost models.
 
 import math
 import numpy as np
 from gpkit import Variable, Model, Vectorize, ureg
 
 from aircraft_models        import OnDemandAircraft
-from mission_models import OnDemandSizingMission, OnDemandRevenueMission, OnDemandDeadheadMission
+from mission_models         import OnDemandSizingMission, OnDemandRevenueMission, OnDemandDeadheadMission
 from standard_substitutions import on_demand_mission_cost_substitutions
-from standard_atmosphere import stdatmo
 
 pi = math.pi
 
@@ -275,16 +274,6 @@ if __name__ == "__main__":
 	problem            = Model(objective_function, [aircraft, sizing_mission, revenue_mission, deadhead_mission, mission_cost])
 	solution           = problem.solve(verbosity=0)
 
-	print "Maximum takeoff mass:   %0.8f kg"     % solution("MTOM").to(ureg.kg).magnitude
-	print "Cost per passenger km: $%0.4f per km" % solution("cost_per_passenger_km").to(ureg.km**-1).magnitude
-	print "Revenue  mission cost: $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost").to(ureg.dimensionless).magnitude
-	print "Deadhead mission cost: $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/DeadheadMissionCost").to(ureg.dimensionless).magnitude
-
-	print "Deadhead ratio: %0.4f" % solution("deadhead_ratio").to(ureg.dimensionless).magnitude
-	print "NdNr:           %0.4f" % solution("N_{deadhead}/N_{revenue}").to(ureg.dimensionless).magnitude
-
-	# print "Capital expenses:      $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses").to(ureg.dimensionless).magnitude
-	# print "Operating expenses:    $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses").to(ureg.dimensionless).magnitude
 
 	"""
 	delta_S = 500*ureg.ft

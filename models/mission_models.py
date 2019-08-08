@@ -465,5 +465,5 @@ if __name__ == "__main__":
 	problem            = Model(objective_function, [aircraft, sizing_mission])
 	solution           = problem.solve(verbosity=0)
 
-	print solution.table()
+	# print solution.table()
 	

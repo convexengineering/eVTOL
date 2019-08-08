@@ -3,6 +3,27 @@
 import numpy as np
 from gpkit import ureg
 
+from collections import OrderedDict
+
+# Generic data (i.e. for all configs)
+generic_data = {} 
+
+generic_data["autonomousEnabled"]        = True
+generic_data["isSizingMissionPiloted"]   = True
+generic_data["isRevenueMissionPiloted"]  = True
+generic_data["isDeadheadMissionPiloted"] = False
+generic_data["reserve"]                  = "20-minute loiter"
+
+generic_data["delta_S"]         = 500 * ureg.ft
+generic_data["Strouhal_number"] = 0.28
+
+
+configs = OrderedDict()
+configs["Lift + cruise"] = {}
+configs["Compound heli"] = {}
+configs["Tilt wing"]     = {}
+configs["Tilt rotor"]    = {}
+
 def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomousEnabled=True):
 
 	aircraft.substitutions.update({
@@ -47,8 +68,8 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 			aircraft.v_cruise:            50. * ureg.mph,
 			aircraft.L_D_cruise:          1.5,
 
-			aircraft.tailRotor_power_fraction_hover:       0.002,
-			aircraft.tailRotor_power_fraction_levelFlight: 0.002,
+			aircraft.tailRotor_power_fraction_hover:       0.001,
+			aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 
 			aircraft.rotors.N:           8.,
 			aircraft.rotors.T_A_max:     3.75 * ureg.lbf / ureg.ft**2,
@@ -61,8 +82,8 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 			aircraft.v_cruise:            100. * ureg.mph,
 			aircraft.L_D_cruise:          3.5,
 
-			aircraft.tailRotor_power_fraction_hover:       0.002,
-			aircraft.tailRotor_power_fraction_levelFlight: 0.002,
+			aircraft.tailRotor_power_fraction_hover:       0.001,
+			aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 
 			aircraft.rotors.N:           1,
 			aircraft.rotors.T_A_max:     3.75 * ureg.lbf / ureg.ft**2,
@@ -89,8 +110,8 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 			aircraft.v_cruise:            150. * ureg.mph,
 			aircraft.L_D_cruise:          10.,
 
-			aircraft.tailRotor_power_fraction_hover:       0.002,
-			aircraft.tailRotor_power_fraction_levelFlight: 0.002,
+			aircraft.tailRotor_power_fraction_hover:       0.001,
+			aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 
 			aircraft.rotors.N:           36.,
 			aircraft.rotors.T_A_max:     40. * ureg.lbf / ureg.ft**2,
@@ -103,8 +124,8 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 			aircraft.v_cruise:            150. * ureg.mph,
 			aircraft.L_D_cruise:          5.5,
 
-			aircraft.tailRotor_power_fraction_hover:       0.002,
-			aircraft.tailRotor_power_fraction_levelFlight: 0.002,
+			aircraft.tailRotor_power_fraction_hover:       0.001,
+			aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 
 			aircraft.rotors.N:           2.0,
 			aircraft.rotors.T_A_max:     7. * ureg.lbf / ureg.ft**2,
@@ -117,8 +138,8 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 			aircraft.v_cruise:            150. * ureg.mph,
 			aircraft.L_D_cruise:          10.,
 
-			aircraft.tailRotor_power_fraction_hover:       0.002,
-			aircraft.tailRotor_power_fraction_levelFlight: 0.002,
+			aircraft.tailRotor_power_fraction_hover:       0.001,
+			aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 
 			aircraft.rotors.N:           8.,
 			aircraft.rotors.T_A_max:     15. * ureg.lbf / ureg.ft**2,
@@ -131,8 +152,8 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 			aircraft.v_cruise:            150. * ureg.mph,
 			aircraft.L_D_cruise:          12.,
 
-			aircraft.tailRotor_power_fraction_hover:       0.002,
-			aircraft.tailRotor_power_fraction_levelFlight: 0.002,
+			aircraft.tailRotor_power_fraction_hover:       0.001,
+			aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 
 			aircraft.rotors.N:           8.,
 			aircraft.rotors.T_A_max:     15. * ureg.lbf / ureg.ft**2,
@@ -159,8 +180,8 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 			aircraft.v_cruise:            150. * ureg.mph,
 			aircraft.L_D_cruise:          14.,
 
-			aircraft.tailRotor_power_fraction_hover:       0.002,
-			aircraft.tailRotor_power_fraction_levelFlight: 0.002,
+			aircraft.tailRotor_power_fraction_hover:       0.001,
+			aircraft.tailRotor_power_fraction_levelFlight: 0.001,
 
 			aircraft.rotors.N:           12.,
 			aircraft.rotors.T_A_max:     15. * ureg.lbf / ureg.ft**2,
@@ -194,7 +215,7 @@ def on_demand_sizing_mission_substitutions(mission, piloted=True, reserve="20-mi
 
 	else:
 		mission.substitutions.update({
-			mission.crew.N:  0.01,  # Negligibly small
+			mission.crew.N:  0.001,  # Negligibly small
 		})
 
 
@@ -244,7 +265,7 @@ def on_demand_revenue_mission_substitutions(mission, piloted=True):
 		
 	else:
 		mission.substitutions.update({
-			mission.crew.N:  0.01,  # Negligibly small
+			mission.crew.N:  0.001,  # Negligibly small
 		})
 
 	return mission
@@ -255,7 +276,7 @@ def on_demand_deadhead_mission_substitutions(mission, piloted=False):
 	mission.substitutions.update({
 		mission.crew.W_unit:       190. * ureg.lbf,
 		mission.passengers.W_unit: 200. * ureg.lbf,
-		mission.passengers.N:      0.01,             # Negligibly small
+		mission.passengers.N:      0.001,             # Negligibly small
 
 		mission.takeoff_segment.t_segment: 30. * ureg.s,
 		mission.cruise_segment.d_segment:  30. * ureg.nautical_mile,
@@ -274,7 +295,7 @@ def on_demand_deadhead_mission_substitutions(mission, piloted=False):
 		
 	else:
 		mission.substitutions.update({
-			mission.crew.N:  0.01,  # Negligibly small
+			mission.crew.N:  0.001,  # Negligibly small
 		})
 
 	return mission
