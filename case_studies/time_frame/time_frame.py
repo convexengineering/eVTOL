@@ -267,7 +267,7 @@ for i, config in enumerate(configs):
 		
 		c      = configs[config][time_frame]
 		offset = style["offsets"][j]
-		cpsk   = c["cost_per_seat_mile"].to(ureg.mile**-1).magnitude
+		cpsk   = c["cost_per_seat_mile"].to(ureg.km**-1).magnitude
 
 		if i==0:
 			plt.bar(i+offset, cpsk, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k', label=time_frame)
