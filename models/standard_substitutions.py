@@ -3,7 +3,7 @@
 import numpy as np
 from gpkit import ureg
 
-def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomousEnabled=False):
+def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomousEnabled=True):
 
 	aircraft.substitutions.update({
 		
@@ -21,11 +21,11 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 		aircraft.battery.cost_per_E: 400. * ureg.kWh**-1,
 		aircraft.battery.cycle_life: 2000.,
 
-		aircraft.rotors.B:      5.,   # Number of rotor blades
-		aircraft.rotors.s:      0.1,
-		aircraft.rotors.ki:     1.2, 
-		aircraft.rotors.Cd0:    0.01,
-		aircraft.rotors.MT_max: 0.9,
+		aircraft.rotors.B:         5.,   # Number of rotor blades
+		aircraft.rotors.s:         0.1,
+		aircraft.rotors.ki:        1.2, 
+		aircraft.rotors.Cd0:       0.01,
+		aircraft.rotors.M_tip_max: 0.9,
 
 		aircraft.electrical_system.eta: 0.9,
 	})
@@ -173,26 +173,27 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 
 	return aircraft
 
-def on_demand_sizing_mission_substitutions(mission, autonomous=False, reserve="20-minute loiter"):
+
+def on_demand_sizing_mission_substitutions(mission, piloted=True, reserve="20-minute loiter"):
 	
 	mission.substitutions.update({
 		mission.crew.W_unit:       190. * ureg.lbf,
 		mission.passengers.W_unit: 200. * ureg.lbf,
-		mission.passengers.N:      3.0,
+		mission.passengers.N:      3.,
 
 		mission.takeoff_segment.t_segment: 2.0 * ureg.minute,
 		mission.cruise_segment.d_segment:  50. * ureg.nautical_mile,
 		mission.landing_segment.t_segment: 2.0 * ureg.minute,
 	})
 	
-	if autonomous:
+	if piloted:
 		mission.substitutions.update({
-			mission.crew.N:  0.001,  # Negligibly small
+			mission.crew.N:  1,
 		})
 
 	else:
 		mission.substitutions.update({
-			mission.crew.N:  1,
+			mission.crew.N:  0.01,  # Negligibly small
 		})
 
 
@@ -216,3 +217,108 @@ def on_demand_sizing_mission_substitutions(mission, autonomous=False, reserve="2
 		raise ValueError(error_string)
 
 	return mission
+
+
+def on_demand_revenue_mission_substitutions(mission, piloted=True):
+	
+	mission.substitutions.update({
+		mission.crew.W_unit:       190. * ureg.lbf,
+		mission.passengers.W_unit: 200. * ureg.lbf,
+		mission.passengers.N:      2.0,
+
+		mission.takeoff_segment.t_segment: 30. * ureg.s,
+		mission.cruise_segment.d_segment:  30. * ureg.nautical_mile,
+		mission.landing_segment.t_segment: 30. * ureg.s,
+
+		mission.ground_segment.t_passenger: 5.   * ureg.min,
+		mission.ground_segment.charger.P:   200. * ureg.kW,
+		mission.ground_segment.charger.eta: 0.9,
+
+	})
+	
+	if piloted:
+		mission.substitutions.update({
+			mission.crew.N:  1,
+		})
+		
+	else:
+		mission.substitutions.update({
+			mission.crew.N:  0.01,  # Negligibly small
+		})
+
+	return mission
+
+
+def on_demand_deadhead_mission_substitutions(mission, piloted=False):
+	
+	mission.substitutions.update({
+		mission.crew.W_unit:       190. * ureg.lbf,
+		mission.passengers.W_unit: 200. * ureg.lbf,
+		mission.passengers.N:      0.01,             # Negligibly small
+
+		mission.takeoff_segment.t_segment: 30. * ureg.s,
+		mission.cruise_segment.d_segment:  30. * ureg.nautical_mile,
+		mission.landing_segment.t_segment: 30. * ureg.s,
+
+		mission.ground_segment.t_passenger: 5.   * ureg.min,
+		mission.ground_segment.charger.P:   200. * ureg.kW,
+		mission.ground_segment.charger.eta: 0.9,
+
+	})
+	
+	if piloted:
+		mission.substitutions.update({
+			mission.crew.N:  1,
+		})
+		
+	else:
+		mission.substitutions.update({
+			mission.crew.N:  0.01,  # Negligibly small
+		})
+
+	return mission
+
+
+def on_demand_mission_cost_substitutions(mission_cost, isRevenueMissionPiloted=True, isDeadheadMissionPiloted=False):
+
+	mission_cost.substitutions.update({
+		mission_cost.deadhead_ratio: 0.2,
+
+		mission_cost.revenue_mission_cost.operating_expenses.pilot_cost.wrap_rate:  70. * ureg.hr**-1,
+		mission_cost.deadhead_mission_cost.operating_expenses.pilot_cost.wrap_rate: 70. * ureg.hr**-1,
+		
+		mission_cost.revenue_mission_cost.operating_expenses.maintenance_cost.wrap_rate:  60. * ureg.hr**-1,
+		mission_cost.deadhead_mission_cost.operating_expenses.maintenance_cost.wrap_rate: 60. * ureg.hr**-1,
+
+		mission_cost.revenue_mission_cost.operating_expenses.maintenance_cost.MMH_FH:  0.6,
+		mission_cost.deadhead_mission_cost.operating_expenses.maintenance_cost.MMH_FH: 0.6,
+
+		mission_cost.revenue_mission_cost.operating_expenses.energy_cost.cost_per_energy:  0.12 * ureg.kWh**-1,
+		mission_cost.deadhead_mission_cost.operating_expenses.energy_cost.cost_per_energy: 0.12 * ureg.kWh**-1,
+
+		mission_cost.revenue_mission_cost.operating_expenses.IOC_fraction:  0.12,
+		mission_cost.deadhead_mission_cost.operating_expenses.IOC_fraction: 0.12,
+	})
+
+
+	if isRevenueMissionPiloted:
+		mission_cost.substitutions.update({
+			mission_cost.revenue_mission_cost.operating_expenses.pilot_cost.pilots_per_aircraft: 1.5,  # 1.5 pilots per aircraft
+		})
+
+	else:
+		mission_cost.substitutions.update({
+			mission_cost.revenue_mission_cost.operating_expenses.pilot_cost.pilots_per_aircraft: 1./8,  # 8 aircraft per bunker pilot
+		})
+
+	if isDeadheadMissionPiloted:
+		mission_cost.substitutions.update({
+			mission_cost.deadhead_mission_cost.operating_expenses.pilot_cost.pilots_per_aircraft: 1.5,  # 1.5 pilots per aircraft
+		})
+		
+	else:
+		mission_cost.substitutions.update({
+			mission_cost.deadhead_mission_cost.operating_expenses.pilot_cost.pilots_per_aircraft: 1./8,  # 8 aircraft per bunker pilot
+		})
+
+	return mission_cost

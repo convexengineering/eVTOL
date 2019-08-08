@@ -3,426 +3,288 @@
 import math
 import numpy as np
 from gpkit import Variable, Model, Vectorize, ureg
+
+from aircraft_models        import OnDemandAircraft
+from mission_models import OnDemandSizingMission, OnDemandRevenueMission, OnDemandDeadheadMission
+from standard_substitutions import on_demand_mission_cost_substitutions
 from standard_atmosphere import stdatmo
 
 pi = math.pi
 
 
 class OnDemandMissionCost(Model):
-	#Includes both revenue and deadhead missions
-	def setup(self,aircraft,revenue_mission,deadhead_mission):
 
-		N_passengers = revenue_mission.passengers.N_passengers
-		trip_distance = revenue_mission.mission_range
+	def standard_substitutions(self, isRevenueMissionPiloted=True, isDeadheadMissionPiloted=False):
+		return on_demand_mission_cost_substitutions(mission_cost=self, isRevenueMissionPiloted=isRevenueMissionPiloted, isDeadheadMissionPiloted=isDeadheadMissionPiloted)
+	
+	# Includes both revenue and deadhead missions
+	def setup(self, aircraft, revenue_mission, deadhead_mission):
 
-		cpt = Variable("cost_per_trip","-","Cost (in dollars) for one trip")
-		cpt_revenue = Variable("revenue_cost_per_trip","-",
-			"Portion of the cost per trip incurred during the revenue-generating flights")
-		cpt_deadhead = Variable("deadhead_cost_per_trip","-",
-			"Portion of the cost per trip incurred during the deadhead flights")
-		cptpp = Variable("cost_per_trip_per_passenger","-",
-			"Cost (in dollars) for one trip, per passenger carried on revenue trip")
-		cpt_seat_mile = Variable("cost_per_seat_mile","mile**-1",
-			"Cost per trip, per seat (passenger) mile")
-		deadhead_ratio = Variable("deadhead_ratio","-","Number of deadhead missions per total missions")
-		NdNr = Variable("N_{deadhead}/N_{typical}","-",
-			"Number of deadhead missions per typical mission")
+		N_passengers  = revenue_mission.passengers.N
+		trip_distance = revenue_mission.cruise_segment.d_segment
 
-		revenue_mission_costs = RevenueMissionCost(aircraft,revenue_mission)
-		deadhead_mission_costs = DeadheadMissionCost(aircraft,deadhead_mission)
+		self.cpt              = cpt              = Variable("cost_per_trip",               "-",      "Cost for one trip")
+		self.cptpp            = cptpp            = Variable("cost_per_trip_per_passenger", "-",      "Cost for one trip, per passenger carried on revenue trip")
+		self.cpt_passenger_km = cpt_passenger_km = Variable("cost_per_passenger_km",       "km**-1", "Cost per trip, per seat (passenger) kilometer")
+		self.cpt_revenue      = cpt_revenue      = Variable("revenue_cost_per_trip",       "-",      "Portion of the cost per trip incurred during the revenue-generating flights")
+		self.cpt_deadhead     = cpt_deadhead     = Variable("deadhead_cost_per_trip",      "-",      "Portion of the cost per trip incurred during the deadhead flights")
+		self.deadhead_ratio   = deadhead_ratio   = Variable("deadhead_ratio",              "-",      "Number of deadhead missions per total missions")
+		self.NdNr             = NdNr             = Variable("N_{deadhead}/N_{revenue}",    "-",      "Number of deadhead missions per revenue mission")
 
-		self.cpt = cpt
-		self.cpt_revenue = cpt_revenue
-		self.cpt_deadhead = cpt_deadhead
-		self.cptpp = cptpp
-		self.cpt_seat_mile = cpt_seat_mile
-		self.deadhead_ratio = deadhead_ratio
-		self.NdNr = NdNr
-		self.revenue_mission_costs = revenue_mission_costs
-		self.deadhead_mission_costs = deadhead_mission_costs
+		self.revenue_mission_cost  = revenue_mission_cost  = RevenueMissionCost( aircraft=aircraft, mission=revenue_mission)
+		self.deadhead_mission_cost = deadhead_mission_cost = DeadheadMissionCost(aircraft=aircraft, mission=deadhead_mission)
+		self.mission_costs         = mission_costs         = [revenue_mission_cost, deadhead_mission_cost]
 
-		constraints = []
-		constraints += [revenue_mission_costs, deadhead_mission_costs]
+		constraints = [mission_costs]
 
-		constraints += [NdNr >= deadhead_ratio*(NdNr+1)]
+		constraints += [1. >= deadhead_ratio * (NdNr**-1 + 1.)]  # Obtained via algebraic manipulation 
 		
-		constraints += [cpt_revenue == revenue_mission_costs.cost_per_mission]
-		constraints += [cpt_deadhead == NdNr*deadhead_mission_costs.cost_per_mission]
+		constraints += [cpt_revenue  == revenue_mission_cost.cost_per_mission        ]
+		constraints += [cpt_deadhead == deadhead_mission_cost.cost_per_mission * NdNr]
 		constraints += [cpt >= cpt_revenue + cpt_deadhead]
 		
-		constraints += [cpt == cptpp*N_passengers]
-		constraints += [cpt == cpt_seat_mile*N_passengers*trip_distance]
+		constraints += [cpt == cptpp            * N_passengers                ]
+		constraints += [cpt == cpt_passenger_km * N_passengers * trip_distance]
 		
 		return constraints
 
 class RevenueMissionCost(Model):
-	#Cost for one mission. Exactly the same code as DeadheadMissionCost.
-	def setup(self,aircraft,mission):
+	
+	# Cost for one mission. Revenue and Deadhead cost models have exactly the same code. Simplifies data output.
+	def setup(self, aircraft, mission):
 
 		t_mission = mission.t_mission
 
-		cost_per_mission = Variable("cost_per_mission","-","Cost per mission")
-		cost_per_time = Variable("cost_per_time","hr**-1","Cost per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Cost per mission")
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Cost per unit mission time")
 
-		capital_expenses = CapitalExpenses(aircraft,mission)
-		operating_expenses = OperatingExpenses(aircraft,mission)
-		expenses = [capital_expenses, operating_expenses]
-
-		self.cost_per_mission = cost_per_mission
-		self.cost_per_time = cost_per_time
-		self.capital_expenses = capital_expenses
-		self.operating_expenses = operating_expenses
-
-		constraints = []
+		self.capital_expenses   = capital_expenses   = CapitalExpenses(aircraft=aircraft, mission=mission)
+		self.operating_expenses = operating_expenses = OperatingExpenses(                 mission=mission)
+		self.expenses           = expenses           = [capital_expenses, operating_expenses]
 		
-		constraints += [expenses]
-		constraints += [cost_per_mission >= sum(c.cost_per_mission for c in expenses)]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
+		constraints =  [expenses]
+		constraints += [cost_per_mission   >= sum(c.cost_per_mission      for c in expenses)]
+		constraints += [c.cost_per_mission == t_mission * c.cost_per_time for c in expenses]
+		constraints += [cost_per_mission   == t_mission * cost_per_time]
 
 		return constraints
+
 
 class DeadheadMissionCost(Model):
-	#Cost for one mission. Exactly the same code as RevenueMissionCost.
-	def setup(self,aircraft,mission):
+	
+	# Cost for one mission. Revenue and Deadhead cost models have exactly the same code. Simplifies data output.
+	def setup(self, aircraft, mission):
 
 		t_mission = mission.t_mission
 
-		cost_per_mission = Variable("cost_per_mission","-","Cost per mission")
-		cost_per_time = Variable("cost_per_time","hr**-1","Cost per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Cost per mission")
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Cost per unit mission time")
 
-		capital_expenses = CapitalExpenses(aircraft,mission)
-		operating_expenses = OperatingExpenses(aircraft,mission)
-		expenses = [capital_expenses, operating_expenses]
-
-		self.cost_per_mission = cost_per_mission
-		self.cost_per_time = cost_per_time
+		self.capital_expenses   = capital_expenses   = CapitalExpenses(aircraft=aircraft, mission=mission)
+		self.operating_expenses = operating_expenses = OperatingExpenses(                 mission=mission)
+		self.expenses           = expenses           = [capital_expenses, operating_expenses]
 		
-		self.capital_expenses = capital_expenses
-		self.operating_expenses = operating_expenses
+		constraints =  [expenses]
+		constraints += [cost_per_mission   >= sum(c.cost_per_mission      for c in expenses)]
+		constraints += [c.cost_per_mission == t_mission * c.cost_per_time for c in expenses]
+		constraints += [cost_per_mission   == t_mission * cost_per_time]
 
-		constraints = []
+		return constraints	
+
+
+class AirframeAcquisitionCost(Model):
+	
+	def setup(self, aircraft):
 		
-		constraints += [expenses]
-		constraints += [cost_per_mission >= sum(c.cost_per_mission for c in expenses)]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
-
-		return constraints
-
-class VehicleAcquisitionCost(Model):
-	def setup(self,aircraft,mission):
+		purchase_price = aircraft.airframe.purchase_price
+		lifetime       = aircraft.airframe.lifetime
 		
-		t_mission = mission.t_mission
-		purchase_price = aircraft.purchase_price
-		vehicle_life = aircraft.vehicle_life
-		
-		cost_per_time = Variable("cost_per_time","hr**-1",
-			"Amortized vehicle purchase price per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-",
-			"Amortized vehicle acquisition cost per mission")
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Amortized vehicle acquisition cost (purchase price) per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Amortized vehicle acquisition cost (purchase price) per mission")
 
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
-		
-		constraints = []
-
-		constraints += [cost_per_time == purchase_price/vehicle_life]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
+		constraints = [purchase_price == cost_per_time * lifetime]
 		
 		return constraints
+
 
 class AvionicsAcquisitionCost(Model):
-	def setup(self,aircraft,mission):
+	
+	def setup(self, aircraft):
 		
-		t_mission = mission.t_mission
 		purchase_price = aircraft.avionics.purchase_price
-		vehicle_life = aircraft.vehicle_life
+		lifetime       = aircraft.avionics.lifetime
 		
-		cost_per_time = Variable("cost_per_time","hr**-1",
-			"Amortized avionics purchase price per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-",
-			"Amortized avionics acquisition cost per mission")
-
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
-
-		constraints = []
-
-		constraints += [cost_per_time == purchase_price/vehicle_life]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Amortized avionics acquisition cost (purchase price) per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Amortized avionics acquisition cost (purchase price) per mission")
+		
+		constraints = [purchase_price == cost_per_time * lifetime]
 		
 		return constraints
+
 
 class BatteryAcquisitionCost(Model):
-	def setup(self,battery,mission):
+	
+	def setup(self, aircraft):
 		
-		t_mission = mission.t_mission
-		purchase_price = battery.purchase_price
-		cycle_life = battery.cycle_life
+		purchase_price = aircraft.battery.purchase_price
+		cycle_life     = aircraft.battery.cycle_life
 		
-		cost_per_time = Variable("cost_per_time","hr**-1",
-			"Amortized battery purchase price per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-",
-			"Amortized battery cost per mission")
-
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
-
-		constraints = []
-
-		constraints += [cost_per_mission == purchase_price/cycle_life]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
-
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Amortized battery acquisition cost (purchase price) per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Amortized battery acquisition cost (purchase price) per mission")
+		
+		constraints = [cost_per_mission == purchase_price / cycle_life]
+		
 		return constraints
 
+
 class CapitalExpenses(Model):
-	def setup(self,aircraft,mission):
+	
+	def setup(self, aircraft, mission):
 
 		t_mission = mission.t_mission
 
-		cost_per_time = Variable("cost_per_time","hr**-1","Capital expenses per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-","Capital expenses per mission")
+		self.airframe_cost = airframe_cost = AirframeAcquisitionCost(aircraft=aircraft)
+		self.avionics_cost = avionics_cost = AvionicsAcquisitionCost(aircraft=aircraft)
+		self.battery_cost  = battery_cost  = BatteryAcquisitionCost( aircraft=aircraft)
+		self.costs         = costs         = [airframe_cost, avionics_cost, battery_cost]
 
-		vehicle_cost = VehicleAcquisitionCost(aircraft,mission)
-		avionics_cost = AvionicsAcquisitionCost(aircraft,mission)
-		battery_cost = BatteryAcquisitionCost(aircraft.battery,mission)
-
-		self.costs = [vehicle_cost, avionics_cost, battery_cost]
-
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
-
-		self.vehicle_cost = vehicle_cost
-		self.avionics_cost = avionics_cost
-		self.battery_cost = battery_cost
-
-		constraints = []
-		constraints += [self.costs]
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Capital expenses per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Capital expenses per mission")
 		
-		constraints += [cost_per_mission >= sum(c.cost_per_mission for c in self.costs)]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
+		constraints =  [costs]
+		constraints += [cost_per_mission   >= sum(c.cost_per_mission      for c in costs)]
+		constraints += [c.cost_per_mission == t_mission * c.cost_per_time for c in costs]
 
 		return constraints
 
 
 class PilotCost(Model):
-	def setup(self,mission):
+	
+	def setup(self):
 
-		t_mission = mission.t_mission
+		self.pilots_per_aircraft = pilots_per_aircraft = Variable("pilots_per_aircraft", "-",      "Pilots per aircraft (assuming crew on board)")
+		self.wrap_rate           = wrap_rate           = Variable("wrap_rate",           "hr**-1", "Pilot wrap rate (including benefits and overhead)")
+		self.cost_per_time       = cost_per_time       = Variable("cost_per_time",       "hr**-1", "Pilot cost per unit mission time")
+		self.cost_per_mission    = cost_per_mission    = Variable("cost_per_mission",    "-",      "Pilot cost per mission")
 
-		wrap_rate = Variable("wrap_rate","hr**-1",
-			"Cost per pilot, per unit mission time (including benefits and overhead)")
-		cost_per_time = Variable("cost_per_time","hr**-1","Pilot cost per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-","Pilot cost per mission")
-
-		self.wrap_rate = wrap_rate
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
-
-		constraints = []
-		
-		if mission.mission_type == "autonomous":
-			aircraft_per_bunker_pilot = Variable("aircraft_per_bunker_pilot",8,"-",
-				"Number of aircraft controlled by 1 bunker pilot (assuming no crew on board)")
-			constraints += [cost_per_time == wrap_rate/aircraft_per_bunker_pilot]
-
-		if mission.mission_type == "piloted":
-			pilots_per_aircraft = Variable("pilots_per_aircram",1.5,"-",
-				"Pilots per aircraft (assuming crew on board)")
-			constraints += [cost_per_time == wrap_rate*pilots_per_aircraft]
-
-		constraints += [cost_per_mission == t_mission*cost_per_time]
+		constraints = [cost_per_time == wrap_rate * pilots_per_aircraft]
 		
 		return constraints
+
 
 class MaintenanceCost(Model):
-	def setup(self,mission):
+	
+	def setup(self):
 
-		t_mission = mission.t_mission
+		self.MMH_FH           = MMH_FH           = Variable("MMH_FH",           "-",      "Maintenance man-hours per flight hour")
+		self.wrap_rate        = wrap_rate        = Variable("wrap_rate",        "hr**-1", "Maintenance wrap rate (including benefits and overhead)")
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Maintenance cost per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Maintenance cost per mission")
 
-		MMH_FH = Variable("MMH_FH","-","Maintenance man-hours per flight hour")
-		wrap_rate = Variable("wrap_rate","hr**-1",
-			"Cost per mechanic, per unit maintenance time (including benefits and overhead)")
-
-		cost_per_time = Variable("cost_per_time","hr**-1","Maintenance cost per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-","Maintenance cost per mission")
-
-		self.MMH_FH = MMH_FH
-		self.wrap_rate = wrap_rate
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
-
-		constraints = []
-
-		constraints += [cost_per_time == MMH_FH*wrap_rate]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
-
+		constraints = [cost_per_time == wrap_rate * MMH_FH]
+		
 		return constraints
 
+
 class EnergyCost(Model):
-	def setup(self,mission):
+	
+	def setup(self, mission):
 
-		t_mission = mission.t_mission
-		E_charger = mission.time_on_ground.E_charger
+		E_charger = mission.ground_segment.E_charger
 
-		cost_per_energy = Variable("cost_per_energy",0.12,"kWh**-1","Price of electricity")
-		cost_per_time = Variable("cost_per_time","hr**-1","Energy cost per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-","Energy cost per mission")
+		self.cost_per_energy  = cost_per_energy  = Variable("cost_per_energy",  "kWh**-1", "Price of electricity")
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1",  "Energy cost per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",       "Energy cost per mission")
 
-		self.cost_per_energy = cost_per_energy
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
-
-		constraints = []
-
-		constraints += [cost_per_mission == E_charger*cost_per_energy]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
+		constraints = [cost_per_mission == E_charger * cost_per_energy]
 
 		return constraints
 
 class IndirectOperatingCost(Model):
-	def setup(self,operating_expenses):
+	
+	def setup(self):
 
-		IOC_fraction = Variable("IOC_fraction",0.12,"-","IOC as a fraction of DOC")
-		cost_per_time = Variable("cost_per_time","hr**-1","IOC per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-","IOC per mission")
-
-		self.IOC_fraction = IOC_fraction
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "IOC per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "IOC per mission")
 
 		constraints = []
-
-		constraints += [cost_per_mission == IOC_fraction*operating_expenses.DOC]
-		constraints += [cost_per_time == IOC_fraction*operating_expenses.DOC_per_time]
 
 		return constraints
 
 class OperatingExpenses(Model):
-	def setup(self,aircraft,mission):
+	
+	def setup(self, mission):
 
 		t_mission = mission.t_mission
 
-		cost_per_time = Variable("cost_per_time","hr**-1","Operating expenses per unit mission time")
-		cost_per_mission = Variable("cost_per_mission","-","Operating expenses per mission")
+		self.cost_per_time    = cost_per_time    = Variable("cost_per_time",    "hr**-1", "Operating expenses per unit mission time")
+		self.cost_per_mission = cost_per_mission = Variable("cost_per_mission", "-",      "Operating expenses per mission")
+		
+		self.DOC_per_time    = DOC_per_time    = Variable("DOC_per_time",    "hr**-1", "Direct operating cost per unit mission time")
+		self.DOC_per_mission = DOC_per_mission = Variable("DOC_per_mission", "-",      "Direct operating cost per mission")
+		self.IOC_fraction    = IOC_fraction    = Variable("IOC_fraction",    "-",      "IOC as a fraction of DOC")
 
-		DOC = Variable("DOC","-","Direct operating cost per mission")
-		DOC_per_time = Variable("DOC_per_time","hr**-1","Direct operating cost per unit mission time")
-		IOC = Variable("IOC","-","Indirect operating cost per mission")
-		IOC_per_time = Variable("IOC_per_time","hr**-1","Indirect operating cost per unit mission time")
+		self.pilot_cost              = pilot_cost              = PilotCost()
+		self.maintenance_cost        = maintenance_cost        = MaintenanceCost()
+		self.energy_cost             = energy_cost             = EnergyCost(mission=mission)
+		self.indirect_operating_cost = indirect_operating_cost = IndirectOperatingCost()
+		
+		self.costs                   = costs                   = [pilot_cost, maintenance_cost, energy_cost, indirect_operating_cost]
+		self.direct_costs            = direct_costs            = [pilot_cost, maintenance_cost, energy_cost                         ]
 
-		self.DOC = DOC
-		self.DOC_per_time = DOC_per_time
-		self.IOC = IOC
-		self.IOC_per_time = IOC_per_time
+		constraints = [costs]
 
-		self.cost_per_time = cost_per_time
-		self.cost_per_mission = cost_per_mission
+		constraints += [cost_per_mission >= sum(c.cost_per_mission for c in costs)]
+		constraints += [DOC_per_mission  >= sum(c.cost_per_mission for c in direct_costs)]
+		
+		constraints += [DOC_per_mission  == t_mission * DOC_per_time]
+		constraints += [DOC_per_mission  == indirect_operating_cost.cost_per_mission / IOC_fraction]
 
-		pilot_cost = PilotCost(mission)
-		maintenance_cost = MaintenanceCost(mission)
-		energy_cost = EnergyCost(mission)
-		indirect_operating_cost = IndirectOperatingCost(self)
-
-		self.pilot_cost = pilot_cost
-		self.maintenance_cost = maintenance_cost
-		self.energy_cost = energy_cost
-		self.indirect_operating_cost = indirect_operating_cost
-
-		constraints = []
-		constraints += [pilot_cost, maintenance_cost, energy_cost, indirect_operating_cost]
-
-		constraints += [DOC >= pilot_cost.cost_per_mission 
-			+ maintenance_cost.cost_per_mission + energy_cost.cost_per_mission]
-		constraints += [DOC_per_time == DOC/t_mission]
-
-		constraints += [IOC == indirect_operating_cost.cost_per_mission]
-		constraints += [IOC_per_time == indirect_operating_cost.cost_per_time]
-
-		constraints += [cost_per_mission >= DOC + IOC]
-		constraints += [cost_per_mission == t_mission*cost_per_time]
+		constraints += [c.cost_per_mission == t_mission * c.cost_per_time for c in costs]
 
 		return constraints
 
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
 
 	#Concept representative analysis
 
 	# from noise_models import rotational_noise, vortex_noise, noise_weighting
 	
 	#String inputs
-	reserve_type="FAA_heli"
-	sizing_mission_type="piloted"
+	# reserve_type="FAA_heli"
+	# sizing_mission_type="piloted"
 
-	problem_subDict = {}
-	
-	Aircraft = OnDemandAircraft()
-	problem_subDict.update({
-		Aircraft.L_D_cruise: 14., #estimated L/D in cruise
-		Aircraft.eta_cruise: 0.85, #propulsive efficiency in cruise
-		Aircraft.tailRotor_power_fraction_hover: 0.1, #  TODO: fix.
-		Aircraft.tailRotor_power_fraction_levelFlight: 0.1, #  TODO: fix.
-		Aircraft.cost_per_weight: 350*ureg.lbf**-1, #vehicle cost per unit empty weight
-		Aircraft.battery.cost_per_C: 400*ureg.kWh**-1, #battery cost per unit energy capacity
-		Aircraft.rotors.N: 12, #number of propellers
-		Aircraft.rotors.Cl_mean_max: 1.0, #maximum allowed mean lift coefficient
-		Aircraft.battery.C_m: 400*ureg.Wh/ureg.kg, #battery energy density
-		Aircraft.structure.weight_fraction: 0.55, #empty weight fraction
-		Aircraft.electricalSystem.eta: 0.9, #electrical system efficiency	
-	})
+	aircraft = OnDemandAircraft()
+	aircraft = aircraft.standard_substitutions(config="Compound heli", autonomousEnabled=True)
 
-	SizingMission = OnDemandSizingMission(Aircraft,mission_type=sizing_mission_type,
-		reserve_type=reserve_type)
-	problem_subDict.update({
-		SizingMission.mission_range: 87*ureg.nautical_mile,#mission range
-		SizingMission.V_cruise: 200*ureg.mph,#cruising speed
-		SizingMission.t_hover: 120*ureg.s,#hover time
-		SizingMission.T_A: 15.*ureg("N")/ureg("m")**2,#disk loading
-		SizingMission.passengers.N_passengers: 3,#Number of passengers
-	})
+	sizing_mission = OnDemandSizingMission(aircraft=aircraft)
+	sizing_mission = sizing_mission.standard_substitutions(piloted=True, reserve="20-minute loiter")
 
-	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=revenue_mission_type)
-	problem_subDict.update({
-		RevenueMission.mission_range: 30*ureg.nautical_mile,#mission range
-		RevenueMission.V_cruise: 200*ureg.mph,#cruising speed
-		RevenueMission.t_hover: 30*ureg.s,#hover time
-		RevenueMission.passengers.N_passengers: 2,#Number of passengers
-		RevenueMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
-	})
+	revenue_mission = OnDemandRevenueMission(aircraft=aircraft)
+	revenue_mission = revenue_mission.standard_substitutions(piloted=True)
 
-	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=deadhead_mission_type)
-	problem_subDict.update({
-		DeadheadMission.mission_range: 30*ureg.nautical_mile,#mission range
-		DeadheadMission.V_cruise: 200*ureg.mph,#cruising speed
-		DeadheadMission.t_hover: 30*ureg.s,#hover time
-		DeadheadMission.passengers.N_passengers: 0.1,#Number of passengers TODO: fix.
-		DeadheadMission.time_on_ground.charger_power: 200*ureg.kW, #Charger power
-	})
+	deadhead_mission = OnDemandDeadheadMission(aircraft=aircraft)
+	deadhead_mission = deadhead_mission.standard_substitutions(piloted=False)
 
-	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
-	problem_subDict.update({
-		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
-		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
-		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
-		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: 70*ureg.hr**-1,#pilot wrap rate
-		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: 60*ureg.hr**-1, #mechanic wrap rate
-		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: 0.6, #maintenance man-hours per flight hour
-		MissionCost.deadhead_ratio: 0.2, #deadhead ratio
-	})
-	
-	problem = Model(MissionCost["cost_per_trip"],
-		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
-	problem.substitutions.update(problem_subDict)
+	mission_cost = OnDemandMissionCost(aircraft=aircraft, revenue_mission=revenue_mission, deadhead_mission=deadhead_mission)
+	mission_cost = mission_cost.standard_substitutions(isRevenueMissionPiloted=True, isDeadheadMissionPiloted=False)
 
-	for i in range(20):
-		solution = problem.solve(verbosity=0)
+	objective_function = mission_cost.cpt
+	problem            = Model(objective_function, [aircraft, sizing_mission, revenue_mission, deadhead_mission, mission_cost])
+	solution           = problem.solve(verbosity=0)
 
-		cpsk = solution("cost_per_seat_mile").to(ureg.km**-1).magnitude
+	print "Maximum takeoff mass:   %0.8f kg"     % solution("MTOM").to(ureg.kg).magnitude
+	print "Cost per passenger km: $%0.4f per km" % solution("cost_per_passenger_km").to(ureg.km**-1).magnitude
+	print "Revenue  mission cost: $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost").to(ureg.dimensionless).magnitude
+	print "Deadhead mission cost: $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/DeadheadMissionCost").to(ureg.dimensionless).magnitude
 
-		print "Cost per seat km: $%0.2f" % cpsk
+	print "Deadhead ratio: %0.4f" % solution("deadhead_ratio").to(ureg.dimensionless).magnitude
+	print "NdNr:           %0.4f" % solution("N_{deadhead}/N_{revenue}").to(ureg.dimensionless).magnitude
 
+	# print "Capital expenses:      $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses").to(ureg.dimensionless).magnitude
+	# print "Operating expenses:    $%0.4f" % solution("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses").to(ureg.dimensionless).magnitude
 
 	"""
 	delta_S = 500*ureg.ft

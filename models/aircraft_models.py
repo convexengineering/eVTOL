@@ -14,8 +14,8 @@ class OnDemandAircraft(Model):
 	def level_flight_performance(self, state):
 		return OnDemandAircraftLevelFlightFlightPerformance(self, state)
 
-	def standard_substitutions(self, autonomousEnabled=True):
-		return on_demand_aircraft_substitutions(aircraft=self, autonomousEnabled=autonomousEnabled)
+	def standard_substitutions(self, config="Lift + cruise", autonomousEnabled=True):
+		return on_demand_aircraft_substitutions(aircraft=self, config=config, autonomousEnabled=autonomousEnabled)
 
 	def setup(self):
 
@@ -62,8 +62,8 @@ class OnDemandAircraft(Model):
 
 			airframe.m == empty_mass_fraction * MTOM,
 
-			v_loiter   == ((1/3.)**(1/4.)) * v_cruise,    # Approximation for loiter speed.        See derivation in publications.
-			L_D_loiter == ((3**0.5)/2.)    * L_D_cruise,  # Approximation for loiter lift-to-drag. See derivation in publications.
+			v_loiter   == ((1./3.)**(1./4.)) * v_cruise,    # Approximation for loiter speed.        See derivation in publications.
+			L_D_loiter == ((3.**0.5)/2.)     * L_D_cruise,  # Approximation for loiter lift-to-drag. See derivation in publications.
 		]
 
 		return constraints
@@ -271,14 +271,14 @@ class Rotors(Model):
 		self.ki          = ki          = Variable("ki",            "-",     "Rotor induced power factor")
 		self.Cd0         = Cd0         = Variable("Cd0",           "-",     "Rotor blade two-dimensional zero-lift drag coefficient")
 		self.T_A_max     = T_A_max     = Variable("(T/A)_{max}",   "N/m^2", "Rotor maximum allowed disk loading")
-		self.MT_max      = MT_max      = Variable("MT_{max}",      "-",     "Rotor maximum allowed tip Mach number")
+		self.M_tip_max   = M_tip_max   = Variable("M_{tip,max}",   "-",     "Rotor maximum allowed tip Mach number")
 		self.Cl_mean_max = Cl_mean_max = Variable("Cl_{mean,max}", "-",     "Rotor maximum allowed mean lift coefficient")
 
 		constraints = [
-			A       == pi * R**2, 
+			A       == pi * R**2., 
 			A_blade == B  * c_avg * R,
 			A_blade == s  * A,
-			D       == 2  * R,
+			D       == 2. * R,
 			AR      == R  / c_avg,
 			A_total == N  * A,
 		]
@@ -299,7 +299,7 @@ class RotorsPerformance(Model):
 		ki          = rotors.ki
 		Cd0         = rotors.Cd0
 		T_A_max     = rotors.T_A_max
-		MT_max      = rotors.MT_max
+		M_tip_max   = rotors.M_tip_max
 		Cl_mean_max = rotors.Cl_mean_max
 
 		rho = state.atmosphere.rho
@@ -311,9 +311,9 @@ class RotorsPerformance(Model):
 		self.P          = P          = Variable("P",          "kW",    "Total power")
 		self.P_perRotor = P_perRotor = Variable("P_perRotor", "kW",    "Power per rotor")
 		self.Q_perRotor = Q_perRotor = Variable("Q_perRotor", "N*m",   "Torque per rotor")
-		self.VT         = VT         = Variable("VT",         "m/s",   "Rotor tip speed")
-		self.omega      = omega      = Variable("\omega",     "rpm",   "Rotor angular velocity")
-		self.MT         = MT         = Variable("MT",         "-",     "Rotor tip Mach number")
+		self.V_tip      = V_tip      = Variable("V_{tip}",    "m/s",   "Rotor tip speed")
+		self.omega      = omega      = Variable("\\omega",    "rpm",   "Rotor angular velocity")
+		self.M_tip      = M_tip      = Variable("M_{tip}",    "-",     "Rotor tip Mach number")
 
 		self.CT      = CT      = Variable("CT",        "-", "Thrust coefficient")
 		self.CQ      = CQ      = Variable("CQ",        "-", "Torque coefficient")
@@ -329,9 +329,9 @@ class RotorsPerformance(Model):
 			T == N * T_perRotor,
 			P == N * P_perRotor,
 
-			T_perRotor == 0.5 * rho * (VT**2) * A * CT,
-			P_perRotor == 0.5 * rho * (VT**3) * A * CP,
-			Q_perRotor == 0.5 * rho * (VT**2) * A * R * CQ,
+			T_perRotor == 0.5 * rho * (V_tip**2.) * A * CT,
+			P_perRotor == 0.5 * rho * (V_tip**3.) * A * CP,
+			Q_perRotor == 0.5 * rho * (V_tip**2.) * A * R * CQ,
 
 			CPi == 0.5  * CT**1.5,
 			CPp == 0.25 * s * Cd0,
@@ -339,14 +339,14 @@ class RotorsPerformance(Model):
 			FOM == CPi / CP,
 			CQ  == CP,
 
-			VT == omega * R,
-			VT == MT    * a,
-			MT <= MT_max,
+			V_tip == omega * R,
+			V_tip == M_tip * a,
+			M_tip <= M_tip_max,
 
 			T_A == T_perRotor / A,
 			T_A <= T_A_max,
 
-			Cl_mean == 3 * CT / s,
+			Cl_mean == 3. * CT / s,
 			Cl_mean <= Cl_mean_max,
 		]
 
@@ -381,4 +381,4 @@ class ElectricalSystemPerformance(Model):
 if __name__=="__main__":
 
 	test_aircraft = OnDemandAircraft()
-	test_aircraft = test_aircraft.standard_substitutions()
+	test_aircraft = test_aircraft.standard_substitutions(config="Lift + cruise", autonomousEnabled=True)
