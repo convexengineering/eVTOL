@@ -257,16 +257,18 @@ class Rotors(Model):
 
 	def setup(self):
 
-		self.R       = R       = Variable("R",            "m",   "Rotor radius")
-		self.D       = D       = Variable("D",            "m",   "Rotor diameter")
-		self.c_avg   = c_avg   = Variable("\overline{c}", "m",   "Rotor average blade chord")
-		self.A       = A       = Variable("A",            "m^2", "Area of 1 rotor disk")
-		self.A_blade = A_blade = Variable("A_{blade}",    "m^2", "Area of 1 set of rotor blades")
-		self.A_total = A_total = Variable("A_{total}",    "m^2", "Combined area of all rotor disks")
-		self.N       = N       = Variable("N",            "-",   "Number of rotors")
-		self.B       = B       = Variable("B",            "-",   "Number of rotor blades")
-		self.AR      = AR      = Variable("AR",           "-",   "Rotor blade aspect ratio")
-		self.s       = s       = Variable("s",            "-",   "Rotor solidity")
+		self.R       = R       = Variable("R",         "m",   "Rotor radius")
+		self.D       = D       = Variable("D",         "m",   "Rotor diameter")
+		self.c_avg   = c_avg   = Variable("c_{avg}",   "m",   "Rotor average blade chord")
+		self.A       = A       = Variable("A",         "m^2", "Area of 1 rotor disk")
+		self.A_blade = A_blade = Variable("A_{blade}", "m^2", "Area of 1 set of rotor blades")
+		self.A_total = A_total = Variable("A_{total}", "m^2", "Combined area of all rotor disks")
+		self.N       = N       = Variable("N",         "-",   "Number of rotors")
+		self.B       = B       = Variable("B",         "-",   "Number of rotor blades")
+		self.AR      = AR      = Variable("AR",        "-",   "Rotor blade aspect ratio")
+		self.s       = s       = Variable("s",         "-",   "Rotor solidity")
+		self.t_avg   = t_avg   = Variable("t_{avg}",   "cm",  "Rotor blade average thickness")
+		self.t_c     = t_c     = Variable("(t/c)",     "-",   "Rotor blade thickness-to-chord ratio")
 		
 		self.ki          = ki          = Variable("ki",            "-",     "Rotor induced power factor")
 		self.Cd0         = Cd0         = Variable("Cd0",           "-",     "Rotor blade two-dimensional zero-lift drag coefficient")
@@ -275,12 +277,13 @@ class Rotors(Model):
 		self.Cl_mean_max = Cl_mean_max = Variable("Cl_{mean,max}", "-",     "Rotor maximum allowed mean lift coefficient")
 
 		constraints = [
-			A       == pi * R**2., 
-			A_blade == B  * c_avg * R,
-			A_blade == s  * A,
-			D       == 2. * R,
-			AR      == R  / c_avg,
-			A_total == N  * A,
+			A       == pi  * R**2., 
+			A_blade == B   * c_avg * R,
+			A_blade == s   * A,
+			D       == 2.  * R,
+			AR      == R   / c_avg,
+			A_total == N   * A,
+			t_avg   == t_c * c_avg,
 		]
 
 		return constraints

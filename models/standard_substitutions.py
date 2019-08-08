@@ -23,6 +23,7 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 
 		aircraft.rotors.B:         5.,   # Number of rotor blades
 		aircraft.rotors.s:         0.1,
+		aircraft.rotors.t_c:       0.12,
 		aircraft.rotors.ki:        1.2, 
 		aircraft.rotors.Cd0:       0.01,
 		aircraft.rotors.M_tip_max: 0.9,
