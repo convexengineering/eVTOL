@@ -2,30 +2,28 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../../models'))
 
-import numpy as np
-from gpkit import ureg
-from matplotlib import pyplot as plt
+import numpy      as np
+from gpkit        import ureg
+from matplotlib   import pyplot as plt
 from noise_models import noise_weighting
 
 #Computations
-f_peak_array = np.logspace(np.log10(100),np.log10(40000),100)*ureg.turn/ureg.s
+f_peak_array                  = np.logspace(np.log10(100), np.log10(40000),100) * ureg.turn / ureg.s
 A_weighting_response_function = np.zeros(np.size(f_peak_array))
-vortex_dBA_offset = np.zeros(np.size(f_peak_array))
+vortex_dBA_offset             = np.zeros(np.size(f_peak_array))
 
-A_weighting_response_function = noise_weighting(f_peak_array,
-	A_weighting_response_function,type="A")
+A_weighting_response_function = noise_weighting(f=f_peak_array, SPL=A_weighting_response_function, weighting="A")
 
 for i,f_peak in enumerate(f_peak_array):
 	
 	spectrum = {}
-	spectrum["f"] = f_peak*[0.5,1,2,4,8,16]
+	spectrum["f"]   = f_peak * [0.5,1,2,4,8,16]
 	spectrum["SPL"] = -np.array([7.92,4.17,8.33,8.75,12.92,13.33])
-
-	spectrum["SPL"] = noise_weighting(spectrum["f"],spectrum["SPL"],type="A")
+	spectrum["SPL"] = noise_weighting(f=spectrum["f"], SPL=spectrum["SPL"], weighting="A")
 	
-	fr = (spectrum["f"]/f_peak).to(ureg.dimensionless) #frequency ratio array
+	fr = (spectrum["f"]/f_peak).to(ureg.dimensionless)  # Frequency ratio array
 
 	weighted_p_ratio_squared = 0
 
@@ -39,7 +37,7 @@ for i,f_peak in enumerate(f_peak_array):
 		b = SPL2 - a*np.log10(fr2)
 
 		leading_term = (10**(b/10))/((a/10) + 1)
-		fr_term = fr2**((a/10) + 1) - fr1**((a/10) + 1)
+		fr_term      = fr2**((a/10) + 1) - fr1**((a/10) + 1)
 
 		weighted_p_ratio_squared += leading_term*fr_term
 

@@ -17,7 +17,7 @@ from standard_substitutions import generic_data, configs
 configs = deepcopy(configs)
 
 
-#Optimize remaining configurations
+#Optimize and do noise analysis
 for config in configs:
 	
 	print "Solving configuration: " + config
@@ -46,7 +46,7 @@ for config in configs:
 	# Noise computations
 	T_perRotor = solution("T_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
 	T_A        = solution("T/A_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
-	V_tip      = solution("V_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	V_tip      = solution("v_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
 	s          = solution("s_OnDemandAircraft/Rotors")
 	Cl_mean    = solution("Cl_{mean}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
 	N          = solution("N_OnDemandAircraft/Rotors")
@@ -342,16 +342,16 @@ plt.savefig('config_tradeStudy_plot_01.pdf')
 
 # Data output (to screen and to text file)
 outputs       = ["Max takeoff mass", "Airframe mass", "Battery mass", "Mission time", "Flight time", "Charging time", "Acquisition cost", "Trip cost per passenger", "Cost per passenger-km"]
-output_units  = ["kg",               "kg",            "kg",           "minutes",      "minutes",     "minutes",       "$US (thousands)"   "dimensionless",           "km**-1",              ]          
-output_spaces = ["",                 "\t",            "\t",           "\t",           "\t",          "\t",            ""                  "",                        "",                    ]
+output_units  = ["kg",               "kg",            "kg",           "minutes",      "minutes",     "minutes",       "$US (thousands)",  "dimensionless",           "km**-1"               ]          
+output_spaces = ["",                 "\t",            "\t",           "\t",           "\t",          "\t",            "",                 "",                        ""                     ]
 
-outputs       += ["Rotor tip speed", "Rotor tip Mach number", "Rotor figure of merit", "Hover SPL (unweighted)",  "Hover SPL (A-weighted)",  "Vortex-noise peak frequency"]
-output_units  += ["m/s",             "dimensionless",         "dimensionless"        , "dimensionless",           "dimensionless",           "turn/s"        ]
-output_spaces += ["\t",              "",                      "",                      "",                        "",                        "\t"            ]
+outputs       += ["Rotor tip speed", "Rotor tip Mach number", "Rotor figure of merit", "Hover SPL (unweighted)",  "Hover SPL (A-weighted)",  "Vortex peak frequency"]
+output_units  += ["m/s",             "dimensionless",         "dimensionless"        , "dimensionless",           "dimensionless",           "turn/s"               ]
+output_spaces += ["\t",              "",                      "",                      "",                        "",                        ""                     ]
 
 output_string =  "Tabulated Data by Configuration\n"
 output_string += "\n"
-output_string += "Configuration\t\t"
+output_string += "Configuration\t\t\t"
 for config in configs:
 	output_string += config
 	output_string += "\t"
@@ -363,7 +363,7 @@ for i, output in enumerate(outputs):
 	
 	units         =  output_units[i]
 	output_space  =  output_spaces[i]
-	output_string += output + "\t" + output_space
+	output_string += output + "\t\t" + output_space
 
 	for j, config in enumerate(configs):
 
@@ -411,7 +411,7 @@ for i, output in enumerate(outputs):
 			continue
 
 		elif output == "Rotor tip speed":
-			var_string  = "V_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance"
+			var_string  = "v_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance"
 			precision   = "%0.1f"
 
 		elif output == "Rotor tip Mach number":
@@ -440,7 +440,7 @@ for i, output in enumerate(outputs):
 
 			continue
 		
-		elif output == "Vortex-noise peak frequency":
+		elif output == "Vortex peak frequency":
 
 			precision = "%0.0f"
 

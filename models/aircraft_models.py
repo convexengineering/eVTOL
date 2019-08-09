@@ -268,7 +268,7 @@ class Rotors(Model):
 		self.AR      = AR      = Variable("AR",        "-",   "Rotor blade aspect ratio")
 		self.s       = s       = Variable("s",         "-",   "Rotor solidity")
 		self.t_avg   = t_avg   = Variable("t_{avg}",   "cm",  "Rotor blade average thickness")
-		self.t_c     = t_c     = Variable("(t/c)",     "-",   "Rotor blade thickness-to-chord ratio")
+		self.t_c     = t_c     = Variable("t/c",       "-",   "Rotor blade thickness-to-chord ratio")
 		
 		self.ki          = ki          = Variable("ki",            "-",     "Rotor induced power factor")
 		self.Cd0         = Cd0         = Variable("Cd0",           "-",     "Rotor blade two-dimensional zero-lift drag coefficient")
@@ -314,7 +314,7 @@ class RotorsPerformance(Model):
 		self.P          = P          = Variable("P",          "kW",    "Total power")
 		self.P_perRotor = P_perRotor = Variable("P_perRotor", "kW",    "Power per rotor")
 		self.Q_perRotor = Q_perRotor = Variable("Q_perRotor", "N*m",   "Torque per rotor")
-		self.V_tip      = V_tip      = Variable("V_{tip}",    "m/s",   "Rotor tip speed")
+		self.v_tip      = v_tip      = Variable("v_{tip}",    "m/s",   "Rotor tip speed")
 		self.omega      = omega      = Variable("\\omega",    "rpm",   "Rotor angular velocity")
 		self.M_tip      = M_tip      = Variable("M_{tip}",    "-",     "Rotor tip Mach number")
 
@@ -332,9 +332,9 @@ class RotorsPerformance(Model):
 			T == N * T_perRotor,
 			P == N * P_perRotor,
 
-			T_perRotor == 0.5 * rho * (V_tip**2.) * A * CT,
-			P_perRotor == 0.5 * rho * (V_tip**3.) * A * CP,
-			Q_perRotor == 0.5 * rho * (V_tip**2.) * A * R * CQ,
+			T_perRotor == 0.5 * rho * (v_tip**2.) * A * CT,
+			P_perRotor == 0.5 * rho * (v_tip**3.) * A * CP,
+			Q_perRotor == 0.5 * rho * (v_tip**2.) * A * R * CQ,
 
 			CPi == 0.5  * CT**1.5,
 			CPp == 0.25 * s * Cd0,
@@ -342,8 +342,8 @@ class RotorsPerformance(Model):
 			FOM == CPi / CP,
 			CQ  == CP,
 
-			V_tip == omega * R,
-			V_tip == M_tip * a,
+			v_tip == omega * R,
+			v_tip == M_tip * a,
 			M_tip <= M_tip_max,
 
 			T_A == T_perRotor / A,

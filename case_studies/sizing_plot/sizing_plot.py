@@ -2,29 +2,33 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../../models'))
 
 import numpy as np
-from gpkit import Model, ureg
-from matplotlib import pyplot as plt
-from aircraft_models import OnDemandAircraft 
-from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
-from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
-from study_input_data import generic_data, configuration_data
-from noise_models import vortex_noise
-from scipy.interpolate import interp2d
-from copy import deepcopy
+from gpkit                  import Model, ureg
+from copy                   import deepcopy
+from matplotlib             import pyplot as plt
+from aircraft_models        import OnDemandAircraft
+from mission_models         import OnDemandSizingMission, OnDemandRevenueMission, OnDemandDeadheadMission
+from cost_models            import OnDemandMissionCost
+from noise_models           import vortex_noise
+from standard_substitutions import generic_data, configs
+
+from scipy.interpolate      import interp2d
+
+configs = deepcopy(configs)
+del configs["Compound heli"]
 
 #Data from Boeing study
 boeing_data = {}
 
-boeing_data["Lift + cruise"] = {}
-boeing_data["Lift + cruise"]["L/D"] = 9.1
-boeing_data["Lift + cruise"]["T/A"] = 7.3*ureg("lbf")/ureg("ft")**2
+boeing_data["Lift + cruise (Duffy et al.)"]        = {}
+boeing_data["Lift + cruise (Duffy et al.)"]["L/D"] = 9.1
+boeing_data["Lift + cruise (Duffy et al.)"]["T/A"] = 7.3*ureg("lbf")/ureg("ft")**2
 
-boeing_data["Tilt rotor"] = {}
-boeing_data["Tilt rotor"]["L/D"] = 11.0
-boeing_data["Tilt rotor"]["T/A"] = 12.8*ureg("lbf")/ureg("ft")**2
+boeing_data["Tilt rotor (Duffy et al.)"]        = {}
+boeing_data["Tilt rotor (Duffy et al.)"]["L/D"] = 11.0
+boeing_data["Tilt rotor (Duffy et al.)"]["T/A"] = 12.8*ureg("lbf")/ureg("ft")**2
 
 '''
 boeing_data["Helicopter"] = {}
@@ -33,157 +37,129 @@ boeing_data["Helicopter"]["T/A"] = 4.1*ureg("lbf")/ureg("ft")**2
 '''
 
 #Instantiate arrays
-numrows = 4
-L_D_array = np.linspace(9,15,numrows)
-T_A_array = np.linspace(4,16,numrows)
-L_D_array, T_A_array = np.meshgrid(L_D_array, T_A_array)
-T_A_array = T_A_array*ureg.lbf/ureg.ft**2
+numrows                  = 4
+L_D_array                = np.linspace(9, 15, numrows)
+T_A_max_array            = np.linspace(4, 16, numrows)
+L_D_array, T_A_max_array = np.meshgrid(L_D_array, T_A_max_array)
+T_A_max_array            = T_A_max_array * ureg.lbf / ureg.ft**2
 
-TOGW_array = np.zeros(np.shape(L_D_array))
+MTOM_array  = np.zeros(np.shape(L_D_array))
+MTOW_array  = np.zeros(np.shape(L_D_array))
 cptpp_array = np.zeros(np.shape(L_D_array))
-SPL_array = np.zeros(np.shape(L_D_array))
+cppk_array  = np.zeros(np.shape(L_D_array))
+SPL_array   = np.zeros(np.shape(L_D_array))
 SPL_A_array = np.zeros(np.shape(L_D_array))
 
 #Optimize 
-configs = deepcopy(configuration_data)
-del configs["Tilt duct"]
-del configs["Multirotor"]
-del configs["Autogyro"]
-del configs["Helicopter"]
-del configs["Coaxial heli"]
-del configs["Compound heli"]
 
 sizing_plot_config = "Lift + cruise" #pull other data from this configuration
-config = sizing_plot_config 
+config             = sizing_plot_config 
 
 c = configs[config]
 
-for i, T_A in enumerate(T_A_array[:,0]):
+for i, T_A_max in enumerate(T_A_max_array[:,0]):
+	
 	for j, L_D_cruise in enumerate(L_D_array[0]):
-		
-		problem_subDict = {}
 
-		Aircraft = OnDemandAircraft(autonomousEnabled=generic_data["autonomousEnabled"])
-		problem_subDict.update({
-			Aircraft.L_D_cruise: L_D_cruise, #estimated L/D in cruise
-			Aircraft.eta_cruise: generic_data["\eta_{cruise}"], #propulsive efficiency in cruise
-			Aircraft.tailRotor_power_fraction_hover: c["tailRotor_power_fraction_hover"],
-			Aircraft.tailRotor_power_fraction_levelFlight: c["tailRotor_power_fraction_levelFlight"],
-			Aircraft.cost_per_weight: generic_data["vehicle_cost_per_weight"], #vehicle cost per unit empty weight
-			Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
-			Aircraft.battery.cost_per_C: generic_data["battery_cost_per_C"], #battery cost per unit energy capacity
-			Aircraft.rotors.N: c["N"], #number of propellers
-			Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
-			Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
-			Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
-		})
+		aircraft = OnDemandAircraft()
+		aircraft = aircraft.standard_substitutions(config=config, autonomousEnabled=generic_data["autonomousEnabled"])
 
-		SizingMission = OnDemandSizingMission(Aircraft,mission_type=generic_data["sizing_mission"]["type"],
-			reserve_type=generic_data["reserve_type"])
-		problem_subDict.update({
-			SizingMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
-			SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
-			SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
-			SizingMission.T_A: T_A,#disk loading
-			SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_{passengers}"],#Number of passengers
-		})
+		aircraft.substitutions.update({
+			aircraft.L_D_cruise:     L_D_cruise,
+			aircraft.rotors.T_A_max: T_A_max,
+			})
 
-		RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
-		problem_subDict.update({
-			RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
-			RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
-			RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
-			RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_{passengers}"],#Number of passengers
-			RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-		})
+		sizing_mission = OnDemandSizingMission(aircraft=aircraft)
+		sizing_mission = sizing_mission.standard_substitutions(piloted=generic_data["isSizingMissionPiloted"], reserve=generic_data["reserve"])
 
-		DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=generic_data["deadhead_mission"]["type"])
-		problem_subDict.update({
-			DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
-			DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
-			DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
-			DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_{passengers}"],#Number of passengers
-			DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-		})
+		revenue_mission = OnDemandRevenueMission(aircraft=aircraft)
+		revenue_mission = revenue_mission.standard_substitutions(piloted=generic_data["isRevenueMissionPiloted"])
 
-		MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
-		problem_subDict.update({
-			MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
-			MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
-			MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
-			MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
-			MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
-			MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
-			MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
-		})
+		deadhead_mission = OnDemandDeadheadMission(aircraft=aircraft)
+		deadhead_mission = deadhead_mission.standard_substitutions(piloted=generic_data["isDeadheadMissionPiloted"])
 
-		problem = Model(MissionCost["cost_per_trip"],
-			[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
-		problem.substitutions.update(problem_subDict)
-		solution = problem.solve(verbosity=0)
+		mission_cost = OnDemandMissionCost(aircraft=aircraft, revenue_mission=revenue_mission, deadhead_mission=deadhead_mission)
+		mission_cost = mission_cost.standard_substitutions(isRevenueMissionPiloted=generic_data["isRevenueMissionPiloted"], isDeadheadMissionPiloted=generic_data["isDeadheadMissionPiloted"])
 
-		TOGW_array[i,j] = solution("TOGW_OnDemandAircraft").to(ureg.lbf).magnitude
+		objective_function = mission_cost.cpt
+		problem            = Model(objective_function, [aircraft, sizing_mission, revenue_mission, deadhead_mission, mission_cost])
+		solution           = problem.solve(verbosity=0)
+
+		MTOM_array[i,j]  = solution("MTOM_OnDemandAircraft").to(ureg.kg).magnitude
+		MTOW_array[i,j]  = solution("MTOW_OnDemandAircraft").to(ureg.lbf).magnitude
 		cptpp_array[i,j] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
+		cppk_array[i,j]  = solution("cost_per_passenger_km_OnDemandMissionCost").to(ureg.km**-1).magnitude
 		
 		#Noise computations
-		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
-		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
-		R = solution("R")
-		VT = solution("VT_OnDemandSizingMission")[0]
-		s = solution("s")
-		Cl_mean = solution("Cl_{mean_{max}}")
-		N = solution("N")
-
-		B = generic_data["B"]
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		T_A        = solution("T/A_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		V_tip      = solution("v_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		s          = solution("s_OnDemandAircraft/Rotors")
+		Cl_mean    = solution("Cl_{mean}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		N          = solution("N_OnDemandAircraft/Rotors")
+		c_avg      = solution("c_{avg}_OnDemandAircraft/Rotors")
+		t_avg      = solution("t_{avg}_OnDemandAircraft/Rotors")
+		rho        = solution("\\rho_OnDemandSizingMission/HoverTakeoff/HoverFlightState/FixedStandardAtmosphere")
+		
 		delta_S = generic_data["delta_S"]
+		St      = generic_data["Strouhal_number"]
 		
-		#Unweighted
-		f_peak, SPL_array[i,j], spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
-			weighting="None")
-		
-		#A-weighted
-		f_peak, SPL_A_array[i,j], spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
-			weighting="A")
+		f_peak, SPL_array[i,j],   spectrum = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S, St, weighting="None")  # Unweighted
+		f_peak, SPL_A_array[i,j], spectrum = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S, St, weighting="A")  # Unweighted
 
-		print "T/A = %0.4f lbf/ft^2; L/D = %0.4f; cptpp = $%0.2f" \
-			% (solution("T/A_OnDemandSizingMission").to(ureg.lbf/ureg.ft**2).magnitude, solution("L_D_cruise"), solution("cost_per_trip_per_passenger"))
+		# print "T/A = %0.4f lbf/ft^2; L/D = %0.4f; cptpp = $%0.2f" \
+		# 	% (solution("T/A_OnDemandSizingMission").to(ureg.lbf/ureg.ft**2).magnitude, solution("L_D_cruise"), solution("cost_per_trip_per_passenger"))
 
 		# print "cptpp values: $%0.2f, $%0.2f, $%0.2f" % (cptpp_array[i,j], solution("cost_per_trip_per_passenger"), solution("cost_per_trip_per_passenger_OnDemandMissionCost"))
 
 
-TOGW_array = TOGW_array*ureg.lbf
+MTOM_array = MTOM_array * ureg.kg
+MTOW_array = MTOW_array * ureg.lbf
+cppk_array = cppk_array * ureg.km**-1
 
-#Add Boeing inputs to configs
+# Add Boeing inputs to configs
 for config in boeing_data:
-	label = config + " (Duffy et al.)"
-	configs[label] = boeing_data[config]
-
+	configs[config] = boeing_data[config]
 	
-#Set up the bilinear interpolation functions
-cptpp_interp = interp2d(L_D_array,T_A_array.to(ureg.N/ureg.m**2).magnitude,\
-	cptpp_array,kind="cubic")
-SPL_A_interp = interp2d(L_D_array,T_A_array.to(ureg.N/ureg.m**2).magnitude,\
-	SPL_A_array,kind="cubic")
+# Set up the bilinear interpolation functions
+cptpp_interp = interp2d(L_D_array, T_A_max_array.to(ureg.N/ureg.m**2).magnitude, cptpp_array,                          kind="cubic")
+cppk_interp  = interp2d(L_D_array, T_A_max_array.to(ureg.N/ureg.m**2).magnitude, cppk_array.to(ureg.km**-1).magnitude, kind="cubic")
+SPL_A_interp = interp2d(L_D_array, T_A_max_array.to(ureg.N/ureg.m**2).magnitude, SPL_A_array,                          kind="cubic")	
 	
-	
-#Estimated cptpp and SPL_A
+# Estimated cptpp, cpsk and SPL_A
 for config in configs:
-	L_D = configs[config]["L/D"]
-	T_A = configs[config]["T/A"].to(ureg.N/ureg.m**2)
-	
-	configs[config]["cptpp"] = cptpp_interp(L_D,T_A)
-	configs[config]["SPL_A"] = SPL_A_interp(L_D,T_A)
+	try:
+		# This will not work for the Boeing configs
+		aircraft = OnDemandAircraft()
+		aircraft = aircraft.standard_substitutions(config=config, autonomousEnabled=generic_data["autonomousEnabled"])
 
-#Generate sizing plot
+		sizing_mission = OnDemandSizingMission(aircraft=aircraft)
+		sizing_mission = sizing_mission.standard_substitutions(piloted=generic_data["isSizingMissionPiloted"], reserve=generic_data["reserve"])
+
+		objective_function = aircraft.MTOM
+		problem            = Model(objective_function, [aircraft, sizing_mission])
+		solution           = problem.solve(verbosity=0)
+
+		L_D     = solution("(L/D)_{cruise}")
+		T_A_max = solution("(T/A)_{max}").to(ureg.N/ureg.m**2).magnitude
+
+	except:
+
+		L_D     = boeing_data[config]["L/D"]
+		T_A_max = boeing_data[config]["T/A"].to(ureg.N/ureg.m**2).magnitude
+	
+	configs[config]["cptpp"] = cptpp_interp(L_D, T_A_max)
+	configs[config]["cppk"]  = cppk_interp( L_D, T_A_max)
+	configs[config]["SPL_A"] = SPL_A_interp(L_D, T_A_max)
+
+# Generate sizing plot
 plt.ion()
 fig1 = plt.figure(figsize=(11,5), dpi=80)
 plt.show()
 
 style = {}
-style["marker"] = ["s","^","v","s","o","^","v"]
-style["fillstyle"] = ["full","full","full","none","none","none","none"]
+style["marker"]     = ["s","^","v","s","o","^","v"]
+style["fillstyle"]  = ["full","full","full","none","none","none","none"]
 style["markersize"] = 16
 
 #First set of lines
@@ -198,7 +174,7 @@ for i,L_D in enumerate(L_D_array[0,:]):
 	plt.text(x-5,y-1,label,fontsize=16,rotation=45)
 
 #Second set of lines
-for i,T_A in enumerate(T_A_array[:,0]):
+for i,T_A in enumerate(T_A_max_array[:,0]):
 	cptpp_row = cptpp_array[i,:]
 	SPL_A_row = SPL_A_array[i,:]
 	plt.plot(cptpp_row,SPL_A_row,'k-',linewidth=2)
@@ -251,18 +227,18 @@ for i in range(np.size(L_D_array[0])):
 
 output_data.write("\n")
 output_data.write("T/A (lbf/ft^2)\n\n")
-for i in range(np.size(T_A_array[0])):
-	for j, T_A in enumerate(T_A_array[i]):
+for i in range(np.size(T_A_max_array[0])):
+	for j, T_A in enumerate(T_A_max_array[i]):
 		T_A = T_A.to(ureg.lbf/ureg.ft**2).magnitude
 		output_data.write("%0.2f\t" % T_A)
 	output_data.write("\n")
 	
 output_data.write("\n")
-output_data.write("TOGW (lbf)\n\n")
-for i in range(np.size(TOGW_array[0])):
-	for j, TOGW in enumerate(TOGW_array[i]):
-		TOGW = TOGW.to(ureg.lbf).magnitude
-		output_data.write("%0.2f\t" % TOGW)
+output_data.write("MTOM (lbf)\n\n")
+for i in range(np.size(MTOM_array[0])):
+	for j, MTOM in enumerate(MTOM_array[i]):
+		MTOM = MTOM.to(ureg.lbf).magnitude
+		output_data.write("%0.2f\t" % MTOM)
 	output_data.write("\n")
 	
 output_data.write("\n")
