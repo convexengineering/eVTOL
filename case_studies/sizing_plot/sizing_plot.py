@@ -149,7 +149,7 @@ for config in configs:
 		T_A_max = boeing_data[config]["T/A"].to(ureg.N/ureg.m**2).magnitude
 	
 	configs[config]["cptpp"] = cptpp_interp(L_D, T_A_max)
-	configs[config]["cppk"]  = cppk_interp( L_D, T_A_max)
+	configs[config]["cppk"]  = cppk_interp( L_D, T_A_max) * ureg.km**-1
 	configs[config]["SPL_A"] = SPL_A_interp(L_D, T_A_max)
 
 # Generate sizing plot
@@ -164,52 +164,51 @@ style["markersize"] = 16
 
 #First set of lines
 for i,L_D in enumerate(L_D_array[0,:]):
-	cptpp_row = cptpp_array[:,i]
+	cppk_row  = cppk_array[:,i].to(ureg.km**-1).magnitude
 	SPL_A_row = SPL_A_array[:,i]
-	plt.plot(cptpp_row,SPL_A_row,'k-',linewidth=2)
+	plt.plot(cppk_row, SPL_A_row,'k-',linewidth=2)
 	
-	x = cptpp_row[0]
-	y = SPL_A_row[0]
+	x     = cppk_row[0]
+	y     = SPL_A_row[0]
 	label = "L/D = %0.1f" % L_D
-	plt.text(x-5,y-1,label,fontsize=16,rotation=45)
+	plt.text(x-0.08, y-1, label, fontsize=16, rotation=45)
 
 #Second set of lines
 for i,T_A in enumerate(T_A_max_array[:,0]):
-	cptpp_row = cptpp_array[i,:]
+	cppk_row  = cppk_array[i,:].to(ureg.km**-1).magnitude
 	SPL_A_row = SPL_A_array[i,:]
-	plt.plot(cptpp_row,SPL_A_row,'k-',linewidth=2)
+	plt.plot(cppk_row,SPL_A_row,'k-',linewidth=2)
 	
-	x = cptpp_row[-1]
-	y = SPL_A_row[-1]
+	x     = cppk_row[-1]
+	y     = SPL_A_row[-1]
 	label = "T/A = %0.0f N/m$^2$" % T_A.to(ureg.N/ureg.m**2).magnitude
-	plt.text(x-11,y-0.2,label,fontsize=16,rotation=0)
+	plt.text(x-0.17, y-0.2,label,fontsize=16,rotation=0)
 
 #Configuration data
 for i,config in enumerate(configs):
-	cptpp = configs[config]["cptpp"]
+	cppk  = configs[config]["cppk"].to(ureg.km**-1).magnitude
 	SPL_A = configs[config]["SPL_A"]
-	plt.plot(cptpp,SPL_A,'k',marker=style["marker"][i],fillstyle=style["fillstyle"][i],\
-		linestyle="None", markersize=style["markersize"],markeredgewidth=3,label=config)
+	plt.plot(cppk, SPL_A,'k',marker=style["marker"][i], fillstyle=style["fillstyle"][i], linestyle="None", markersize=style["markersize"], markeredgewidth=3, label=config)
 	
 plt.grid()
 [xmin,xmax] = plt.gca().get_xlim()
-plt.xlim(xmin=xmin-10,xmax=xmax+3)
+plt.xlim(xmin=0.85*xmin, xmax=1.05*xmax)
 [ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymin=ymin-5,ymax=ymax+1)
+plt.ylim(ymin=0.92*ymin, ymax=ymax)
 
 locs,labels = plt.xticks()
 new_xticks = [""]*len(locs)
 for i,loc in enumerate(locs):
-	new_xticks[i] = "\$%0.0f" % loc
-plt.xticks(locs,new_xticks,fontsize=16)
-plt.yticks(fontsize=18)
+	new_xticks[i] = "\$%0.2f" % loc
+plt.xticks(locs, new_xticks, fontsize=18)
+plt.yticks(                  fontsize=18)
 
-plt.xlabel('Cost per trip, per passenger', fontsize=20)
-plt.ylabel('SPL (dBA)', fontsize = 20)
-plt.legend(numpoints = 1,loc='lower right', framealpha=1, fontsize = 14)
+plt.xlabel('Cost per passenger-km',   fontsize=20)
+plt.ylabel('SPL (dBA)',               fontsize=20)
+plt.legend(numpoints=1, framealpha=1, fontsize=14, loc='lower right')
 
 plt.tight_layout()
-plt.subplots_adjust(left=0.10,right=0.97,bottom=0.14,top=0.97)
+plt.subplots_adjust(left=0.08, right=0.96, bottom=0.14, top=0.97)
 plt.savefig('sizing_plot_01.pdf')
 
 
@@ -217,7 +216,7 @@ plt.savefig('sizing_plot_01.pdf')
 output_data = open("sizing_plot_data.txt","w")
 
 output_data.write("Sizing plot data\n\n")
-output_data.write("Configuration: %s\n\n" % config)
+output_data.write("Configuration: %s\n\n" % sizing_plot_config)
 
 output_data.write("L/D (dimensionless)\n\n")
 for i in range(np.size(L_D_array[0])):
@@ -226,18 +225,18 @@ for i in range(np.size(L_D_array[0])):
 	output_data.write("\n")
 
 output_data.write("\n")
-output_data.write("T/A (lbf/ft^2)\n\n")
+output_data.write("T/A (N/m^2)\n\n")
 for i in range(np.size(T_A_max_array[0])):
 	for j, T_A in enumerate(T_A_max_array[i]):
-		T_A = T_A.to(ureg.lbf/ureg.ft**2).magnitude
-		output_data.write("%0.2f\t" % T_A)
+		T_A = T_A.to(ureg.N/ureg.m**2).magnitude
+		output_data.write("%0.1f\t" % T_A)
 	output_data.write("\n")
 	
 output_data.write("\n")
-output_data.write("MTOM (lbf)\n\n")
+output_data.write("MTOM (kg)\n\n")
 for i in range(np.size(MTOM_array[0])):
 	for j, MTOM in enumerate(MTOM_array[i]):
-		MTOM = MTOM.to(ureg.lbf).magnitude
+		MTOM = MTOM.to(ureg.kg).magnitude
 		output_data.write("%0.2f\t" % MTOM)
 	output_data.write("\n")
 	
@@ -246,6 +245,14 @@ output_data.write("Cost per trip, per passenger\n\n")
 for i in range(np.size(cptpp_array[0])):
 	for j, cptpp in enumerate(cptpp_array[i]):
 		output_data.write("%0.2f\t" % cptpp)
+	output_data.write("\n")
+
+output_data.write("\n")
+output_data.write("Cost per passenger-km\n\n")
+for i in range(np.size(cppk_array[0])):
+	for j, cppk in enumerate(cppk_array[i]):
+		cppk = cppk.to(ureg.km**-1).magnitude
+		output_data.write("%0.2f\t" % cppk)
 	output_data.write("\n")
 
 output_data.write("\n")

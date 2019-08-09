@@ -2,152 +2,216 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../../models'))
 
 import numpy as np
-from gpkit import Model, ureg
-from matplotlib import pyplot as plt
-from aircraft_models import OnDemandAircraft 
-from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
-from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
-from study_input_data import generic_data, configuration_data
-from copy import deepcopy
-from collections import OrderedDict
-from noise_models import vortex_noise
+from gpkit                  import Model, ureg
+from copy                   import deepcopy
+from collections            import OrderedDict
+from matplotlib             import pyplot as plt
+from aircraft_models        import OnDemandAircraft
+from mission_models         import OnDemandSizingMission, OnDemandRevenueMission, OnDemandDeadheadMission
+from cost_models            import OnDemandMissionCost
+from noise_models           import vortex_noise
+from standard_substitutions import generic_data, configs
 
 
 # Data specific to study
-configs = OrderedDict()
-reserve_type_array = ["Uber","FAA_heli","FAA_aircraft"]
+cases = OrderedDict()
 
-for config in configuration_data:
-	configs[config] = OrderedDict()
-	for reserve_type in reserve_type_array:
-		configs[config][reserve_type] = configuration_data[config].copy()
-
-#Delete unwanted configurations
-del configs["Multirotor"]["Uber"]
-del configs["Multirotor"]["FAA_heli"]
-del configs["Multirotor"]["FAA_aircraft"]
-
-del configs["Autogyro"]["Uber"]
-del configs["Autogyro"]["FAA_heli"]
-del configs["Autogyro"]["FAA_aircraft"]
-
-del configs["Helicopter"]["Uber"]
-del configs["Helicopter"]["FAA_heli"]
-del configs["Helicopter"]["FAA_aircraft"]
-
-del configs["Tilt duct"]["Uber"]
-del configs["Tilt duct"]["FAA_heli"]
-del configs["Tilt duct"]["FAA_aircraft"]
-
-del configs["Coaxial heli"]["Uber"]
-del configs["Coaxial heli"]["FAA_heli"]
-del configs["Coaxial heli"]["FAA_aircraft"]
-
-
-#Delete configurations that will not be evaluated
-pared_configs = deepcopy(configs)
 for config in configs:
-	if configs[config] == {}:
-		del pared_configs[config]
-configs = deepcopy(pared_configs)
 
-#Optimize remaining configurations
-for config in configs:
+	cases[config] = OrderedDict()
+
+	cases[config]["2-nmi diversion"]  = {}
+	cases[config]["20-minute loiter"] = {}
+	cases[config]["30-minute loiter"] = {}
+
+
+# Optimize
+for config in cases:
 	
 	print "Solving configuration: " + config
 
-	for reserve_type in configs[config]:
+	for i, reserve in enumerate(cases[config]):
 		
-		c = configs[config][reserve_type]
+		c = cases[config][reserve]
 
-		problem_subDict = {}
-	
-		Aircraft = OnDemandAircraft(autonomousEnabled=generic_data["autonomousEnabled"])
-		problem_subDict.update({
-			Aircraft.L_D_cruise: c["L/D"], #estimated L/D in cruise
-			Aircraft.eta_cruise: generic_data["\eta_{cruise}"], #propulsive efficiency in cruise
-			Aircraft.tailRotor_power_fraction_hover: c["tailRotor_power_fraction_hover"],
-			Aircraft.tailRotor_power_fraction_levelFlight: c["tailRotor_power_fraction_levelFlight"],
-			Aircraft.cost_per_weight: generic_data["vehicle_cost_per_weight"], #vehicle cost per unit empty weight
-			Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
-			Aircraft.battery.cost_per_C: generic_data["battery_cost_per_C"], #battery cost per unit energy capacity
-			Aircraft.rotors.N: c["N"], #number of propellers
-			Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
-			Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
-			Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
-		})
+		aircraft = OnDemandAircraft()
+		aircraft = aircraft.standard_substitutions(config=config, autonomousEnabled=generic_data["autonomousEnabled"])
 
-		SizingMission = OnDemandSizingMission(Aircraft,mission_type=generic_data["sizing_mission"]["type"],
-			reserve_type=reserve_type)
-		problem_subDict.update({
-			SizingMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
-			SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
-			SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
-			SizingMission.T_A: c["T/A"],#disk loading
-			SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_{passengers}"],#Number of passengers
-		})
+		sizing_mission = OnDemandSizingMission(aircraft=aircraft)
+		sizing_mission = sizing_mission.standard_substitutions(piloted=generic_data["isSizingMissionPiloted"], reserve=reserve)
+		
+		revenue_mission = OnDemandRevenueMission(aircraft=aircraft)
+		revenue_mission = revenue_mission.standard_substitutions(piloted=generic_data["isRevenueMissionPiloted"])
 
-		RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
-		problem_subDict.update({
-			RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
-			RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
-			RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
-			RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_{passengers}"],#Number of passengers
-			RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-		})
+		deadhead_mission = OnDemandDeadheadMission(aircraft=aircraft)
+		deadhead_mission = deadhead_mission.standard_substitutions(piloted=generic_data["isDeadheadMissionPiloted"])
 
-		DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=generic_data["deadhead_mission"]["type"])
-		problem_subDict.update({
-			DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
-			DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
-			DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
-			DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_{passengers}"],#Number of passengers
-			DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-		})
+		mission_cost = OnDemandMissionCost(aircraft=aircraft, revenue_mission=revenue_mission, deadhead_mission=deadhead_mission)
+		mission_cost = mission_cost.standard_substitutions(isRevenueMissionPiloted=generic_data["isRevenueMissionPiloted"], isDeadheadMissionPiloted=generic_data["isDeadheadMissionPiloted"])
 
-		MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
-		problem_subDict.update({
-			MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
-			MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
-			MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
-			MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
-			MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
-			MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
-			MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
-		})
+		objective_function = mission_cost.cpt
+		problem            = Model(objective_function, [aircraft, sizing_mission, revenue_mission, deadhead_mission, mission_cost])
+		solution           = problem.solve(verbosity=0)
 
-		problem = Model(MissionCost["cost_per_trip"],
-			[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
-		problem.substitutions.update(problem_subDict)
-		solution = problem.solve(verbosity=0)
-		configs[config][reserve_type]["solution"] = solution
+		c["solution"] = solution
 
-		configs[config][reserve_type]["TOGW"] = solution("TOGW_OnDemandAircraft")
-		configs[config][reserve_type]["W_{battery}"] = solution("W_OnDemandAircraft/Battery")
-		configs[config][reserve_type]["cost_per_trip_per_passenger"] = solution("cost_per_trip_per_passenger_OnDemandMissionCost")
-
-		#Noise computations
-		T_perRotor = solution("T_perRotor_OnDemandSizingMission")[0]
-		Q_perRotor = solution("Q_perRotor_OnDemandSizingMission")[0]
-		R = solution("R")
-		VT = solution("VT_OnDemandSizingMission")[0]
-		s = solution("s")
-		Cl_mean = solution("Cl_{mean_{max}}")
-		N = solution("N")
-
-		B = generic_data["B"]
+		# Noise computations (sizing mission)
+		T_perRotor = solution("T_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		T_A        = solution("T/A_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		V_tip      = solution("v_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		s          = solution("s_OnDemandAircraft/Rotors")
+		Cl_mean    = solution("Cl_{mean}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+		N          = solution("N_OnDemandAircraft/Rotors")
+		c_avg      = solution("c_{avg}_OnDemandAircraft/Rotors")
+		t_avg      = solution("t_{avg}_OnDemandAircraft/Rotors")
+		rho        = solution("\\rho_OnDemandSizingMission/HoverTakeoff/HoverFlightState/FixedStandardAtmosphere")
+		
 		delta_S = generic_data["delta_S"]
+		St      = generic_data["Strouhal_number"]
 
-		#A-weighted
-		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,
-			weighting="A")
-		configs[config][reserve_type]["SPL_A"] = SPL
+		f_peak, SPL, spectrum = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S, St, weighting="A")
+
+		c["SPL_sizing_A"]      = SPL
+		c["f_{peak}"]          = f_peak
+		c["spectrum_sizing_A"] = spectrum
+
+
+# Plotting commands
+plt.ion()
+fig1 = plt.figure(figsize=(11,4), dpi=80)
+plt.rc('axes', axisbelow=True)
+plt.show()
+
+y_pos = np.arange(len(configs))
+labels = [""]*len(configs)
+for i, config in enumerate(configs):
+	if config == "Compound heli":
+		labels[i] = config.replace(" ", "\n")  # Replace spaces with newlines
+	else:
+		labels[i] = config
+
+xmin = np.min(y_pos) - 0.7
+xmax = np.max(y_pos) + 0.7
+
+style = {}
+style["rotation"]         = -45
+style["legend_ncols"]     = 2
+style["bar_width_wide"]   = 0.7
+style["bar_width_medium"] = 0.3
+style["bar_width_narrow"] = 0.2
+style["offsets"]          = [-0.25, 0, 0.25]
+style["colors"]           = ["grey", "w", "k", "lightgrey"]
+
+style["fontsize"] = {}
+style["fontsize"]["xticks"]     = 14
+style["fontsize"]["yticks"]     = 14
+style["fontsize"]["xlabel"]     = 18
+style["fontsize"]["ylabel"]     = 16
+style["fontsize"]["title"]      = 16
+style["fontsize"]["legend"]     = 11
+style["fontsize"]["text_label"] = 18
+
+
+# Takeoff mass
+plt.subplot(1,3,1)
+for i,config in enumerate(cases):
+
+	for j, reserve in enumerate(cases[config]):
+
+		offset   = style["offsets"][j]
+		solution = cases[config][reserve]["solution"]
+		MTOM     = solution("MTOM").to(ureg.kg).magnitude
+
+		if i==0:
+			plt.bar(i+offset, MTOM, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k', label=reserve)
+		else:
+			plt.bar(i+offset, MTOM, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
+
+plt.xlim(xmin=xmin, xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.0*ymax)
+plt.grid()
+plt.xticks(y_pos, labels,         fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                       fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Mass (kg)',           fontsize=style["fontsize"]["ylabel"])
+plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
+plt.legend(loc="lower left",      fontsize=style["fontsize"]["legend"], framealpha=1)
+
+
+# Cost per passenger-km
+plt.subplot(1,3,2)
+for i,config in enumerate(cases):
+
+	for j, reserve in enumerate(cases[config]):
+
+		offset   = style["offsets"][j]
+		solution = cases[config][reserve]["solution"]
+		cppk     = solution("cost_per_passenger_km").to(ureg.km**-1).magnitude
+
+		plt.bar(i+offset, cppk, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
+
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.0*ymax)
+plt.grid()
+plt.xticks(y_pos, labels,                 fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                               fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Cost ($US/km)',               fontsize=style["fontsize"]["ylabel"])
+plt.title("Cost per Passenger Kilometer", fontsize=style["fontsize"]["title"])
+
+
+# Hover SPL (revenue mission)
+plt.subplot(1,3,3)
+for i,config in enumerate(cases):
+
+	for j, reserve in enumerate(cases[config]):
+
+		offset       = style["offsets"][j]
+		SPL_sizing_A = cases[config][reserve]["SPL_sizing_A"]
+
+		plt.bar(i+offset, SPL_sizing_A, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
+
+SPL_req = 62
+plt.plot([np.min(y_pos)-1, np.max(y_pos)+1], [SPL_req, SPL_req], color="black", linewidth=3, linestyle="--", label="62 dBA")
+
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymin=57, ymax=ymax-1)
+plt.grid()
+plt.xticks(y_pos, labels,                 fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                               fontsize=style["fontsize"]["yticks"])
+plt.ylabel('SPL (dBA)',                   fontsize=style["fontsize"]["ylabel"])
+plt.title("Hover Sound (sizing mission)", fontsize=style["fontsize"]["title"])
+plt.legend(loc="lower left",              fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.09, right=0.95, bottom=0.28, top=0.92)
+plt.savefig('reserve_requirement_plot_01.pdf')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		
-
+"""
 
 # Plotting commands
 plt.ion()
@@ -324,4 +388,5 @@ title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f ro
 plt.suptitle(title_str,fontsize = 13.5)
 plt.tight_layout()
 plt.subplots_adjust(left=0.08,right=0.96,bottom=0.10,top=0.87)
-plt.savefig('reserve_requirement_plot_01.pdf')
+
+"""

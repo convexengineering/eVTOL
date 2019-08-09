@@ -58,13 +58,14 @@ for config in configs:
 	St      = generic_data["Strouhal_number"]
 
 	#Unweighted
-	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor, T_A=T_A, V_tip=V_tip, s=s, Cl_mean=Cl_mean, N=N, c_avg=c_avg, t_avg=t_avg, rho=rho, delta_S=delta_S, St=St, weighting="None")
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S, St, weighting="None")
 	
 	configs[config]["SPL"]      = SPL
 	configs[config]["f_{peak}"] = f_peak
 
 	#A-weighted
-	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor, T_A=T_A, V_tip=V_tip, s=s, Cl_mean=Cl_mean, N=N, c_avg=c_avg, t_avg=t_avg, rho=rho, delta_S=delta_S, St=St, weighting="A")
+	f_peak, SPL, spectrum = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S, St, weighting="A")	
+
 	configs[config]["SPL_A"] = SPL
 
 
