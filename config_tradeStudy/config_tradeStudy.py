@@ -376,11 +376,11 @@ for i, output in enumerate(outputs):
 
 		elif output == "Airframe mass":
 			var_string  = "m_OnDemandAircraft/Airframe"
-			precision   = "%0.1f"
+			precision   = "%0.0f"
 
 		elif output == "Battery mass":
 			var_string  = "m_OnDemandAircraft/Battery"
-			precision   = "%0.1f"
+			precision   = "%0.0f"
 
 		elif output == "Mission time":
 			var_string = "t_{mission}_OnDemandRevenueMission"

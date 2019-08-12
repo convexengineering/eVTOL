@@ -36,11 +36,11 @@ def on_demand_aircraft_substitutions(aircraft, config="Lift + cruise", autonomou
 
 		aircraft.avionics.lifetime:  20000 * ureg.hour,
 		
-		aircraft.battery.E_frac:     0.8,
-		aircraft.battery.e:          400. * ureg.Wh / ureg.kg,
-		aircraft.battery.p:          3.   * ureg.kW / ureg.kg,
-		aircraft.battery.cost_per_E: 400. * ureg.kWh**-1,
-		aircraft.battery.cycle_life: 2000.,
+		aircraft.battery.E_frac:          0.8,
+		aircraft.battery.e:               400. * ureg.Wh / ureg.kg,
+		aircraft.battery.p:               3.   * ureg.kW / ureg.kg,
+		aircraft.battery.cost_per_energy: 400. * ureg.kWh**-1,
+		aircraft.battery.cycle_life:      2000.,
 
 		aircraft.rotors.B:         5.,   # Number of rotor blades
 		aircraft.rotors.s:         0.1,

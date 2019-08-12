@@ -3,8 +3,8 @@ Tabulated Data by Configuration
 Configuration			Lift + cruise	Compound heli	Tilt wing	Tilt rotor	Units
 
 Max takeoff mass		1504		1475		1441		1326		kg
-Airframe mass			796.9		737.7		792.7		729.2		kg
-Battery mass			348.3		379.4		290.2		238.3		kg
+Airframe mass			797		738		793		729		kg
+Battery mass			348		379		290		238		kg
 Mission time			26.0		27.3		24.0		22.2		minutes
 Flight time			14.8		14.8		14.8		14.8		minutes
 Charging time			11.1		12.5		9.2		7.4		minutes

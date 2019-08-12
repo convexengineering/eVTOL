@@ -156,7 +156,6 @@ class OnDemandAircraftLevelFlightFlightPerformance(Model):
 			P_shaft_tailRotor     == tailRotor_power_fraction * P_shaft,
 
 			T * v == eta_levelFlight * P_shaft_thrust,
-
 		]
 
 		return constraints
@@ -208,11 +207,11 @@ class Battery(Model):
 		self.e      = e      = Variable("e",        "Wh/kg", "Battery specific energy (energy density)")
 		self.p      = p      = Variable("p",        "W/kg",  "Battery specific power (power density)")
 
-		self.cost_per_E     = cost_per_E     = Variable("cost_per_E",     "kWh**-1", "Battery cost per unit energy stored")
-		self.cost_per_m     = cost_per_m     = Variable("cost_per_m",     "kg**-1",  "Battery cost per unit mass")
-		self.cost_per_W     = cost_per_W     = Variable("cost_per_W",     "N**-1",   "Battery cost per unit weight")
-		self.purchase_price = purchase_price = Variable("purchase_price", "-",       "Purchase price of the battery")
-		self.cycle_life     = cycle_life     = Variable("cycle_life",     "-",       "Number of cycles before battery needs replacement")
+		self.cost_per_energy = cost_per_energy = Variable("cost_per_energy", "kWh**-1", "Battery cost per unit energy stored")
+		self.cost_per_mass   = cost_per_mass   = Variable("cost_per_mass",   "kg**-1",  "Battery cost per unit mass")
+		self.cost_per_weight = cost_per_weight = Variable("cost_per_weight", "N**-1",   "Battery cost per unit weight")
+		self.purchase_price  = purchase_price  = Variable("purchase_price",  "-",       "Purchase price of the battery")
+		self.cycle_life      = cycle_life      = Variable("cycle_life",      "-",       "Number of cycles before battery needs replacement")
 
 		self.m = m = Variable("m", "kg", "Battery mass")
 		self.W = W = Variable("W", "N",  "Battery weight")
@@ -222,9 +221,9 @@ class Battery(Model):
 			P_max == m * p,
 			E_eff == E_frac * E,
 
-			purchase_price == cost_per_E * E,
-			purchase_price == cost_per_m * m,
-			purchase_price == cost_per_W * W,
+			purchase_price == cost_per_energy * E,
+			purchase_price == cost_per_mass   * m,
+			purchase_price == cost_per_weight * W,
 		]
 
 		return constraints

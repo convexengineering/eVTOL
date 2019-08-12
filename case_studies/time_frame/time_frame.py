@@ -55,9 +55,9 @@ for config in configs:
 	cases[config]["Near term"]["airframe_cost_per_weight"] = 400 * ureg.lbf**-1
 	cases[config]["Long term"]["airframe_cost_per_weight"] = 200 * ureg.lbf**-1
 
-	cases[config]["Initial"]["battery_cost_per_E"]   = 400 * ureg.kWh**-1
-	cases[config]["Near term"]["battery_cost_per_E"] = 200 * ureg.kWh**-1
-	cases[config]["Long term"]["battery_cost_per_E"] = 100 * ureg.kWh**-1
+	cases[config]["Initial"]["battery_cost_per_energy"]   = 400 * ureg.kWh**-1
+	cases[config]["Near term"]["battery_cost_per_energy"] = 200 * ureg.kWh**-1
+	cases[config]["Long term"]["battery_cost_per_energy"] = 100 * ureg.kWh**-1
 
 
 # Optimize
@@ -75,7 +75,7 @@ for config in cases:
 		aircraft.substitutions.update({
 			aircraft.airframe.cost_per_weight: c["airframe_cost_per_weight"],
 			aircraft.battery.e:                c["e"],
-			aircraft.battery.cost_per_E:       c["battery_cost_per_E"],
+			aircraft.battery.cost_per_energy:  c["battery_cost_per_energy"],
 		})
 
 		sizing_mission = OnDemandSizingMission(aircraft=aircraft)
@@ -99,6 +99,8 @@ for config in cases:
 		solution           = problem.solve(verbosity=0)
 
 		c["solution"] = solution
+
+		print case + "aircraft cost: %0.1f per kg" % solution("cost_per_mass_OnDemandAircraft/Airframe").to(ureg.kg**-1).magnitude
 
 		# Noise computations (sizing mission)
 		T_perRotor = solution("T_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
