@@ -122,6 +122,7 @@ class HoverLanding(Model):
 
 class Cruise(Model):
 
+	# Cruise and Reserve segments use exactly the same code. Duplication simplifies data output.
 	def setup(self, aircraft, h=0*ureg.m):
 
 		self.state       = state       = LevelFlightState(h=h)
@@ -141,10 +142,8 @@ class Cruise(Model):
 
 		constraints =  [state, performance]
 		constraints += [
-			L   == W,
-			T   == D,
-			v   == aircraft.v_cruise,    # Cruise value. 
-			L_D == aircraft.L_D_cruise,  # Cruise value.   
+			L == W,
+			T == D,
 			
 			d_segment == v * t_segment,
 			t_segment == performance.battery_perf.t,
@@ -153,8 +152,9 @@ class Cruise(Model):
 		return constraints
 
 
-class Loiter(Model):
+class Reserve(Model):
 
+	# Cruise and Reserve segments use exactly the same code. Duplication simplifies data output.
 	def setup(self, aircraft, h=0.*ureg.m):
 
 		self.state       = state       = LevelFlightState(h=h)
@@ -174,10 +174,8 @@ class Loiter(Model):
 
 		constraints =  [state, performance]
 		constraints += [
-			L   == W,
-			T   == D,
-			v   == aircraft.v_loiter,    # Loiter value. 
-			L_D == aircraft.L_D_loiter,  # Loiter value.   
+			L == W,
+			T == D,  
 			
 			d_segment == v * t_segment,
 			t_segment == performance.battery_perf.t,
@@ -208,21 +206,29 @@ class OnDemandSizingMission(Model):
 		self.m_mission = m_mission = Variable("m_{mission}", "kg",  "Mission aircraft mass (mass of the aircraft during the mission)")
 		self.W_mission = W_mission = Variable("W_{mission}", "N",   "Mission aircraft weight (weight of the aircraft during the mission)")
 		self.E_mission = E_mission = Variable("E_{mission}", "kWh", "Mission electrical energy used")
+
+		self.v_reserve_nondim   = v_reserve_nondim   = Variable("v_{reserve,nondim}",     "-", "Reserve flight speed / cruise flight speed")
+		self.L_D_reserve_nondim = L_D_reserve_nondim = Variable("(L/D)_{reserve,nondim}", "-", "Reserve lift-to-drag / cruise lift-to-drag")
 		
 		self.takeoff_segment = takeoff_segment = HoverTakeoff(aircraft=aircraft, h=h)
-		self.cruise_segment  = cruise_segment  = Cruise(aircraft=aircraft, h=h)
-		self.loiter_segment  = loiter_segment  = Loiter(aircraft=aircraft, h=h)
+		self.cruise_segment  = cruise_segment  = Cruise(      aircraft=aircraft, h=h)
+		self.reserve_segment = reserve_segment = Reserve(     aircraft=aircraft, h=h)
 		self.landing_segment = landing_segment = HoverLanding(aircraft=aircraft, h=h)
 
-		segments             = [takeoff_segment, cruise_segment, loiter_segment, landing_segment]
-		flight_segments      = [takeoff_segment, cruise_segment, loiter_segment, landing_segment]
-		hover_segments       = [takeoff_segment,                                 landing_segment]
-		levelFlight_segments = [                 cruise_segment, loiter_segment                 ]
+		segments             = [takeoff_segment, cruise_segment, reserve_segment, landing_segment]
+		flight_segments      = [takeoff_segment, cruise_segment, reserve_segment, landing_segment]
+		hover_segments       = [takeoff_segment,                                  landing_segment]
+		levelFlight_segments = [                 cruise_segment, reserve_segment                 ]
 
 		constraints =  [payload, segments]
+
+		constraints += [cruise_segment.state.v   == aircraft.v_cruise]
+		constraints += [cruise_segment.state.L_D == aircraft.L_D_cruise]
+		
+		constraints += [reserve_segment.state.v   == cruise_segment.state.v   * v_reserve_nondim]
+		constraints += [reserve_segment.state.L_D == cruise_segment.state.L_D * L_D_reserve_nondim]
 		
 		constraints += [W_mission == g * m_mission]
-
 		constraints += [c.W       == g * c.m for c in payload]
 		constraints += [W_mission == c.performance.W for c in flight_segments]
 		constraints += [W_mission >= W_noPassengersOrCrew + sum(c.W for c in payload)]
@@ -272,39 +278,6 @@ class Passengers(Model):
 			W == N * W_unit,
 		]
 
-		return constraints
-
-
-class Loiter(Model):
-
-	def setup(self, aircraft, h=0.*ureg.m):
-
-		self.state       = state       = LevelFlightState(h=h)
-		self.performance = performance = aircraft.level_flight_performance(state)
-
-		v   = state.v
-		L   = state.L
-		T   = state.T
-		D   = state.D
-		L_D = state.L_D
-
-		m = performance.m
-		W = performance.W
-
-		self.t_segment = t_segment = Variable("t_{segment}", "min", "Segment time")
-		self.d_segment = d_segment = Variable("d_{segment}", "km",  "Segment distance travelled")
-
-		constraints =  [state, performance]
-		constraints += [
-			L   == W,
-			T   == D,
-			v   == aircraft.v_loiter,    # Loiter value. 
-			L_D == aircraft.L_D_loiter,  # Loiter value.   
-			
-			d_segment == v * t_segment,
-			t_segment == performance.battery_perf.t,
-		]
-		
 		return constraints
 
 
@@ -373,7 +346,7 @@ class OnDemandRevenueMission(Model):
 		self.t_flight  = t_flight  = Variable("t_{flight}",  "min", "Time in flight")
 
 		self.takeoff_segment = takeoff_segment = HoverTakeoff(aircraft=aircraft, h=h)
-		self.cruise_segment  = cruise_segment  = Cruise(aircraft=aircraft, h=h)
+		self.cruise_segment  = cruise_segment  = Cruise(      aircraft=aircraft, h=h)
 		self.landing_segment = landing_segment = HoverLanding(aircraft=aircraft, h=h)
 		self.ground_segment  = ground_segment  = TimeOnGround(aircraft=aircraft)
 
@@ -383,6 +356,9 @@ class OnDemandRevenueMission(Model):
 		levelFlight_segments = [                 cruise_segment,                                ]
 
 		constraints =  [payload, segments]
+
+		constraints += [cruise_segment.state.v   == aircraft.v_cruise]
+		constraints += [cruise_segment.state.L_D == aircraft.L_D_cruise]
 
 		constraints += [t_flight  >= sum(c.t_segment for c in flight_segments)]
 		constraints += [t_mission >= t_flight + ground_segment.t_segment]
@@ -437,6 +413,9 @@ class OnDemandDeadheadMission(Model):
 		levelFlight_segments = [                 cruise_segment,                                ]
 
 		constraints =  [payload, segments]
+
+		constraints += [cruise_segment.state.v   == aircraft.v_cruise]
+		constraints += [cruise_segment.state.L_D == aircraft.L_D_cruise]
 
 		constraints += [t_flight  >= sum(c.t_segment for c in flight_segments)]
 		constraints += [t_mission >= t_flight + ground_segment.t_segment]

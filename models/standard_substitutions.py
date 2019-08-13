@@ -221,17 +221,23 @@ def on_demand_sizing_mission_substitutions(mission, piloted=True, reserve="20-mi
 
 	if reserve == "20-minute loiter":
 		mission.substitutions.update({
-			mission.loiter_segment.t_segment: 20. * ureg.minute,
+			mission.reserve_segment.t_segment: 20. * ureg.minute,
+			mission.v_reserve_nondim:          ((1./3.)**(1./4.)),  # Approximation for max-endurance speed.        See derivation in publications.
+			mission.L_D_reserve_nondim:        ((3.**0.5)/2.),      # Approximation for max-endurance lift-to-drag. See derivation in publications.
 		})
 
 	elif reserve == "30-minute loiter":
 		mission.substitutions.update({
-			mission.loiter_segment.t_segment: 30. * ureg.minute,
+			mission.reserve_segment.t_segment: 30. * ureg.minute,
+			mission.v_reserve_nondim:          ((1./3.)**(1./4.)),  # Approximation for max-endurance speed.        See derivation in publications.
+			mission.L_D_reserve_nondim:        ((3.**0.5)/2.),      # Approximation for max-endurance lift-to-drag. See derivation in publications.
 		})
 
 	elif reserve == "2-nmi diversion":
 		mission.substitutions.update({
-			mission.loiter_segment.d_segment: 2. * ureg.nautical_mile,
+			mission.reserve_segment.d_segment: 2. * ureg.nautical_mile,
+			mission.v_reserve_nondim:          1.,
+			mission.L_D_reserve_nondim:        1.,
 		})
 
 	else:

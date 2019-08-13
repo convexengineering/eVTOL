@@ -139,7 +139,7 @@ for i, config in enumerate(configs):
 	E_cruise  = solution("E_OnDemandSizingMission/Cruise/OnDemandAircraftLevelFlightFlightPerformance/BatteryPerformance").to(ureg.kWh).magnitude
 	E_hover   = (solution("E_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/BatteryPerformance") \
 		+ solution("E_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/BatteryPerformance")).to(ureg.kWh).magnitude
-	E_reserve = solution("E_OnDemandSizingMission/Loiter/OnDemandAircraftLevelFlightFlightPerformance/BatteryPerformance").to(ureg.kWh).magnitude
+	E_reserve = solution("E_OnDemandSizingMission/Reserve/OnDemandAircraftLevelFlightFlightPerformance/BatteryPerformance").to(ureg.kWh).magnitude
 
 	if i==0:
 		plt.bar(i, E_cruise,  align='center', bottom=0,                alpha=1, color=style["colors"][0], edgecolor='k', label="Cruise")
@@ -169,7 +169,7 @@ for i, config in enumerate(configs):
 	P_electric    = np.zeros(3)	
 	P_electric[0] = solution("P_{electric}_OnDemandSizingMission/Cruise/LevelFlightState").to(ureg.kW).magnitude        # Cruise
 	P_electric[1] = solution("P_{electric}_OnDemandSizingMission/HoverTakeoff/HoverFlightState").to(ureg.kW).magnitude  # Hover
-	P_electric[2] = solution("P_{electric}_OnDemandSizingMission/Loiter/LevelFlightState").to(ureg.kW).magnitude        # Reserve
+	P_electric[2] = solution("P_{electric}_OnDemandSizingMission/Reserve/LevelFlightState").to(ureg.kW).magnitude       # Reserve
 	
 	for j,offset in enumerate(style["offsets"]):
 		if i==0:

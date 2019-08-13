@@ -38,11 +38,8 @@ class OnDemandAircraft(Model):
 		self.m_noPassengersOrCrew = m_noPassengersOrCrew = Variable("m_{noPassengersOrCrew}", "kg", "Aircraft mass without passengers or crew")
 		self.W_noPassengersOrCrew = W_noPassengersOrCrew = Variable("W_{noPassengersOrCrew}", "N",  "Aircraft weight without passengers or crew")
 		
-		self.v_cruise = v_cruise = Variable("v_{cruise}", "m/s", "Cruise speed")
-		self.v_loiter = v_loiter = Variable("v_{loiter}", "m/s", "Loiter speed")
-
-		self.L_D_cruise = L_D_cruise = Variable("(L/D)_{cruise}", "-", "Cruise L/D ratio")
-		self.L_D_loiter = L_D_loiter = Variable("(L/D)_{loiter}", "-", "Loiter L/D ratio")
+		self.v_cruise   = v_cruise   = Variable("v_{cruise}",     "m/s", "Cruise speed")
+		self.L_D_cruise = L_D_cruise = Variable("(L/D)_{cruise}", "-",   "Cruise lift-to-drag ratio")
 
 		self.eta_levelFlight = eta_levelFlight = Variable("\eta_{levelFlight}",  "-", "Level-flight propulsive efficiency (proeller efficiency)")
 
@@ -53,7 +50,7 @@ class OnDemandAircraft(Model):
 		self.tailRotor_power_fraction_levelFlight = tailRotor_power_fraction_levelFlight
 
 		constraints =  [self.components]
-		constraints += [c.W                  == g * c.m for c in mass_components]   # Avoids the need to include this in each sub-model
+		constraints += [c.W                  == g * c.m for c in mass_components ]  # Avoids the need to include this in each sub-model
 		constraints += [m_noPassengersOrCrew >= sum(c.m for c in mass_components)]  # Mass summation
 
 		constraints += [
@@ -61,9 +58,6 @@ class OnDemandAircraft(Model):
 			W_noPassengersOrCrew == g * m_noPassengersOrCrew,
 
 			airframe.m == empty_mass_fraction * MTOM,
-
-			v_loiter   == ((1./3.)**(1./4.)) * v_cruise,    # Approximation for loiter speed.        See derivation in publications.
-			L_D_loiter == ((3.**0.5)/2.)     * L_D_cruise,  # Approximation for loiter lift-to-drag. See derivation in publications.
 		]
 
 		return constraints

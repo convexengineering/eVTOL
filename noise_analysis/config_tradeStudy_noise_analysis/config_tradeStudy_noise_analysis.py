@@ -334,7 +334,7 @@ for i, config in enumerate(configs):
 	plt.xlabel('$\Theta$ (degrees)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.title(config, fontsize = 18)
-	plt.legend(loc="lower left",fontsize=12, framealpha=1)
+	plt.legend(loc="lower left", fontsize=12, framealpha=1)
 
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)

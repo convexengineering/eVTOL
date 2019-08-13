@@ -76,7 +76,6 @@ for config in configs:
 	solution      = problem.solve(verbosity=0)
 	c["solution"] = solution
 
-
 	for i in range(len(mission_range)):
 
 		# Noise computations (sizing mission)
