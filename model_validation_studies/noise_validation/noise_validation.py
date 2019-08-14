@@ -2,7 +2,7 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../../models'))
 
 import math
 import numpy as np
@@ -16,8 +16,8 @@ from noise_models import vortex_noise
 pi = math.pi
 
 generic_inputs = {}
-generic_inputs["\rho"] = 1.19956*ureg.kg/ureg.m**3
-generic_inputs["delta_S"] = 300*ureg.ft
+generic_inputs["\rho"]    = 1.19956 * ureg.kg/ureg.m**3
+generic_inputs["delta_S"] = 300.    * ureg.ft
 
 heli_info = {}
 
@@ -67,17 +67,22 @@ test_data["CH-53A"][2]["omega"] = 215*ureg.rpm
 test_data["CH-53A"][2]["T"] = [23700,29600,37900,43520]*ureg.lbf
 test_data["CH-53A"][2]["SPL_measured"] = [85,86,89,90]
 
-rho = generic_inputs["\rho"]
+rho     = generic_inputs["\rho"]
 delta_S = generic_inputs["delta_S"]
 
 for heli in test_data:
 	
-	R = heli_info[heli]["R"]
-	s = heli_info[heli]["s"]
-	A = heli_info[heli]["A"]
-	B = heli_info[heli]["B"]
+	R   = heli_info[heli]["R"]
+	s   = heli_info[heli]["s"]
+	A   = heli_info[heli]["A"]
+	B   = heli_info[heli]["B"]
 	t_c = heli_info[heli]["t_c"]
-	St = heli_info[heli]["St"]
+	St  = heli_info[heli]["St"]
+
+	A_blade = s * A
+	c_avg   = A_blade / (B * R)
+	t_avg   = t_c * c_avg
+	N       = 1.
 	
 	for j,data in enumerate(test_data[heli]):
 	
@@ -85,15 +90,19 @@ for heli in test_data:
 		
 		omega_rad_s = test_data[heli][j]["omega"].to(ureg.radian/ureg.s)
 		omega_rad_s = (omega_rad_s.magnitude)*ureg.s**-1
-		VT = omega_rad_s*R
+		V_tip       = omega_rad_s*R
 		
-		for k,T in enumerate(test_data[heli][j]["T"]):
-		
-			CT = (T / (0.5*rho*(VT**2)*A)).to(ureg.dimensionless)
-			Cl_mean = 3*CT/s
+		for k,T_perRotor in enumerate(test_data[heli][j]["T"]):
+
+			T_A     = T_perRotor / A
+			CT      = (T_perRotor / (0.5*rho*(V_tip**2)*A)).to(ureg.dimensionless)
+			Cl_mean = 3 * CT / s
 			
-			f_peak, SPL, spectrum = vortex_noise(T_perRotor=T,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-					N=1,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=t_c,St=St,weighting="None")
+			f_peak, SPL, spectrum = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S, St, weighting="None")
+
+			
+			# f_peak, SPL, spectrum = vortex_noise(T_perRotor=T,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
+			# 		N=1,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=t_c,St=St,weighting="None")
 			test_data[heli][j]["SPL_calculated"][k] = SPL
 
 
@@ -115,7 +124,7 @@ for i, heli in enumerate(test_data):
 		plt.subplot(2,3,3*i+j+1)
 	
 		omega          = test_data[heli][j]["omega"].to(ureg.rpm).magnitude
-		T              = test_data[heli][j]["T"].to(ureg.lbf).magnitude/1e3
+		T              = test_data[heli][j]["T"].to(ureg.kN).magnitude
 		SPL_calculated = test_data[heli][j]["SPL_calculated"]
 		SPL_measured   = test_data[heli][j]["SPL_measured"]
 		
@@ -127,10 +136,10 @@ for i, heli in enumerate(test_data):
 		[ymin,ymax] = plt.gca().get_ylim()
 		plt.ylim(ymin=ymin-1,ymax=ymax+1)
 		plt.grid()
-		plt.xticks(fontsize=12)
-		plt.yticks(fontsize=12)
-		plt.xlabel(r'Thrust (lbf $\times \; 10^3$)', fontsize = 16)
-		plt.ylabel('SPL (dB)', fontsize = 16)
+		plt.xticks(fontsize=14)
+		plt.yticks(fontsize=14)
+		plt.xlabel('Thrust (kN)', fontsize=16)
+		plt.ylabel('SPL (dB)',    fontsize=16)
 		
 		title_str = heli \
 			+ " at %0.0f rpm \n(max error = %0.1f dB)" \

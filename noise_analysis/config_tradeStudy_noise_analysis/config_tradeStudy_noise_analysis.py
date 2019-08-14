@@ -1,255 +1,220 @@
-#Noise analysis as part of vehicle top-level trade study
+# Noise analysis as part of vehicle top-level trade study
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + "/../../models"))
 
 import numpy as np
-from gpkit import Model, ureg
-from matplotlib import pyplot as plt
-from aircraft_models import OnDemandAircraft 
-from aircraft_models import OnDemandSizingMission, OnDemandRevenueMission
-from aircraft_models import OnDemandDeadheadMission, OnDemandMissionCost
-from study_input_data import generic_data, configuration_data
-from noise_models import rotational_noise, vortex_noise, noise_weighting
+from gpkit                  import Model, ureg
+from copy                   import deepcopy
+from matplotlib             import pyplot as plt
+from aircraft_models        import OnDemandAircraft
+from mission_models         import OnDemandSizingMission, OnDemandRevenueMission, OnDemandDeadheadMission
+from cost_models            import OnDemandMissionCost
+from noise_models           import rotational_noise, vortex_noise, noise_weighting
+from standard_substitutions import generic_data, configs
 
-# Delete some configurations
-configs = configuration_data.copy()
-del configs["Tilt duct"]
-del configs["Multirotor"]
-del configs["Autogyro"]
-del configs["Helicopter"]
-del configs["Coaxial heli"]
+configs = deepcopy(configs)
 
-#Optimize remaining configurations
-# Delete some configurations
-configs = configuration_data.copy()
-del configs["Tilt duct"]
-del configs["Multirotor"]
-del configs["Autogyro"]
-del configs["Helicopter"]
-del configs["Coaxial heli"]
+x = 500*ureg.ft
 
-#Optimize remaining configurations
+#Optimize
 for config in configs:
 	
 	print "Solving configuration: " + config
 
-	c = configs[config]
+	aircraft = OnDemandAircraft()
+	aircraft = aircraft.standard_substitutions(config=config, autonomousEnabled=generic_data["autonomousEnabled"])
 
-	problem_subDict = {}
-	
-	Aircraft = OnDemandAircraft(autonomousEnabled=generic_data["autonomousEnabled"])
-	problem_subDict.update({
-		Aircraft.L_D_cruise: c["L/D"], #estimated L/D in cruise
-		Aircraft.eta_cruise: generic_data["\eta_{cruise}"], #propulsive efficiency in cruise
-		Aircraft.tailRotor_power_fraction_hover: c["tailRotor_power_fraction_hover"],
-		Aircraft.tailRotor_power_fraction_levelFlight: c["tailRotor_power_fraction_levelFlight"],
-		Aircraft.cost_per_weight: generic_data["vehicle_cost_per_weight"], #vehicle cost per unit empty weight
-		Aircraft.battery.C_m: generic_data["C_m"], #battery energy density
-		Aircraft.battery.cost_per_C: generic_data["battery_cost_per_C"], #battery cost per unit energy capacity
-		Aircraft.rotors.N: c["N"], #number of propellers
-		Aircraft.rotors.Cl_mean_max: c["Cl_{mean_{max}}"], #maximum allowed mean lift coefficient
-		Aircraft.structure.weight_fraction: c["weight_fraction"], #empty weight fraction
-		Aircraft.electricalSystem.eta: generic_data["\eta_{electric}"], #electrical system efficiency	
-	})
+	sizing_mission = OnDemandSizingMission(aircraft=aircraft)
+	sizing_mission = sizing_mission.standard_substitutions(piloted=generic_data["isSizingMissionPiloted"], reserve=generic_data["reserve"])
 
-	SizingMission = OnDemandSizingMission(Aircraft,mission_type=generic_data["sizing_mission"]["type"],
-		reserve_type=generic_data["reserve_type"])
-	problem_subDict.update({
-		SizingMission.mission_range: generic_data["sizing_mission"]["range"],#mission range
-		SizingMission.V_cruise: c["V_{cruise}"],#cruising speed
-		SizingMission.t_hover: generic_data["sizing_mission"]["t_{hover}"],#hover time
-		SizingMission.T_A: c["T/A"],#disk loading
-		SizingMission.passengers.N_passengers: generic_data["sizing_mission"]["N_{passengers}"],#Number of passengers
-	})
+	revenue_mission = OnDemandRevenueMission(aircraft=aircraft)
+	revenue_mission = revenue_mission.standard_substitutions(piloted=generic_data["isRevenueMissionPiloted"])
 
-	RevenueMission = OnDemandRevenueMission(Aircraft,mission_type=generic_data["revenue_mission"]["type"])
-	problem_subDict.update({
-		RevenueMission.mission_range: generic_data["revenue_mission"]["range"],#mission range
-		RevenueMission.V_cruise: c["V_{cruise}"],#cruising speed
-		RevenueMission.t_hover: generic_data["revenue_mission"]["t_{hover}"],#hover time
-		RevenueMission.passengers.N_passengers: generic_data["revenue_mission"]["N_{passengers}"],#Number of passengers
-		RevenueMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-	})
+	deadhead_mission = OnDemandDeadheadMission(aircraft=aircraft)
+	deadhead_mission = deadhead_mission.standard_substitutions(piloted=generic_data["isDeadheadMissionPiloted"])
 
-	DeadheadMission = OnDemandDeadheadMission(Aircraft,mission_type=generic_data["deadhead_mission"]["type"])
-	problem_subDict.update({
-		DeadheadMission.mission_range: generic_data["deadhead_mission"]["range"],#mission range
-		DeadheadMission.V_cruise: c["V_{cruise}"],#cruising speed
-		DeadheadMission.t_hover: generic_data["deadhead_mission"]["t_{hover}"],#hover time
-		DeadheadMission.passengers.N_passengers: generic_data["deadhead_mission"]["N_{passengers}"],#Number of passengers
-		DeadheadMission.time_on_ground.charger_power: generic_data["charger_power"], #Charger power
-	})
+	mission_cost = OnDemandMissionCost(aircraft=aircraft, revenue_mission=revenue_mission, deadhead_mission=deadhead_mission)
+	mission_cost = mission_cost.standard_substitutions(isRevenueMissionPiloted=generic_data["isRevenueMissionPiloted"], isDeadheadMissionPiloted=generic_data["isDeadheadMissionPiloted"])
 
-	MissionCost = OnDemandMissionCost(Aircraft,RevenueMission,DeadheadMission)
-	problem_subDict.update({
-		MissionCost.revenue_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
-		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
-		MissionCost.revenue_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
-		MissionCost.deadhead_mission_costs.operating_expenses.pilot_cost.wrap_rate: generic_data["pilot_wrap_rate"],#pilot wrap rate
-		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.wrap_rate: generic_data["mechanic_wrap_rate"], #mechanic wrap rate
-		MissionCost.deadhead_mission_costs.operating_expenses.maintenance_cost.MMH_FH: generic_data["MMH_FH"], #maintenance man-hours per flight hour
-		MissionCost.deadhead_ratio: generic_data["deadhead_ratio"], #deadhead ratio
-	})
+	objective_function = mission_cost.cpt
+	problem            = Model(objective_function, [aircraft, sizing_mission, revenue_mission, deadhead_mission, mission_cost])
+	solution           = problem.solve(verbosity=0)
 
-	problem = Model(MissionCost["cost_per_trip"],
-		[Aircraft, SizingMission, RevenueMission, DeadheadMission, MissionCost])
-	problem.substitutions.update(problem_subDict)
-	solution = problem.solve(verbosity=0)
 	configs[config]["solution"] = solution
 
 
-B = generic_data["B"]
-x = 500*ureg.ft
 
 #Noise computations for varying theta (delta-S = constant)
 print
 print "Noise computations for varying theta"
-theta_array = np.linspace(91,175,20)*ureg.degree
+theta_array = np.linspace(91, 175, 20) * ureg.degree
 
 for config in configs:
 
 	configs[config]["theta"] = {}
 	
-	configs[config]["theta"]["rotational"] = {}
-	configs[config]["theta"]["rotational"]["f_fund"] = np.zeros(np.size(theta_array))*ureg.turn/ureg.s
-	configs[config]["theta"]["rotational"]["SPL"] = np.zeros(np.size(theta_array))
+	configs[config]["theta"]["rotational"]             = {}
+	configs[config]["theta"]["rotational"]["f_fund"]   = np.zeros(np.size(theta_array)) * ureg.turn / ureg.s
+	configs[config]["theta"]["rotational"]["SPL"]      = np.zeros(np.size(theta_array))
 	configs[config]["theta"]["rotational"]["spectrum"] = [{} for i in range(np.size(theta_array))]
 
-	configs[config]["theta"]["rotational_A"] = {}
-	configs[config]["theta"]["rotational_A"]["f_fund"] = np.zeros(np.size(theta_array))*ureg.turn/ureg.s
-	configs[config]["theta"]["rotational_A"]["SPL"] = np.zeros(np.size(theta_array))
+	configs[config]["theta"]["rotational_A"]             = {}
+	configs[config]["theta"]["rotational_A"]["f_fund"]   = np.zeros(np.size(theta_array)) * ureg.turn / ureg.s
+	configs[config]["theta"]["rotational_A"]["SPL"]      = np.zeros(np.size(theta_array))
 	configs[config]["theta"]["rotational_A"]["spectrum"] = [{} for i in range(np.size(theta_array))]
 
-	T_perRotor = configs[config]["solution"]("T_perRotor_OnDemandSizingMission")[0]
-	Q_perRotor = configs[config]["solution"]("Q_perRotor_OnDemandSizingMission")[0]
-	R = configs[config]["solution"]("R")
-	VT = configs[config]["solution"]("VT_OnDemandSizingMission")[0]
-	s = configs[config]["solution"]("s")
-	Cl_mean = configs[config]["solution"]("Cl_{mean_{max}}")
-	N = configs[config]["solution"]("N")
+	solution = configs[config]["solution"]
 
-	#Rotational noise calculations
+	T_perRotor = solution("T_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	Q_perRotor = solution("Q_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	T_A        = solution("T/A_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	Cl_mean    = solution("Cl_{mean}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	R          = solution("R_OnDemandAircraft/Rotors")
+	s          = solution("s_OnDemandAircraft/Rotors")
+	omega      = solution("\\omega_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	V_tip      = solution("v_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	c_avg      = solution("c_{avg}_OnDemandAircraft/Rotors")
+	t_avg      = solution("t_{avg}_OnDemandAircraft/Rotors")
+	N          = solution("N_OnDemandAircraft/Rotors")
+	B          = solution("B_OnDemandAircraft/Rotors")
+	rho        = solution("\\rho_OnDemandSizingMission/HoverTakeoff/HoverFlightState/FixedStandardAtmosphere")
+	a          = solution("a_OnDemandSizingMission/HoverTakeoff/HoverFlightState/FixedStandardAtmosphere")
+
+	# Rotational noise calculations (vary theta; fixed delta_S)
 	for i,theta in enumerate(theta_array):
 		
-		#Unweighted
-		f_peak, SPL, spectrum = rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
-			delta_S=x,h=0*ureg.ft,t_c=0.12,num_harmonics=10,weighting="None")
-		configs[config]["theta"]["rotational"]["f_fund"][i] = f_peak
-		configs[config]["theta"]["rotational"]["SPL"][i] = SPL
+		# Unweighted
+		rotational_data         = rotational_noise(T_perRotor, Q_perRotor, R, omega, c_avg, t_avg, N, B, rho, a, theta=theta, delta_S=x, num_harmonics=10, weighting="None")
+		[f_peak, SPL, spectrum] = rotational_data
+
+		configs[config]["theta"]["rotational"]["f_fund"][i]   = f_peak
+		configs[config]["theta"]["rotational"]["SPL"][i]      = SPL
 		configs[config]["theta"]["rotational"]["spectrum"][i] = spectrum
 
-		#A-weighted
-		f_peak, SPL, spectrum = rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
-			delta_S=x,h=0*ureg.ft,t_c=0.12,num_harmonics=10,weighting="A")
-		configs[config]["theta"]["rotational_A"]["f_fund"][i] = f_peak
-		configs[config]["theta"]["rotational_A"]["SPL"][i] = SPL
+		# A-weighted
+		rotational_data         = rotational_noise(T_perRotor, Q_perRotor, R, omega, c_avg, t_avg, N, B, rho, a, theta=theta, delta_S=x, num_harmonics=10, weighting="A")
+		[f_peak, SPL, spectrum] = rotational_data
+
+		configs[config]["theta"]["rotational_A"]["f_fund"][i]   = f_peak
+		configs[config]["theta"]["rotational_A"]["SPL"][i]      = SPL
 		configs[config]["theta"]["rotational_A"]["spectrum"][i] = spectrum
 
-	#Vortex noise computations
-	configs[config]["theta"]["vortex"] = {}
+	# Vortex noise computations
+	configs[config]["theta"]["vortex"]   = {}
 	configs[config]["theta"]["vortex_A"] = {}
 
-	#Unweighted
-	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-		N=N,B=B,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="None")
-	configs[config]["theta"]["vortex"]["f_peak"] = f_peak
-	configs[config]["theta"]["vortex"]["SPL"] = SPL
+	# Unweighted
+	vortex_data             = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S=x, St=generic_data["Strouhal_number"], weighting="None")
+	[f_peak, SPL, spectrum] = vortex_data
+	
+	configs[config]["theta"]["vortex"]["f_peak"]   = f_peak
+	configs[config]["theta"]["vortex"]["SPL"]      = SPL
 	configs[config]["theta"]["vortex"]["spectrum"] = spectrum
 
 	#A-weighted
-	f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,Cl_mean=Cl_mean,
-		N=N,B=B,delta_S=x,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
-	configs[config]["theta"]["vortex_A"]["f_peak"] = f_peak
-	configs[config]["theta"]["vortex_A"]["SPL"] = SPL
+	vortex_data             = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S=x, St=generic_data["Strouhal_number"], weighting="A")
+	[f_peak, SPL, spectrum] = vortex_data
+	
+	configs[config]["theta"]["vortex_A"]["f_peak"]   = f_peak
+	configs[config]["theta"]["vortex_A"]["SPL"]      = SPL
 	configs[config]["theta"]["vortex_A"]["spectrum"] = spectrum
 
 
 #Computations for varying y (delta-S is not constant)
 print "Noise computations for varying y"
-y_array = np.linspace(50,3000,20)*ureg.ft
+y_array = np.linspace(50, 3000, 20) * ureg.ft
 
 for config in configs:
 
 	configs[config]["y"] = {}
 	
-	configs[config]["y"]["rotational"] = {}
-	configs[config]["y"]["rotational"]["f_fund"] = np.zeros(np.size(y_array))*ureg.turn/ureg.s
-	configs[config]["y"]["rotational"]["SPL"] = np.zeros(np.size(y_array))
+	configs[config]["y"]["rotational"]             = {}
+	configs[config]["y"]["rotational"]["f_fund"]   = np.zeros(np.size(y_array)) * ureg.turn / ureg.s
+	configs[config]["y"]["rotational"]["SPL"]      = np.zeros(np.size(y_array))
 	configs[config]["y"]["rotational"]["spectrum"] = [{} for i in range(np.size(y_array))]
 
-	configs[config]["y"]["rotational_A"] = {}
-	configs[config]["y"]["rotational_A"]["f_fund"] = np.zeros(np.size(y_array))*ureg.turn/ureg.s
-	configs[config]["y"]["rotational_A"]["SPL"] = np.zeros(np.size(y_array))
+	configs[config]["y"]["rotational_A"]             = {}
+	configs[config]["y"]["rotational_A"]["f_fund"]   = np.zeros(np.size(y_array)) * ureg.turn / ureg.s
+	configs[config]["y"]["rotational_A"]["SPL"]      = np.zeros(np.size(y_array))
 	configs[config]["y"]["rotational_A"]["spectrum"] = [{} for i in range(np.size(y_array))]
 
-	configs[config]["y"]["vortex"] = {}
-	configs[config]["y"]["vortex"]["f_peak"] = np.zeros(np.size(y_array))*ureg.turn/ureg.s
-	configs[config]["y"]["vortex"]["SPL"] = np.zeros(np.size(y_array))
+	configs[config]["y"]["vortex"]             = {}
+	configs[config]["y"]["vortex"]["f_peak"]   = np.zeros(np.size(y_array)) * ureg.turn / ureg.s
+	configs[config]["y"]["vortex"]["SPL"]      = np.zeros(np.size(y_array))
 	configs[config]["y"]["vortex"]["spectrum"] = [{} for i in range(np.size(y_array))]
 
-	configs[config]["y"]["vortex_A"] = {}
-	configs[config]["y"]["vortex_A"]["f_peak"] = np.zeros(np.size(y_array))*ureg.turn/ureg.s
-	configs[config]["y"]["vortex_A"]["SPL"] = np.zeros(np.size(y_array))
+	configs[config]["y"]["vortex_A"]             = {}
+	configs[config]["y"]["vortex_A"]["f_peak"]   = np.zeros(np.size(y_array)) * ureg.turn / ureg.s
+	configs[config]["y"]["vortex_A"]["SPL"]      = np.zeros(np.size(y_array))
 	configs[config]["y"]["vortex_A"]["spectrum"] = [{} for i in range(np.size(y_array))]
 
-	configs[config]["y"]["total"] = {}
-	configs[config]["y"]["total"]["SPL"] = np.zeros(np.size(y_array))
+	configs[config]["y"]["total"]          = {}
+	configs[config]["y"]["total"]["SPL"]   = np.zeros(np.size(y_array))
 	configs[config]["y"]["total"]["SPL_A"] = np.zeros(np.size(y_array))
 
-	T_perRotor = configs[config]["solution"]("T_perRotor_OnDemandSizingMission")[0]
-	Q_perRotor = configs[config]["solution"]("Q_perRotor_OnDemandSizingMission")[0]
-	R = configs[config]["solution"]("R")
-	VT = configs[config]["solution"]("VT_OnDemandSizingMission")[0]
-	s = configs[config]["solution"]("s")
-	Cl_mean = configs[config]["solution"]("Cl_{mean_{max}}")
-	N = configs[config]["solution"]("N")
+	solution = configs[config]["solution"]
+
+	T_perRotor = solution("T_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	Q_perRotor = solution("Q_perRotor_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	T_A        = solution("T/A_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	Cl_mean    = solution("Cl_{mean}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	R          = solution("R_OnDemandAircraft/Rotors")
+	s          = solution("s_OnDemandAircraft/Rotors")
+	omega      = solution("\\omega_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	V_tip      = solution("v_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance")
+	c_avg      = solution("c_{avg}_OnDemandAircraft/Rotors")
+	t_avg      = solution("t_{avg}_OnDemandAircraft/Rotors")
+	N          = solution("N_OnDemandAircraft/Rotors")
+	B          = solution("B_OnDemandAircraft/Rotors")
+	rho        = solution("\\rho_OnDemandSizingMission/HoverTakeoff/HoverFlightState/FixedStandardAtmosphere")
+	a          = solution("a_OnDemandSizingMission/HoverTakeoff/HoverFlightState/FixedStandardAtmosphere")
 
 	#Noise calculations
 	for i,y in enumerate(y_array):
 
-		theta = 180*ureg.degree - (np.arctan(y/x)*ureg.radian).to(ureg.degree)
+		theta   = 180*ureg.degree - (np.arctan(y/x)*ureg.radian).to(ureg.degree)
 		delta_S = np.sqrt(x**2 + y**2)
 
-		#Rotational noise (unweighted)
-		f_peak, SPL, spectrum = rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
-			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,num_harmonics=20,weighting="None")
-		configs[config]["y"]["rotational"]["f_fund"][i] = f_peak
-		configs[config]["y"]["rotational"]["SPL"][i] = SPL
+		# Rotational noise (unweighted)
+		rotational_data         = rotational_noise(T_perRotor, Q_perRotor, R, omega, c_avg, t_avg, N, B, rho, a, theta=theta, delta_S=delta_S, num_harmonics=10, weighting="None")
+		[f_peak, SPL, spectrum] = rotational_data
+
+		configs[config]["y"]["rotational"]["f_fund"][i]   = f_peak
+		configs[config]["y"]["rotational"]["SPL"][i]      = SPL
 		configs[config]["y"]["rotational"]["spectrum"][i] = spectrum
 
-		#Rotational noise (A-weighted)
-		f_peak, SPL, spectrum = rotational_noise(T_perRotor,Q_perRotor,R,VT,s,N,B,theta=theta,
-			delta_S=delta_S,h=0*ureg.ft,t_c=0.12,num_harmonics=20,weighting="A")
-		configs[config]["y"]["rotational_A"]["f_fund"][i] = f_peak
-		configs[config]["y"]["rotational_A"]["SPL"][i] = SPL
+		# Rotational noise (A-weighted)
+		rotational_data         = rotational_noise(T_perRotor, Q_perRotor, R, omega, c_avg, t_avg, N, B, rho, a, theta=theta, delta_S=delta_S, num_harmonics=10, weighting="A")
+		[f_peak, SPL, spectrum] = rotational_data
+
+		configs[config]["y"]["rotational_A"]["f_fund"][i]   = f_peak
+		configs[config]["y"]["rotational_A"]["SPL"][i]      = SPL
 		configs[config]["y"]["rotational_A"]["spectrum"][i] = spectrum
 
-		#Vortex noise (unweighted)
-		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="None")
-		configs[config]["y"]["vortex"]["f_peak"][i] = f_peak
-		configs[config]["y"]["vortex"]["SPL"][i] = SPL
+		# Vortex noise (unweighted)
+		vortex_data             = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S=delta_S, St=generic_data["Strouhal_number"], weighting="None")
+		[f_peak, SPL, spectrum] = vortex_data
+		
+		configs[config]["y"]["vortex"]["f_peak"][i]   = f_peak
+		configs[config]["y"]["vortex"]["SPL"][i]      = SPL
 		configs[config]["y"]["vortex"]["spectrum"][i] = spectrum
 
-		#Vortex noise (A-weighted)
-		f_peak, SPL, spectrum = vortex_noise(T_perRotor=T_perRotor,R=R,VT=VT,s=s,
-			Cl_mean=Cl_mean,N=N,B=B,delta_S=delta_S,h=0*ureg.ft,t_c=0.12,St=0.28,weighting="A")
-		configs[config]["y"]["vortex_A"]["f_peak"][i] = f_peak
-		configs[config]["y"]["vortex_A"]["SPL"][i] = SPL
+		# Vortex noise (A-weighted)
+		vortex_data             = vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S=delta_S, St=generic_data["Strouhal_number"], weighting="A")
+		[f_peak, SPL, spectrum] = vortex_data
+		
+		configs[config]["y"]["vortex_A"]["f_peak"][i]   = f_peak
+		configs[config]["y"]["vortex_A"]["SPL"][i]      = SPL
 		configs[config]["y"]["vortex_A"]["spectrum"][i] = spectrum
 
 		#Total noise
-		p_ratio_squared = 10**(configs[config]["y"]["rotational"]["SPL"][i]/10)\
-			+ 10**(configs[config]["y"]["vortex"]["SPL"][i]/10)
-		p_ratio_squared_A = 10**(configs[config]["y"]["rotational_A"]["SPL"][i]/10)\
-			+ 10**(configs[config]["y"]["vortex_A"]["SPL"][i]/10)
+		p_ratio_squared   = 10**(configs[config]["y"]["rotational"]["SPL"][i]/10)   + 10**(configs[config]["y"]["vortex"]["SPL"][i]/10)
+		p_ratio_squared_A = 10**(configs[config]["y"]["rotational_A"]["SPL"][i]/10) + 10**(configs[config]["y"]["vortex_A"]["SPL"][i]/10)
 
-		configs[config]["y"]["total"]["SPL"][i] = 10*np.log10(p_ratio_squared)
-		configs[config]["y"]["total"]["SPL_A"][i] = 10*np.log10(p_ratio_squared_A)
-
-
+		configs[config]["y"]["total"]["SPL"][i]   = 10 * np.log10(p_ratio_squared)
+		configs[config]["y"]["total"]["SPL_A"][i] = 10 * np.log10(p_ratio_squared_A)
 
 
 # Plotting commands
@@ -282,7 +247,7 @@ for i, config in enumerate(configs):
 	#A-weighting spectrum
 	f_min_rev_per_s = rotational_f.to(ureg.turn/ureg.s).magnitude
 	f_max_rev_per_s = np.max(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude)
-	f_dBA_offset = np.linspace(f_min_rev_per_s,f_max_rev_per_s,100)*ureg.turn/ureg.s
+	f_dBA_offset = np.linspace(f_min_rev_per_s,f_max_rev_per_s,100) * ureg.turn / ureg.s
 	dBA_offset = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
 	
 	ax = fig1.add_subplot(2,2,i+1)
@@ -321,39 +286,6 @@ for i, config in enumerate(configs):
 	lines2, labels2 = ax2.get_legend_handles_labels()
 	ax2.legend(lines + lines2, labels + labels2, fontsize=13,loc="lower right", framealpha=1)
 
-
-if generic_data["reserve_type"] == "FAA_aircraft" or generic_data["reserve_type"] == "FAA_heli":
-	num = solution("t_{loiter}_OnDemandSizingMission").to(ureg.minute).magnitude
-	if generic_data["reserve_type"] == "FAA_aircraft":
-		reserve_type_string = "FAA aircraft VFR (%0.0f-minute loiter time)" % num
-	elif generic_data["reserve_type"] == "FAA_heli":
-		reserve_type_string = "FAA helicopter VFR (%0.0f-minute loiter time)" % num
-elif generic_data["reserve_type"] == "Uber":
-	num = solution["constants"]["R_{divert}_OnDemandSizingMission"].to(ureg.nautical_mile).magnitude
-	reserve_type_string = " (%0.0f-nm diversion distance)" % num
-
-if generic_data["autonomousEnabled"]:
-	autonomy_string = "autonomy enabled"
-else:
-	autonomy_string = "pilot required"
-
-title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
-	+ "Sizing mission (%s): range = %0.0f nmi; %0.0f passengers; %0.0fs hover time; reserve type = " \
-	% (generic_data["sizing_mission"]["type"], generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
-	 generic_data["sizing_mission"]["N_{passengers}"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
-	+ reserve_type_string + "\n"\
-	+ "Revenue mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (generic_data["revenue_mission"]["type"], generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["revenue_mission"]["N_{passengers}"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
-	 generic_data["charger_power"].to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
-	% (generic_data["deadhead_mission"]["type"], generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["deadhead_mission"]["N_{passengers}"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
-	 generic_data["deadhead_ratio"])
-
-
-plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_01.pdf')
@@ -402,9 +334,8 @@ for i, config in enumerate(configs):
 	plt.xlabel('$\Theta$ (degrees)', fontsize = 16)
 	plt.ylabel('SPL (dB)', fontsize = 16)
 	plt.title(config, fontsize = 18)
-	plt.legend(loc="lower left",fontsize=12, framealpha=1)
+	plt.legend(loc="lower left", fontsize=12, framealpha=1)
 
-plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_02.pdf')
@@ -442,7 +373,6 @@ for i, config in enumerate(configs):
 	plt.title(config, fontsize = 18)
 	plt.legend(loc="lower right", fontsize=13,framealpha=1)
 
-plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_03.pdf')
@@ -483,11 +413,9 @@ for i, theta_desired in enumerate(theta_plot_values):
 	subtitle_str = config + " ($\Theta$ = %0.1f$^\circ$)" % theta.to(ureg.degree).magnitude
 	plt.title(subtitle_str, fontsize = 18)
 
-plt.suptitle(title_str,fontsize = 13)
 plt.tight_layout()
 plt.subplots_adjust(left=0.06,right=0.94,bottom=0.08,top=0.87)
 plt.savefig('config_tradeStudy_noise_analysis_plot_04.pdf')
-
 
 
 # Plot showing noise spectra (both rotational & vortex) for a sample value of y. Lift+cruise vehicle only.
@@ -499,30 +427,30 @@ ax = plt.subplot(1,1,1)
 ax.set_axisbelow(True)
 
 #Find value of y closest to that desired
-y_desired = 200*ureg.m
-idx = (np.abs(y_array - y_desired)).argmin()
+y_desired  = 200 * ureg.m
+idx        = (np.abs(y_array - y_desired)).argmin()
 y_selected = y_array[idx]
 
+
 c = configs["Lift + cruise"]
-	
-#Rotational noise (1st harmonic only)
-rotational_f     = c["y"]["rotational"]["spectrum"][idx]["f"][0]
-rotational_SPL   = c["y"]["rotational"]["spectrum"][idx]["SPL"][0]
-rotational_SPL_A = noise_weighting(rotational_f,rotational_SPL)
 
-#Vortex noise
-vortex_f_spectrum     = c["y"]["vortex"]["spectrum"][idx]["f"]
-vortex_SPL_spectrum   = c["y"]["vortex"]["spectrum"][idx]["SPL"]
-vortex_SPL_A_spectrum = noise_weighting(vortex_f_spectrum,vortex_SPL_spectrum)
+# Plot rotational noise harmonics
+for i in range(3):
 
-#A-weighting spectrum
-f_min_rev_per_s = rotational_f.to(ureg.turn/ureg.s).magnitude
-f_max_rev_per_s = np.max(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude)
-f_dBA_offset    = np.linspace(f_min_rev_per_s,f_max_rev_per_s,100)*ureg.turn/ureg.s
-dBA_offset      = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
+	rotational_f   = c["y"]["rotational"]["spectrum"][idx]["f"][i].to(ureg.turn/ureg.s).magnitude
+	rotational_SPL = c["y"]["rotational"]["spectrum"][idx]["SPL"][i]
 
-ax.bar(rotational_f.to(ureg.turn/ureg.s).magnitude,rotational_SPL,align="center", color='k', width=0.3*rotational_f.to(ureg.turn/ureg.s).magnitude, label="Rotational noise")
-ax.plot(vortex_f_spectrum.to(ureg.turn/ureg.s).magnitude,vortex_SPL_spectrum, 'k-',linewidth=2,label="Vortex noise")
+	if i==0:
+		ax.bar(rotational_f, rotational_SPL, align="center", color='k', width=0.3*rotational_f, label="Rotational noise")
+	else:
+		ax.bar(rotational_f, rotational_SPL, align="center", color='k', width=0.3*rotational_f)
+
+# Plot vortex noise spectrum
+vortex_f_spectrum   = c["y"]["vortex"]["spectrum"][idx]["f"].to(ureg.turn/ureg.s).magnitude
+vortex_SPL_spectrum = c["y"]["vortex"]["spectrum"][idx]["SPL"]
+
+ax.plot(vortex_f_spectrum, vortex_SPL_spectrum, 'k-', linewidth=3, label="Vortex noise")
+
 plt.grid(zorder=0)
 plt.xticks(fontsize=16)
 plt.yticks(fontsize=16)
@@ -534,8 +462,15 @@ plt.ylabel('SPL (dB)', fontsize = 16)
 
 ax2 = ax.twinx()
 ax2.set_axisbelow(True)
-ax2.plot(f_dBA_offset.to(ureg.turn/ureg.s).magnitude,dBA_offset,'k--',linewidth=2,
-	label="A-weighting offset")
+
+# Plot A-weighting spectrum on alternate axes
+f_min = c["y"]["rotational"]["spectrum"][idx]["f"][0].to(ureg.turn/ureg.s).magnitude
+f_max = np.max(vortex_f_spectrum)
+
+f_dBA_offset = np.linspace(f_min_rev_per_s, f_max_rev_per_s, 100) * ureg.turn / ureg.s
+dBA_offset   = noise_weighting(f_dBA_offset,np.zeros(np.shape(f_dBA_offset)))
+
+ax2.plot(f_dBA_offset.to(ureg.turn/ureg.s).magnitude, dBA_offset,'k--',linewidth=3, label="A-weighting offset")
 plt.ylabel('SPL offset (dBA)', fontsize=16)
 	
 plt.xscale('log')
@@ -543,7 +478,7 @@ ax2.tick_params(axis="y", labelsize=16)
 subtitle_str = "Noise spectrum at y = %0.0f m \n(lift + cruise configuration)" % y_selected.to(ureg.m).magnitude
 plt.title(subtitle_str, fontsize = 18)
 
-lines, labels = ax.get_legend_handles_labels()
+lines, labels   = ax.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 ax2.legend(lines + lines2, labels + labels2, fontsize=16, loc="lower right", framealpha=1)
 

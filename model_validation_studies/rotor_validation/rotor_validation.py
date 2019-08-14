@@ -2,20 +2,29 @@
 
 import os
 import sys
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../../models'))
 
 import numpy as np
-from gpkit import Variable, Model, Vectorize, ureg
-from matplotlib import pyplot as plt
-from aircraft_models import Rotors, FlightState, RotorsAero
+
+from gpkit           import Variable, Model, Vectorize, ureg
+from matplotlib      import pyplot as plt
+from aircraft_models import Rotors
+from mission_models  import HoverFlightState
 
 #Test data, from Leishman textbook
 
 test_data = {}
 
-test_data["N"] = 1
-test_data["s"] = 0.098
-test_data["R"] = 32.5*ureg.inch
+test_data["N"]           = 1.
+test_data["s"]           = 0.098
+test_data["R"]           = 32.5 * ureg.inch
+test_data["B"]           = 4.
+
+# self.T_A_max     = T_A_max     = Variable("",   "N/m^2", "Rotor maximum allowed disk loading")
+		
+#self.Cl_mean_max = Cl_mean_max = Variable("Cl_{mean,max}", "-",     "Rotor maximum allowed mean lift coefficient")
+
+
 
 test_data["CT_oldConvention"] = np.array([0.0019, 0.0026, 0.0027, 0.0033, 0.0041, 0.0042,\
 	0.005, 0.0051, 0.0061, 0.0062, 0.0065, 0.0067, 0.0072, 0.0073, 0.0078, 0.008, 0.0083,\
@@ -33,48 +42,59 @@ test_data["CP"] = 2*test_data["CP_oldConvention"]
 #Data from GPKit analysis
 gp_model_data = {}
 
-gp_model_data["ki"] = np.array([1.15,1.2])
+gp_model_data["ki"] = np.array([1.15, 1.2])
 gp_model_data["Cd0"] = 0.01
 
 gp_model_data["N"] = test_data["N"]
 gp_model_data["s"] = test_data["s"]
 gp_model_data["R"] = test_data["R"]
+gp_model_data["B"] = test_data["B"]
 
-gp_model_data["CT"] = np.linspace(0.002,0.02,16)
-gp_model_data["FOM"] = np.zeros([np.size(gp_model_data["CT"]),np.size(gp_model_data["ki"])])
-gp_model_data["CP"] = np.zeros([np.size(gp_model_data["CT"]),np.size(gp_model_data["ki"])])
+gp_model_data["t/c"]           = 0.12                         # Irrelevant
+gp_model_data["M_{tip,max}"]   = 0.9                          # Irrelevant
+gp_model_data["(T/A)_{max}"]   = 7.  * ureg.lbf / ureg.ft**2  # Irrelevant
+gp_model_data["Cl_{mean,max}"] = 2.0                          # Irrelevant
+gp_model_data["v_{tip}"]       = 20. * ureg.ft/ureg.s         # Irrelevant
 
-gp_model_State = FlightState(h=0*ureg.ft)
+gp_model_data["CT"]  = np.linspace(0.002,0.02,16)
+gp_model_data["FOM"] = np.zeros([np.size(gp_model_data["CT"]), np.size(gp_model_data["ki"])])
+gp_model_data["CP"]  = np.zeros([np.size(gp_model_data["CT"]), np.size(gp_model_data["ki"])])
 
-for i,CT in enumerate(gp_model_data["CT"]):
-	for j,ki in enumerate(gp_model_data["ki"]):
+gp_model_State = HoverFlightState(h=0*ureg.ft)
 
-		gp_model_subDict = {}
+for i, CT in enumerate(gp_model_data["CT"]):
+	
+	for j, ki in enumerate(gp_model_data["ki"]):
 
 		gp_model_Rotor = Rotors()
-		gp_model_subDict.update({
-			gp_model_Rotor.N: gp_model_data["N"],
-			gp_model_Rotor.s: gp_model_data["s"],
-			gp_model_Rotor.R: gp_model_data["R"],
-			gp_model_Rotor.Cl_mean_max: 2.0,#not needed
+		gp_model_Rotor.substitutions.update({
+			gp_model_Rotor.N:   gp_model_data["N"],
+			gp_model_Rotor.s:   gp_model_data["s"],
+			gp_model_Rotor.R:   gp_model_data["R"],
+			gp_model_Rotor.B:   gp_model_data["B"],
+			gp_model_Rotor.t_c: gp_model_data["t/c"],
 
+			gp_model_Rotor.ki:          ki,
+			gp_model_Rotor.Cd0:         gp_model_data["Cd0"],
+			gp_model_Rotor.T_A_max:     gp_model_data["(T/A)_{max}"],
+			gp_model_Rotor.M_tip_max:   gp_model_data["M_{tip,max}"],
+			gp_model_Rotor.Cl_mean_max: gp_model_data["Cl_{mean,max}"],
 		})
 
 		gp_model_Rotor_AeroAnalysis = gp_model_Rotor.performance(gp_model_State)
-		gp_model_subDict.update({
-			gp_model_Rotor_AeroAnalysis.ki: ki,
-			gp_model_Rotor_AeroAnalysis.Cd0: gp_model_data["Cd0"],
-			gp_model_Rotor_AeroAnalysis.CT: CT,
-			gp_model_Rotor_AeroAnalysis.VT: 20*ureg.ft/ureg.s,
+		
+		gp_model_Rotor_AeroAnalysis.substitutions.update({
+			gp_model_Rotor_AeroAnalysis.CT:    CT,
+			gp_model_Rotor_AeroAnalysis.v_tip: gp_model_data["v_{tip}"]
 		})
 
-		gp_model_Model = Model(gp_model_Rotor_AeroAnalysis["P"],\
-			[gp_model_Rotor,gp_model_Rotor_AeroAnalysis,gp_model_State])
-		gp_model_Model.substitutions.update(gp_model_subDict)
-		gp_model_Solution = gp_model_Model.solve(verbosity=0)
+		objective_function = gp_model_Rotor_AeroAnalysis.P
 
-		gp_model_data["FOM"][i,j] = gp_model_Solution("FOM")
-		gp_model_data["CP"][i,j] = gp_model_Solution("CP")
+		problem  = Model(objective_function, [gp_model_Rotor, gp_model_Rotor_AeroAnalysis, gp_model_State])
+		solution = problem.solve(verbosity=0)
+
+		gp_model_data["FOM"][i,j] = solution("FOM")
+		gp_model_data["CP"][i,j]  = solution("CP")
 
 
 
