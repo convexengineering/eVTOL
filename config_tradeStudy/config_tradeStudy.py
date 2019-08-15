@@ -194,33 +194,52 @@ plt.title("Battery Power Draw", fontsize=style["fontsize"]["title"])
 plt.legend(loc="upper right",   fontsize=style["fontsize"]["legend"], framealpha=1)
 
 
-# Vehicle Acquisition Costs
+# Mission time
 plt.subplot(3,3,4)
 for i, config in enumerate(configs):
 	
-	c_airframe = configs[config]["solution"]("purchase_price_OnDemandAircraft/Airframe") / 1e6
-	c_avionics = configs[config]["solution"]("purchase_price_OnDemandAircraft/Avionics") / 1e6
-	c_battery  = configs[config]["solution"]("purchase_price_OnDemandAircraft/Battery")  / 1e6
+	t_flight = configs[config]["solution"]("t_{flight}_OnDemandRevenueMission").to(ureg.min).magnitude
+	t_charge = configs[config]["solution"]("t_{segment}_OnDemandRevenueMission/TimeOnGround").to(ureg.min).magnitude
 
 	if i==0:
-		plt.bar(i, c_airframe, bottom=0,                     align='center', alpha=1, color=style["colors"][0], edgecolor='k', label="Airframe")
-		plt.bar(i, c_avionics, bottom=c_airframe,            align='center', alpha=1, color=style["colors"][1], edgecolor='k', label="Avionics")
-		plt.bar(i, c_battery,  bottom=c_airframe+c_avionics, align='center', alpha=1, color=style["colors"][2], edgecolor='k', label="Battery")
+		plt.bar(i, t_flight, bottom=0,        align='center', alpha=1, color=style["colors"][0], edgecolor='k', label="Flight time")
+		plt.bar(i, t_charge, bottom=t_flight, align='center', alpha=1, color=style["colors"][2], edgecolor='k', label="Charging time")
 	else:
-		plt.bar(i, c_airframe, bottom=0,                     align='center', alpha=1, color=style["colors"][0], edgecolor='k')
-		plt.bar(i, c_avionics, bottom=c_airframe,            align='center', alpha=1, color=style["colors"][1], edgecolor='k')
-		plt.bar(i, c_battery,  bottom=c_airframe+c_avionics, align='center', alpha=1, color=style["colors"][2], edgecolor='k')
+		plt.bar(i, t_flight, bottom=0,        align='center', alpha=1, color=style["colors"][0], edgecolor='k')
+		plt.bar(i, t_charge, bottom=t_flight, align='center', alpha=1, color=style["colors"][2], edgecolor='k')
 
 plt.grid()
-plt.xticks(y_pos, labels,         fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
-plt.yticks(                       fontsize=style["fontsize"]["yticks"])
-plt.ylabel('Cost ($millions US)', fontsize=style["fontsize"]["ylabel"])
-plt.title("Acquisition Costs",    fontsize=style["fontsize"]["title"])
-plt.legend(loc="lower left",      fontsize=style["fontsize"]["legend"], framealpha=1)
+plt.xticks(y_pos, labels,      fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                    fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Time (minutes)',   fontsize=style["fontsize"]["ylabel"])
+plt.title("Mission Time",      fontsize=style["fontsize"]["title"])
+plt.legend(loc="lower left",   fontsize=style["fontsize"]["legend"], framealpha=1)
 
 
-# Cost per seat km
+# Trip cost 
 plt.subplot(3,3,5)
+for i, config in enumerate(configs):
+	
+	cpt_revenue  = configs[config]["solution"]("revenue_cost_per_trip")
+	cpt_deadhead = configs[config]["solution"]("deadhead_cost_per_trip")
+
+	if i==0:
+		plt.bar(i, cpt_revenue,  bottom=0,           align='center', alpha=1, color=style["colors"][0], edgecolor='k', label="Revenue mission")
+		plt.bar(i, cpt_deadhead, bottom=cpt_revenue, align='center', alpha=1, color=style["colors"][2], edgecolor='k', label="Deadhead effect")
+	else:
+		plt.bar(i, cpt_revenue,  bottom=0,           align='center', alpha=1, color=style["colors"][0], edgecolor='k')
+		plt.bar(i, cpt_deadhead, bottom=cpt_revenue, align='center', alpha=1, color=style["colors"][2], edgecolor='k')
+
+plt.grid()
+plt.xticks(y_pos, labels,     fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                   fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Cost ($US/trip)', fontsize=style["fontsize"]["ylabel"])
+plt.title("Trip Cost ",       fontsize=style["fontsize"]["title"])
+plt.legend(loc="lower left",  fontsize=style["fontsize"]["legend"], framealpha=1)
+
+
+# Cost per Passenger Kilometer
+plt.subplot(3,3,6)
 for i, config in enumerate(configs):
 	
 	cpsk = configs[config]["solution"]("cost_per_passenger_km_OnDemandMissionCost").to(ureg.km**-1).magnitude
@@ -233,30 +252,33 @@ plt.ylabel('Cost ($US/km)',                fontsize=style["fontsize"]["ylabel"])
 plt.title("Cost per Passenger Kilometer",  fontsize=style["fontsize"]["title"])
 
 
-# Trip cost breakdown (revenue / deadhead) 
-plt.subplot(3,3,6)
+# Vehicle Purchase Price
+plt.subplot(3,3,7)
 for i, config in enumerate(configs):
 	
-	cpt_revenue  = configs[config]["solution"]("revenue_cost_per_trip")
-	cpt_deadhead = configs[config]["solution"]("deadhead_cost_per_trip")
+	c_airframe = configs[config]["solution"]("purchase_price_OnDemandAircraft/Airframe") / 1e3
+	c_avionics = configs[config]["solution"]("purchase_price_OnDemandAircraft/Avionics") / 1e3
+	c_battery  = configs[config]["solution"]("purchase_price_OnDemandAircraft/Battery")  / 1e3
 
 	if i==0:
-		plt.bar(i, cpt_revenue,  bottom=0,           align='center', alpha=1, color=style["colors"][0], edgecolor='k', label="Revenue")
-		plt.bar(i, cpt_deadhead, bottom=cpt_revenue, align='center', alpha=1, color=style["colors"][2], edgecolor='k', label="Deadhead")
+		plt.bar(i, c_airframe, bottom=0,                     align='center', alpha=1, color=style["colors"][0], edgecolor='k', label="Airframe")
+		plt.bar(i, c_avionics, bottom=c_airframe,            align='center', alpha=1, color=style["colors"][1], edgecolor='k', label="Avionics")
+		plt.bar(i, c_battery,  bottom=c_airframe+c_avionics, align='center', alpha=1, color=style["colors"][2], edgecolor='k', label="Battery")
 	else:
-		plt.bar(i, cpt_revenue,  bottom=0,           align='center', alpha=1, color=style["colors"][0], edgecolor='k')
-		plt.bar(i, cpt_deadhead, bottom=cpt_revenue, align='center', alpha=1, color=style["colors"][2], edgecolor='k')
+		plt.bar(i, c_airframe, bottom=0,                     align='center', alpha=1, color=style["colors"][0], edgecolor='k')
+		plt.bar(i, c_avionics, bottom=c_airframe,            align='center', alpha=1, color=style["colors"][1], edgecolor='k')
+		plt.bar(i, c_battery,  bottom=c_airframe+c_avionics, align='center', alpha=1, color=style["colors"][2], edgecolor='k')
 
 plt.grid()
 plt.xticks(y_pos, labels,           fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                         fontsize=style["fontsize"]["yticks"])
-plt.ylabel('Cost ($US/trip)',       fontsize=style["fontsize"]["ylabel"])
-plt.title("Trip Cost Breakdown", fontsize=style["fontsize"]["title"])
+plt.ylabel('Price ($thousands US)', fontsize=style["fontsize"]["ylabel"])
+plt.title("Purchase Price",         fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",        fontsize=style["fontsize"]["legend"], framealpha=1)
 
 
 # Capital Expenses (revenue mission)
-plt.subplot(3,3,7)
+plt.subplot(3,3,8)
 for i, config in enumerate(configs):
 	
 	c_airframe = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AirframeAcquisitionCost")
@@ -283,7 +305,7 @@ plt.legend(loc="upper right",         fontsize=style["fontsize"]["legend"], fram
 
 
 # Operating Expenses (revenue mission)
-plt.subplot(3,3,8)
+plt.subplot(3,3,9)
 for i, config in enumerate(configs):
 	
 	c_pilot       = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
@@ -310,6 +332,19 @@ plt.title("Mission Operating Expenses", fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",            fontsize=style["fontsize"]["legend"], framealpha=1)
 
 
+
+
+
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.08, right=0.98, bottom=0.10, top=0.97, hspace=0.7)
+plt.savefig('config_tradeStudy_plot_01.pdf')
+
+
+
+
+
+"""
 # Sound pressure level (in hover) 
 plt.subplot(3,3,9)
 
@@ -334,21 +369,20 @@ plt.yticks(                   fontsize=style["fontsize"]["yticks"])
 plt.ylabel('SPL (dB)',        fontsize=style["fontsize"]["ylabel"])
 plt.title("Hover Sound (sizing mission)",   fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower right", fontsize=style["fontsize"]["legend"], framealpha=1)
-
-
-plt.tight_layout()
-plt.subplots_adjust(left=0.08, right=0.98, bottom=0.10, top=0.97, hspace=0.7)
-plt.savefig('config_tradeStudy_plot_01.pdf')
-
+"""
 
 # Data output (to screen and to text file)
-outputs       = ["Max takeoff mass", "Airframe mass", "Battery mass", "Mission time", "Flight time", "Charging time", "Acquisition cost", "Trip cost per passenger", "Cost per passenger-km"]
-output_units  = ["kg",               "kg",            "kg",           "minutes",      "minutes",     "minutes",       "$US (thousands)",  "dimensionless",           "km**-1"               ]          
-output_spaces = ["",                 "\t",            "\t",           "\t",           "\t",          "\t",            "",                 "",                        ""                     ]
+outputs       = ["Max takeoff mass", "Airframe mass", "Battery mass", "Mission time", "Flight time", "Charging time", "Purchase price",  "Trip cost",     "Cost per passenger-km"]
+output_units  = ["kg",               "kg",            "kg",           "minutes",      "minutes",     "minutes",       "$US (thousands)", "dimensionless", "km**-1"               ]          
+output_spaces = ["",                 "\t",            "\t",           "\t",           "\t",          "\t",            "\t",              "\t",            ""                     ]
 
-outputs       += ["Rotor tip speed", "Rotor tip Mach number", "Rotor figure of merit", "Hover SPL (unweighted)",  "Hover SPL (A-weighted)",  "Vortex peak frequency"]
-output_units  += ["m/s",             "dimensionless",         "dimensionless"        , "dimensionless",           "dimensionless",           "turn/s"               ]
-output_spaces += ["\t",              "",                      "",                      "",                        "",                        ""                     ]
+outputs       += ["Rotor diameter", "Tip speed", "Tip Mach number", "Thrust coefficient", "Power coefficient", "Figure of merit"]
+output_units  += ["m",              "m/s",       "dimensionless",   "dimensionless",      "dimensionless",     "dimensionless"  ]
+output_spaces += ["\t",             "\t",        "\t",              "",                   "",                  "\t",            ]
+
+outputs       += ["Hover SPL (unweighted)",  "Hover SPL (A-weighted)",  "Vortex peak frequency"]
+output_units  += ["dimensionless",           "dimensionless",           "turn/s"               ]
+output_spaces += ["",                        "",                        ""                     ]
 
 output_string =  "Tabulated Data by Configuration\n"
 output_string += "\n"
@@ -394,15 +428,15 @@ for i, output in enumerate(outputs):
 			var_string = "t_{segment}_OnDemandRevenueMission/TimeOnGround"
 			precision  = "%0.1f"
 		
-		elif output == "Trip cost per passenger":
-			var_string  = "cost_per_trip_per_passenger"
-			precision   = "%0.1f"
+		elif output == "Trip cost":
+			var_string  = "cost_per_trip"
+			precision   = "%0.0f"
 
 		elif output == "Cost per passenger-km":
 			var_string  = "cost_per_passenger_km"
 			precision   = "%0.2f"
 
-		elif output == "Acquisition cost":
+		elif output == "Purchase price":
 			var_strings = ["purchase_price_OnDemandAircraft/Airframe", "purchase_price_OnDemandAircraft/Avionics", "purchase_price_OnDemandAircraft/Battery"]
 			precision   = "%0.0f"
 
@@ -411,15 +445,27 @@ for i, output in enumerate(outputs):
 
 			continue
 
-		elif output == "Rotor tip speed":
+		elif output == "Rotor diameter":
+			var_string  = "D_OnDemandAircraft/Rotors"
+			precision   = "%0.2f"
+
+		elif output == "Tip speed":
 			var_string  = "v_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance"
 			precision   = "%0.1f"
 
-		elif output == "Rotor tip Mach number":
+		elif output == "Tip Mach number":
 			var_string  = "M_{tip}_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance"
 			precision   = "%0.2f"
 
-		elif output == "Rotor figure of merit":
+		elif output == "Thrust coefficient":
+			var_string  = "CT_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance"
+			precision   = "%0.4f"
+
+		elif output == "Power coefficient":
+			var_string  = "CP_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance"
+			precision   = "%0.4f"
+
+		elif output == "Figure of merit":
 			var_string  = "FOM_OnDemandSizingMission/HoverTakeoff/OnDemandAircraftHoverPerformance/RotorsPerformance"
 			precision   = "%0.2f"
 

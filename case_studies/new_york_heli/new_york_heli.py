@@ -182,28 +182,63 @@ plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",      fontsize=style["fontsize"]["legend"], framealpha=1)
 
 
-# Trip cost per passenger
+# Mission time
 plt.subplot(1,3,2)
+for i,config in enumerate(cases):
+
+	for j, case in enumerate(cases[config]):
+
+		offset    = style["offsets"][j]
+		solution  = cases[config][case]["solution"]
+		t_flight  = solution("t_{flight}_OnDemandRevenueMission").to(ureg.min).magnitude
+		t_mission = solution("t_{mission}_OnDemandRevenueMission").to(ureg.min).magnitude
+
+		label = "Flight time = %0.1f min" % t_flight
+
+		if i==0:
+			plt.bar(i+offset, t_mission, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k', label=label)
+		else:
+			plt.bar(i+offset, t_mission, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
+
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.0*ymax)
+plt.grid()
+plt.xticks(y_pos, labels,    fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                  fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Time (minutes)', fontsize=style["fontsize"]["ylabel"])
+plt.title("Mission Time",    fontsize=style["fontsize"]["title"])
+plt.legend(loc="lower left", fontsize=style["fontsize"]["legend"], framealpha=1)
+
+
+# Trip cost
+plt.subplot(1,3,3)
 for i,config in enumerate(cases):
 
 	for j, case in enumerate(cases[config]):
 
 		offset   = style["offsets"][j]
 		solution = cases[config][case]["solution"]
-		cptpp    = solution("cost_per_trip_per_passenger")
+		cpt      = solution("cost_per_trip")
 
-		plt.bar(i+offset, cptpp, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
+		plt.bar(i+offset, cpt, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
 
 plt.xlim(xmin=xmin,xmax=xmax)
 [ymin,ymax] = plt.gca().get_ylim()
 plt.ylim(ymax=1.0*ymax)
 plt.grid()
-plt.xticks(y_pos, labels,            fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
-plt.yticks(                          fontsize=style["fontsize"]["yticks"])
-plt.ylabel('Cost ($US)',             fontsize=style["fontsize"]["ylabel"])
-plt.title("Trip Cost per Passenger", fontsize=style["fontsize"]["title"])
+plt.xticks(y_pos, labels, fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(               fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Cost ($US)',  fontsize=style["fontsize"]["ylabel"])
+plt.title("Trip Cost",    fontsize=style["fontsize"]["title"])
 
 
+plt.tight_layout()
+plt.subplots_adjust(left=0.09, right=0.95, bottom=0.28, top=0.92)
+plt.savefig('new_york_heli_plot_01.pdf')
+
+
+"""
 # Hover SPL (revenue mission)
 plt.subplot(1,3,3)
 for i,config in enumerate(cases):
@@ -227,7 +262,5 @@ plt.yticks(                                fontsize=style["fontsize"]["yticks"])
 plt.ylabel('SPL (dBA)',                    fontsize=style["fontsize"]["ylabel"])
 plt.title("Hover Sound (revenue mission)", fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",               fontsize=style["fontsize"]["legend"], framealpha=1)
+"""
 
-plt.tight_layout()
-plt.subplots_adjust(left=0.09, right=0.95, bottom=0.28, top=0.92)
-plt.savefig('new_york_heli_plot_01.pdf')

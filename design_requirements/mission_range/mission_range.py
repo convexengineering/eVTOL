@@ -39,7 +39,7 @@ for config in configs:
 	elif (config == "Tilt wing"):
 		mission_range = np.linspace(15, 98, num_pts) * ureg.nautical_mile
 	elif (config == "Tilt rotor"):
-		mission_range = np.linspace(15, 120, num_pts) * ureg.nautical_mile
+		mission_range = np.linspace(15, 110, num_pts) * ureg.nautical_mile
 
 	c                 = configs[config]
 	c["SPL_sizing_A"] = np.zeros(np.size(mission_range))
@@ -147,8 +147,29 @@ plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
 plt.legend(loc='lower right',     fontsize=style["fontsize"]["legend"], framealpha=1, numpoints=1)
 
 
-# Trip cost per passenger-km
+# Mission time
 plt.subplot(1,3,2)
+for i, config in enumerate(configs):
+
+	solution      = configs[config]["solution"]
+	mission_range = solution("d_{segment}_OnDemandSizingMission/Cruise").to(ureg.km).magnitude
+	t_mission     = solution("t_{mission}_OnDemandRevenueMission").to(ureg.min).magnitude
+
+	plt.plot(mission_range, t_mission, color="black", linewidth=1.5,linestyle=style["linestyle"][i], marker=style["marker"][i],
+		fillstyle=style["fillstyle"][i], markersize=style["markersize"], label=config)
+
+plt.grid()
+[ymin, ymax] = plt.gca().get_ylim()
+plt.ylim(ymin=0, ymax=1.1*ymax)
+plt.xticks(                      fontsize=style["fontsize"]["xticks"])
+plt.yticks(                      fontsize=style["fontsize"]["yticks"])
+plt.xlabel('Mission range (km)', fontsize=style["fontsize"]["xlabel"])
+plt.ylabel('Time (minutes)',     fontsize=style["fontsize"]["ylabel"])
+plt.title("Mission Time",        fontsize=style["fontsize"]["title"])
+
+
+# Trip cost per passenger-km
+plt.subplot(1,3,3)
 for i, config in enumerate(configs):
 
 	solution      = configs[config]["solution"]
@@ -167,7 +188,13 @@ plt.xlabel('Mission range (km)',          fontsize=style["fontsize"]["xlabel"])
 plt.ylabel('Cost ($US/km)',               fontsize=style["fontsize"]["ylabel"])
 plt.title("Cost per Passenger Kilometer", fontsize=style["fontsize"]["title"])
 
+plt.tight_layout()
+plt.subplots_adjust(left=0.09, right=0.95, bottom=0.16, top=0.92)
+plt.savefig('mission_range_plot_01.pdf')
 
+
+
+"""
 # Sound in hover
 plt.subplot(1,3,3)
 for i, config in enumerate(configs):
@@ -187,8 +214,4 @@ plt.yticks(                               fontsize=style["fontsize"]["yticks"])
 plt.xlabel('Mission range (km)',          fontsize=style["fontsize"]["xlabel"])
 plt.ylabel('SPL (dBA)',                   fontsize=style["fontsize"]["ylabel"])
 plt.title("Hover Sound (sizing mission)", fontsize=style["fontsize"]["title"])
-
-
-plt.tight_layout()
-plt.subplots_adjust(left=0.09, right=0.95, bottom=0.16, top=0.92)
-plt.savefig('mission_range_plot_01.pdf')
+"""
