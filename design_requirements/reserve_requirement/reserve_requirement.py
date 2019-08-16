@@ -141,8 +141,31 @@ plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",      fontsize=style["fontsize"]["legend"], framealpha=1)
 
 
-# Cost per passenger-km
+# Mission time 
 plt.subplot(1,3,2)
+for i,config in enumerate(cases):
+
+	for j, reserve in enumerate(cases[config]):
+
+		offset    = style["offsets"][j]
+		solution  = cases[config][reserve]["solution"]
+		t_mission = solution("t_{mission}_OnDemandRevenueMission").to(ureg.min).magnitude
+
+		plt.bar(i+offset, t_mission, align='center', alpha=1, width=style["bar_width_narrow"], color=style["colors"][j], edgecolor='k')
+
+plt.xlim(xmin=xmin,xmax=xmax)
+[ymin,ymax] = plt.gca().get_ylim()
+plt.ylim(ymax=1.0*ymax)
+plt.grid()
+plt.xticks(y_pos, labels,    fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                  fontsize=style["fontsize"]["yticks"])
+plt.ylabel('Time (minutes)', fontsize=style["fontsize"]["ylabel"])
+plt.title("Mission Time",    fontsize=style["fontsize"]["title"])
+plt.legend(loc="lower left", fontsize=style["fontsize"]["legend"], framealpha=1)
+
+
+# Cost per passenger-km
+plt.subplot(1,3,3)
 for i,config in enumerate(cases):
 
 	for j, reserve in enumerate(cases[config]):
@@ -163,6 +186,14 @@ plt.ylabel('Cost ($US/km)',               fontsize=style["fontsize"]["ylabel"])
 plt.title("Cost per Passenger Kilometer", fontsize=style["fontsize"]["title"])
 
 
+
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.09, right=0.95, bottom=0.28, top=0.92)
+plt.savefig('reserve_requirement_plot_01.pdf')
+
+
+"""
 # Hover SPL (revenue mission)
 plt.subplot(1,3,3)
 for i,config in enumerate(cases):
@@ -185,208 +216,5 @@ plt.xticks(y_pos, labels,                 fontsize=style["fontsize"]["xticks"], 
 plt.yticks(                               fontsize=style["fontsize"]["yticks"])
 plt.ylabel('SPL (dBA)',                   fontsize=style["fontsize"]["ylabel"])
 plt.title("Hover Sound (sizing mission)", fontsize=style["fontsize"]["title"])
-plt.legend(loc="lower left",              fontsize=style["fontsize"]["legend"], framealpha=1)
-
-plt.tight_layout()
-plt.subplots_adjust(left=0.09, right=0.95, bottom=0.28, top=0.92)
-plt.savefig('reserve_requirement_plot_01.pdf')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		
-"""
-
-# Plotting commands
-plt.ion()
-fig1 = plt.figure(figsize=(12,12), dpi=80)
-plt.rc('axes', axisbelow=True)
-plt.show()
-
-y_pos = np.arange(len(configs))
-labels = [""]*len(configs)
-for i, config in enumerate(configs):
-	labels[i] = config
-
-xmin = np.min(y_pos) - 0.7
-xmax = np.max(y_pos) + 0.7
-
-offset_array = [-0.3,0,0.3]
-width = 0.2
-colors = ["grey", "w", "k"]
-
-#Maximum takeoff weight
-plt.subplot(2,2,1)
-for i,config in enumerate(configs):
-	for j,reserve_type in enumerate(configs[config]):
-		c = configs[config][reserve_type]
-		offset = offset_array[j]
-		TOGW = c["TOGW"].to(ureg.lbf).magnitude
-
-		if (i == 0):
-			if (reserve_type == "Uber"):
-				label = reserve_type + " (2-nmi diversion)"
-			elif (reserve_type == "FAA_heli"):
-				label = "FAA helicopter VFR (20-min loiter)"
-			elif (reserve_type == "FAA_aircraft"):
-				label = "FAA aircraft VFR (30-min loiter)"
-
-			plt.bar(i+offset,TOGW,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k',label=label)
-		else:
-			plt.bar(i+offset,TOGW,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k')
-
-plt.grid()
-plt.xlim(xmin=xmin,xmax=xmax)
-[ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.3*ymax)
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.yticks(fontsize=12)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Maximum Takeoff Weight",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12,framealpha=1)
-
-
-#Battery weight
-plt.subplot(2,2,2)
-for i,config in enumerate(configs):
-	for j,reserve_type in enumerate(configs[config]):
-		c = configs[config][reserve_type]
-		offset = offset_array[j]
-		W_battery = c["W_{battery}"].to(ureg.lbf).magnitude
-
-		if (i == 0):
-			if (reserve_type == "Uber"):
-				label = reserve_type + " (2-nmi diversion)"
-			elif (reserve_type == "FAA_heli"):
-				label = "FAA helicopter VFR (20-min loiter)"
-			elif (reserve_type == "FAA_aircraft"):
-				label = "FAA aircraft VFR (30-min loiter)"
-
-			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k',label=label)
-		else:
-			plt.bar(i+offset,W_battery,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k')
-
-plt.grid()
-plt.xlim(xmin=xmin,xmax=xmax)
-[ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.25*ymax)
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.yticks(fontsize=12)
-plt.ylabel('Weight (lbf)', fontsize = 16)
-plt.title("Battery Weight",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12,framealpha=1)
-
-
-#Trip cost per passenger 
-plt.subplot(2,2,3)
-for i,config in enumerate(configs):
-	for j,reserve_type in enumerate(configs[config]):
-		c = configs[config][reserve_type]
-		offset = offset_array[j]
-		cptpp = c["cost_per_trip_per_passenger"]
-
-		if (i == 0):
-			if (reserve_type == "Uber"):
-				label = reserve_type + " (2-nmi diversion)"
-			elif (reserve_type == "FAA_heli"):
-				label = "FAA helicopter VFR (20-min loiter)"
-			elif (reserve_type == "FAA_aircraft"):
-				label = "FAA aircraft VFR (30-min loiter)"
-
-			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k',label=label)
-		else:
-			plt.bar(i+offset,cptpp,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k')
-
-plt.grid()
-plt.xlim(xmin=xmin,xmax=xmax)
-[ymin,ymax] = plt.gca().get_ylim()
-plt.ylim(ymax = 1.25*ymax)
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.yticks(fontsize=12)
-plt.ylabel('Cost ($US)', fontsize = 16)
-plt.title("Cost per Trip, per Passenger",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12,framealpha=1)
-
-
-#Sound pressure level (in hover) 
-plt.subplot(2,2,4)
-for i,config in enumerate(configs):
-	for j,reserve_type in enumerate(configs[config]):
-		c = configs[config][reserve_type]
-		offset = offset_array[j]
-		SPL_sizing = c["SPL_A"]
-
-		if (i == 0):
-			if (reserve_type == "Uber"):
-				label = reserve_type + " (2-nmi diversion)"
-			elif (reserve_type == "FAA_heli"):
-				label = "FAA helicopter VFR (20-min loiter)"
-			elif (reserve_type == "FAA_aircraft"):
-				label = "FAA aircraft VFR (30-min loiter)"
-
-			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k',label=label)
-		else:
-			plt.bar(i+offset,SPL_sizing,align='center',alpha=1,width=width,color=colors[j],
-				edgecolor='k')
-
-SPL_req = 62
-plt.plot([np.min(y_pos)-1,np.max(y_pos)+1],[SPL_req, SPL_req],
-	color="black", linewidth=3, linestyle="-")
-
-plt.ylim(ymin = 57,ymax = 80)
-plt.grid()
-plt.xlim(xmin=xmin,xmax=xmax)
-plt.xticks(y_pos, labels, rotation=-45, fontsize=12)
-plt.yticks(fontsize=12)
-plt.ylabel('SPL (dBA)', fontsize = 16)
-plt.title("Sound Pressure Level in Hover",fontsize = 18)
-plt.legend(loc='upper right', fontsize = 12,framealpha=1)
-
-if generic_data["autonomousEnabled"]:
-	autonomy_string = "autonomy enabled"
-else:
-	autonomy_string = "pilot required"
-
-title_str = "Aircraft parameters: battery energy density = %0.0f Wh/kg; %0.0f rotor blades; %s\n" \
-	% (generic_data["C_m"].to(ureg.Wh/ureg.kg).magnitude, B, autonomy_string) \
-	+ "Sizing mission (%s): range = %0.0f nmi; %0.0f passengers; %0.0fs hover time" \
-	% (generic_data["sizing_mission"]["type"], generic_data["sizing_mission"]["range"].to(ureg.nautical_mile).magnitude,\
-	 generic_data["sizing_mission"]["N_{passengers}"], generic_data["sizing_mission"]["t_{hover}"].to(ureg.s).magnitude)\
-	+ "\n"\
-	+ "Revenue mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; charger power = %0.0f kW\n" \
-	% (generic_data["revenue_mission"]["type"], generic_data["revenue_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["revenue_mission"]["N_{passengers}"], generic_data["revenue_mission"]["t_{hover}"].to(ureg.s).magnitude,\
-	 generic_data["charger_power"].to(ureg.kW).magnitude) \
-	+ "Deadhead mission (%s): range = %0.0f nmi; %0.1f passengers; %0.0fs hover time; no reserve; deadhead ratio = %0.1f" \
-	% (generic_data["deadhead_mission"]["type"], generic_data["deadhead_mission"]["range"].to(ureg.nautical_mile).magnitude, \
-	 generic_data["deadhead_mission"]["N_{passengers}"], generic_data["deadhead_mission"]["t_{hover}"].to(ureg.s).magnitude,\
-	 generic_data["deadhead_ratio"])
-
-plt.suptitle(title_str,fontsize = 13.5)
-plt.tight_layout()
-plt.subplots_adjust(left=0.08,right=0.96,bottom=0.10,top=0.87)
-
+plt.legend(loc="lower left",              fontsize=style["fontsize"]["legend"], framealpha=1)	
 """
