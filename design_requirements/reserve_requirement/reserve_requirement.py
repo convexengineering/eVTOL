@@ -81,7 +81,6 @@ for config in cases:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(11,4), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
@@ -114,9 +113,8 @@ style["fontsize"]["title"]      = 16
 style["fontsize"]["legend"]     = 11
 style["fontsize"]["text_label"] = 18
 
-
 # Takeoff mass
-plt.subplot(1,3,1)
+fig1 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i,config in enumerate(cases):
 
 	for j, reserve in enumerate(cases[config]):
@@ -137,12 +135,16 @@ plt.grid()
 plt.xticks(y_pos, labels,         fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                       fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Mass (kg)',           fontsize=style["fontsize"]["ylabel"])
-plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
+# plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",      fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('reserve_requirement_plot_01_MaximumTakeoffMass.pdf')
 
 
 # Mission time 
-plt.subplot(1,3,2)
+fig2 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i,config in enumerate(cases):
 
 	for j, reserve in enumerate(cases[config]):
@@ -160,11 +162,15 @@ plt.grid()
 plt.xticks(y_pos, labels,    fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                  fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Time (minutes)', fontsize=style["fontsize"]["ylabel"])
-plt.title("Mission Time",    fontsize=style["fontsize"]["title"])
+# plt.title("Mission Time",    fontsize=style["fontsize"]["title"])
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('reserve_requirement_plot_02_MissionTime.pdf')
 
 
 # Cost per passenger-km
-plt.subplot(1,3,3)
+fig3 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i,config in enumerate(cases):
 
 	for j, reserve in enumerate(cases[config]):
@@ -182,14 +188,13 @@ plt.grid()
 plt.xticks(y_pos, labels,                 fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                               fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Cost ($US/km)',               fontsize=style["fontsize"]["ylabel"])
-plt.title("Cost per Passenger Kilometer", fontsize=style["fontsize"]["title"])
-
-
-
+# plt.title("Cost per Passenger Kilometer", fontsize=style["fontsize"]["title"])
 
 plt.tight_layout()
-plt.subplots_adjust(left=0.09, right=0.95, bottom=0.28, top=0.92)
-plt.savefig('reserve_requirement_plot_01.pdf')
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('reserve_requirement_plot_03_CostPerPassengerKilometer.pdf')
+
+
 
 
 """

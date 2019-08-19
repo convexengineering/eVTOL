@@ -97,7 +97,6 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(11,4), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
 
@@ -126,7 +125,7 @@ style["fontsize"]["text_label"] = 18
 
 
 # Takeoff mass
-plt.subplot(1,3,1)
+fig1 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 
 	solution      = configs[config]["solution"]
@@ -143,12 +142,16 @@ plt.xticks(                       fontsize=style["fontsize"]["xticks"])
 plt.yticks(                       fontsize=style["fontsize"]["yticks"])
 plt.xlabel('Mission range (km)',  fontsize=style["fontsize"]["xlabel"])
 plt.ylabel('Mass (kg)',           fontsize=style["fontsize"]["ylabel"])
-plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
+# plt.title("Maximum Takeoff Mass", fontsize=style["fontsize"]["title"])
 plt.legend(loc='lower right',     fontsize=style["fontsize"]["legend"], framealpha=1, numpoints=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.16, top=0.98)
+plt.savefig('mission_range_plot_01_MaximumTakeoffMass.pdf')
 
 
 # Mission time
-plt.subplot(1,3,2)
+fig2 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 
 	solution      = configs[config]["solution"]
@@ -165,11 +168,15 @@ plt.xticks(                      fontsize=style["fontsize"]["xticks"])
 plt.yticks(                      fontsize=style["fontsize"]["yticks"])
 plt.xlabel('Mission range (km)', fontsize=style["fontsize"]["xlabel"])
 plt.ylabel('Time (minutes)',     fontsize=style["fontsize"]["ylabel"])
-plt.title("Mission Time",        fontsize=style["fontsize"]["title"])
+# plt.title("Mission Time",        fontsize=style["fontsize"]["title"])
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.16, top=0.98)
+plt.savefig('mission_range_plot_02_MissionTime.pdf')
 
 
 # Trip cost per passenger-km
-plt.subplot(1,3,3)
+fig3 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 
 	solution      = configs[config]["solution"]
@@ -186,11 +193,11 @@ plt.xticks(                               fontsize=style["fontsize"]["xticks"])
 plt.yticks(                               fontsize=style["fontsize"]["yticks"])
 plt.xlabel('Mission range (km)',          fontsize=style["fontsize"]["xlabel"])
 plt.ylabel('Cost ($US/km)',               fontsize=style["fontsize"]["ylabel"])
-plt.title("Cost per Passenger Kilometer", fontsize=style["fontsize"]["title"])
+# plt.title("Cost per Passenger Kilometer", fontsize=style["fontsize"]["title"])
 
 plt.tight_layout()
-plt.subplots_adjust(left=0.09, right=0.95, bottom=0.16, top=0.92)
-plt.savefig('mission_range_plot_01.pdf')
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.16, top=0.98)
+plt.savefig('mission_range_plot_03_CostPerPassengerKilometer.pdf')
 
 
 
