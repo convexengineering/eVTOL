@@ -161,7 +161,6 @@ plt.xticks(y_pos, labels,    fontsize=style["fontsize"]["xticks"], rotation=styl
 plt.yticks(                  fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Time (minutes)', fontsize=style["fontsize"]["ylabel"])
 plt.title("Mission Time",    fontsize=style["fontsize"]["title"])
-plt.legend(loc="lower left", fontsize=style["fontsize"]["legend"], framealpha=1)
 
 
 # Cost per passenger-km

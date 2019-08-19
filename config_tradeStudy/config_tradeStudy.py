@@ -71,9 +71,9 @@ for config in configs:
 
 # Plotting commands
 plt.ion()
-fig1 = plt.figure(figsize=(12, 11), dpi=80)
 plt.rc('axes', axisbelow=True)
 plt.show()
+
 
 y_pos = np.arange(len(configs))
 labels = [""]*len(configs)
@@ -104,7 +104,7 @@ style["fontsize"]["text_label"] = 18
 
 
 # Mass breakdown
-plt.subplot(3,3,1)
+fig1 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	
 	m_airframe  = configs[config]["solution"]("m_OnDemandAircraft/Airframe").to(ureg.kg).magnitude
@@ -127,12 +127,16 @@ plt.ylim(ymax = 1.7*ymax)
 plt.xticks(y_pos, labels,     fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                   fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Mass (kg)',       fontsize=style["fontsize"]["ylabel"])
-plt.title("Mass Breakdown",   fontsize=style["fontsize"]["title"])
+# plt.title("Mass Breakdown",   fontsize=style["fontsize"]["title"])
 plt.legend(loc="upper right", fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_01_MassBreakdown.pdf')
 
 
 # Energy use by mission segment (sizing mission)
-plt.subplot(3,3,2)
+fig2 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	solution = configs[config]["solution"]
 
@@ -157,12 +161,16 @@ plt.ylim(ymax = 1.4*ymax)
 plt.xticks(y_pos, labels,     fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                   fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Energy (kWh)',    fontsize=style["fontsize"]["ylabel"])
-plt.title("Energy Use",       fontsize=style["fontsize"]["title"])
+# plt.title("Energy Use",       fontsize=style["fontsize"]["title"])
 plt.legend(loc="upper right", fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_02_EnergyUse.pdf')
 
 
 # Power draw by mission segment (sizing mission)
-plt.subplot(3,3,3)
+fig3 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	solution = configs[config]["solution"]
 
@@ -190,12 +198,16 @@ plt.grid()
 plt.xticks(y_pos, labels,       fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                     fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Power (kW)',        fontsize=style["fontsize"]["ylabel"])
-plt.title("Battery Power Draw", fontsize=style["fontsize"]["title"])
+# plt.title("Battery Power Draw", fontsize=style["fontsize"]["title"])
 plt.legend(loc="upper right",   fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_03_BatteryPowerDraw.pdf')
 
 
 # Mission time
-plt.subplot(3,3,4)
+fig4 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	
 	t_flight = configs[config]["solution"]("t_{flight}_OnDemandRevenueMission").to(ureg.min).magnitude
@@ -212,12 +224,16 @@ plt.grid()
 plt.xticks(y_pos, labels,      fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                    fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Time (minutes)',   fontsize=style["fontsize"]["ylabel"])
-plt.title("Mission Time",      fontsize=style["fontsize"]["title"])
+# plt.title("Mission Time",      fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",   fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_04_MissionTime.pdf')
 
 
 # Trip cost 
-plt.subplot(3,3,5)
+fig5 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	
 	cpt_revenue  = configs[config]["solution"]("revenue_cost_per_trip")
@@ -234,12 +250,16 @@ plt.grid()
 plt.xticks(y_pos, labels,     fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                   fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Cost ($US/trip)', fontsize=style["fontsize"]["ylabel"])
-plt.title("Trip Cost ",       fontsize=style["fontsize"]["title"])
+# plt.title("Trip Cost ",       fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",  fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_05_TripCost.pdf')
 
 
 # Cost per Passenger Kilometer
-plt.subplot(3,3,6)
+fig6 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	
 	cpsk = configs[config]["solution"]("cost_per_passenger_km_OnDemandMissionCost").to(ureg.km**-1).magnitude
@@ -249,11 +269,15 @@ plt.grid()
 plt.xticks(y_pos, labels,                  fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                                fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Cost ($US/km)',                fontsize=style["fontsize"]["ylabel"])
-plt.title("Cost per Passenger Kilometer",  fontsize=style["fontsize"]["title"])
+# plt.title("Cost per Passenger Kilometer",  fontsize=style["fontsize"]["title"])
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_06_CostPerPassengerKilometer.pdf')
 
 
 # Vehicle Purchase Price
-plt.subplot(3,3,7)
+fig7 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	
 	c_airframe = configs[config]["solution"]("purchase_price_OnDemandAircraft/Airframe") / 1e3
@@ -273,12 +297,16 @@ plt.grid()
 plt.xticks(y_pos, labels,           fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                         fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Price ($thousands US)', fontsize=style["fontsize"]["ylabel"])
-plt.title("Purchase Price",         fontsize=style["fontsize"]["title"])
+# plt.title("Purchase Price",         fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",        fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_07_PurchasePrice.pdf')
 
 
 # Capital Expenses (revenue mission)
-plt.subplot(3,3,8)
+fig8 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	
 	c_airframe = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/CapitalExpenses/AirframeAcquisitionCost")
@@ -300,12 +328,16 @@ plt.ylim(ymax = 1.35*ymax)
 plt.xticks(y_pos, labels,             fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                           fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Cost ($US/mission)',      fontsize=style["fontsize"]["ylabel"])
-plt.title("Mission Capital Expenses", fontsize=style["fontsize"]["title"])
+# plt.title("Mission Capital Expenses", fontsize=style["fontsize"]["title"])
 plt.legend(loc="upper right",         fontsize=style["fontsize"]["legend"], framealpha=1)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_08_MissionCapitalExpenses.pdf')
 
 
 # Operating Expenses (revenue mission)
-plt.subplot(3,3,9)
+fig9 = plt.figure(figsize=(4, 3.7), dpi=80)
 for i, config in enumerate(configs):
 	
 	c_pilot       = configs[config]["solution"]("cost_per_mission_OnDemandMissionCost/RevenueMissionCost/OperatingExpenses/PilotCost")
@@ -328,48 +360,13 @@ plt.grid()
 plt.xticks(y_pos, labels,               fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
 plt.yticks(                             fontsize=style["fontsize"]["yticks"])
 plt.ylabel('Cost ($US/mission)',        fontsize=style["fontsize"]["ylabel"])
-plt.title("Mission Operating Expenses", fontsize=style["fontsize"]["title"])
+# plt.title("Mission Operating Expenses", fontsize=style["fontsize"]["title"])
 plt.legend(loc="lower left",            fontsize=style["fontsize"]["legend"], framealpha=1)
 
-
-
-
-
-
 plt.tight_layout()
-plt.subplots_adjust(left=0.08, right=0.98, bottom=0.10, top=0.97, hspace=0.7)
-plt.savefig('config_tradeStudy_plot_01.pdf')
+plt.subplots_adjust(left=0.23, right=0.98, bottom=0.30, top=0.98)
+plt.savefig('config_tradeStudy_plot_09_MissionOperatingExpenses.pdf')
 
-
-
-
-
-"""
-# Sound pressure level (in hover) 
-plt.subplot(3,3,9)
-
-for i, config in enumerate(configs):
-	SPL_sizing   = configs[config]["SPL"]
-	SPL_sizing_A = configs[config]["SPL_A"]
-
-	if i==0:
-		plt.bar(i-0.2, SPL_sizing,   width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][0], edgecolor='k', label="Unweighted")
-		plt.bar(i+0.2, SPL_sizing_A, width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][2], edgecolor='k', label="A-weighted")
-	else:
-		plt.bar(i-0.2, SPL_sizing,   width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][0], edgecolor='k')
-		plt.bar(i+0.2, SPL_sizing_A, width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][2], edgecolor='k')
-
-SPL_req = 62
-plt.plot([np.min(y_pos)-1, np.max(y_pos)+1], [SPL_req, SPL_req], color="black", linewidth=3, linestyle="--", label="62 dBA")
-plt.xlim(xmin=np.min(y_pos)-1,xmax=np.max(y_pos)+1)
-plt.ylim(ymin=51, ymax=77)
-plt.grid()
-plt.xticks(y_pos, labels,     fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
-plt.yticks(                   fontsize=style["fontsize"]["yticks"])
-plt.ylabel('SPL (dB)',        fontsize=style["fontsize"]["ylabel"])
-plt.title("Hover Sound (sizing mission)",   fontsize=style["fontsize"]["title"])
-plt.legend(loc="lower right", fontsize=style["fontsize"]["legend"], framealpha=1)
-"""
 
 # Data output (to screen and to text file)
 outputs       = ["Max takeoff mass", "Airframe mass", "Battery mass", "Mission time", "Flight time", "Charging time", "Purchase price",  "Trip cost",     "Cost per passenger-km"]
@@ -508,3 +505,31 @@ print output_string
 text_file = open("config_trade_study_tabulatedData.txt", "w")
 text_file.write(output_string)
 text_file.close()
+
+
+"""
+# Sound pressure level (in hover) 
+plt.subplot(3,3,9)
+
+for i, config in enumerate(configs):
+	SPL_sizing   = configs[config]["SPL"]
+	SPL_sizing_A = configs[config]["SPL_A"]
+
+	if i==0:
+		plt.bar(i-0.2, SPL_sizing,   width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][0], edgecolor='k', label="Unweighted")
+		plt.bar(i+0.2, SPL_sizing_A, width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][2], edgecolor='k', label="A-weighted")
+	else:
+		plt.bar(i-0.2, SPL_sizing,   width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][0], edgecolor='k')
+		plt.bar(i+0.2, SPL_sizing_A, width=style["bar_width_medium"], align='center', alpha=1, color=style["colors"][2], edgecolor='k')
+
+SPL_req = 62
+plt.plot([np.min(y_pos)-1, np.max(y_pos)+1], [SPL_req, SPL_req], color="black", linewidth=3, linestyle="--", label="62 dBA")
+plt.xlim(xmin=np.min(y_pos)-1,xmax=np.max(y_pos)+1)
+plt.ylim(ymin=51, ymax=77)
+plt.grid()
+plt.xticks(y_pos, labels,     fontsize=style["fontsize"]["xticks"], rotation=style["rotation"])
+plt.yticks(                   fontsize=style["fontsize"]["yticks"])
+plt.ylabel('SPL (dB)',        fontsize=style["fontsize"]["ylabel"])
+plt.title("Hover Sound (sizing mission)",   fontsize=style["fontsize"]["title"])
+plt.legend(loc="lower right", fontsize=style["fontsize"]["legend"], framealpha=1)
+"""
