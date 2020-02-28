@@ -1,6 +1,6 @@
 #Standard-atmospheric function for Python. Not GP-compatible. Uses a lookup table.
 #Pint is used to ensure unit consistency
-
+from __future__ import print_function
 import numpy as np
 import scipy.interpolate as interp
 from gpkit import ureg
@@ -8,7 +8,7 @@ import os
 import sys
 
 def stdatmo(h):
-	
+
 	data_file_path = os.path.abspath(os.path.dirname(__file__)) + "/stdatmo_table.txt"
 	data_from_file = np.loadtxt(data_file_path,skiprows=2)
 
@@ -42,4 +42,4 @@ if __name__=="__main__":
 	#Small test case
 	h = np.linspace(0,40000,2)*ureg.ft
 	atmospheric_data = stdatmo(h)
-	print atmospheric_data["\rho"]
+	print(atmospheric_data["\rho"])

@@ -1,4 +1,5 @@
 # Functions for rotor noise prediction
+from __future__ import print_function
 import numpy as np
 import math
 pi = math.pi
@@ -6,7 +7,7 @@ pi = math.pi
 from scipy.special       import jv
 from gpkit               import Model, ureg
 from matplotlib          import pyplot as plt
-from aircraft_models     import OnDemandAircraft 
+from aircraft_models     import OnDemandAircraft
 from mission_models      import OnDemandSizingMission, OnDemandRevenueMission, OnDemandDeadheadMission
 from cost_models         import OnDemandMissionCost
 from standard_atmosphere import stdatmo
@@ -16,20 +17,20 @@ def rotational_noise(T_perRotor, Q_perRotor, R, omega, c_avg, t_avg, N, B, rho, 
 
 	P_ref = 2e-5 * ureg.Pa  # Reference pressure
 	R_eff = 0.8  * R        # Effective rotor radius
-	
+
 	omega = omega.to(ureg.radian / ureg.s)
-	
+
 	spectrum = {}
 	spectrum["m"]   = range(1, num_harmonics+1, 1)
 	spectrum["f"]   = np.zeros(num_harmonics) * ureg.rad/ureg.s
 	spectrum["SPL"] = np.zeros(num_harmonics)
 
 	p_ratio_squared = np.zeros(num_harmonics)
-	
+
 	#Compute unweighted spectrum
 	for i, m in enumerate(spectrum["m"]):
 		spectrum["f"][i] = m*B*omega
-		
+
 		bessel_argument = ((m*B*omega/a) * R_eff * np.sin(theta)).to(ureg.dimensionless)
 		bessel_term     = jv(m*B, bessel_argument)
 
@@ -47,8 +48,8 @@ def rotational_noise(T_perRotor, Q_perRotor, R, omega, c_avg, t_avg, N, B, rho, 
 		spectrum["SPL"] = noise_weighting(spectrum["f"], spectrum["SPL"], weighting="A")
 	else:
 		error_string = "Noise weighting scheme " + weighting + " not recognized."
-		raise AttributeError(error_string) 
-	
+		raise AttributeError(error_string)
+
 	#Calculate overall SPL
 	p_ratio_squared_sum = 0
 	for i,SPL in enumerate(spectrum["SPL"]):
@@ -61,16 +62,16 @@ def rotational_noise(T_perRotor, Q_perRotor, R, omega, c_avg, t_avg, N, B, rho, 
 
 
 def vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta_S=500*ureg.ft, St=0.28, weighting="None"):
-	
+
 	k2 = 1.206e-2 * ureg.s**3/ureg.ft**3
 
 	V_07   = 0.7 * V_tip
 	alpha  = Cl_mean / (2*pi)                           # Angle of attack (average)
 	t_proj = t_avg*np.cos(alpha) + c_avg*np.sin(alpha)  # Blade projected thickness
-	
-	f_peak = (St*V_07/t_proj) * ureg.turn  # Peak frequency 
+
+	f_peak = (St*V_07/t_proj) * ureg.turn  # Peak frequency
 	f_peak = f_peak.to(ureg.rad/ureg.s)    # Convert to rad/s
-	
+
 	p_ratio = k2 * (V_tip/(rho*delta_S))*np.sqrt((T_perRotor*N/s)*(T_A))
 	SPL     = 20 * np.log10(p_ratio)
 
@@ -81,12 +82,12 @@ def vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta
 	spectrum["SPL"] = SPL*np.ones(np.shape(offsets_dB)) - offsets_dB
 
 	if weighting == "A":
-		
+
 		#Apply A-weighting to the spectrum
 		spectrum["SPL"] = noise_weighting(spectrum["f"], spectrum["SPL"], weighting="A")
 
 		fr = (spectrum["f"]/f_peak).to(ureg.dimensionless)  # Frequency ratio array
-		
+
 		# Interpolate in log-space
 		weighted_p_ratio_squared = 0
 		for i in range(0,np.size(fr)-1):
@@ -109,7 +110,7 @@ def vortex_noise(T_perRotor, T_A, V_tip, s, Cl_mean, N, c_avg, t_avg, rho, delta
 
 
 def noise_weighting(f, SPL, weighting="A"):
-	
+
 	# Noise weighting function. Currently, only A-weighting is implemented.
 	if weighting == "A":
 		f           = f.to(ureg.turn/ureg.s).magnitude
@@ -117,7 +118,7 @@ def noise_weighting(f, SPL, weighting="A"):
 		denominator = (f**2+20.6**2)*(f**2+12194**2)*np.sqrt((f**2+107.7**2)*(f**2+737.9**2))
 		R           = numerator / denominator
 		weight      = 20*np.log10(R) + 2.00
-	
+
 	else:
 		error_string = "Noise weighting scheme " + weighting + " not recognized."
 		raise AttributeError(error_string)
@@ -129,8 +130,8 @@ def noise_weighting(f, SPL, weighting="A"):
 if __name__=="__main__":
 
 	config = "Lift + cruise"
-	print
-	print "Solving configuration: " + config
+	print()
+	print("Solving configuration: " + config)
 
 	aircraft = OnDemandAircraft()
 	aircraft = aircraft.standard_substitutions(config="Compound heli", autonomousEnabled=True)
@@ -183,9 +184,9 @@ if __name__=="__main__":
 	noise["rotational"]["dBA_offset"] = noise_weighting(noise["rotational"]["f_fund"], 0)  # Noise offsets. How much does the weighting scheme affect the results?
 	noise["vortex"]["dBA_offset"]     = noise_weighting(noise["vortex"]["f_peak"],     0)  # Noise offsets. How much does the weighting scheme affect the results?
 
-	print "%0.0f blades; theta = %0.1f degrees; weighting = %s" % (B, theta.to(ureg.degree).magnitude, weighting)
-	print 
-	print "Noise Type          \tRotational \tVortex"
-	print "Peak Frequency (Hz) \t%0.1f      \t%0.1f" % (noise["rotational"]["f_fund"].to(ureg.turn/ureg.s).magnitude, noise["vortex"]["f_peak"].to(ureg.turn/ureg.s).magnitude)
-	print "SPL (dB)            \t%0.1f      \t%0.1f" % (noise["rotational"]["SPL"],                                   noise["vortex"]["SPL"])
-	print "dBA offset at peak: \t%0.1f      \t%0.1f" % (noise["rotational"]["dBA_offset"],                            noise["vortex"]["dBA_offset"])
+	print("%0.0f blades; theta = %0.1f degrees; weighting = %s" % (B, theta.to(ureg.degree).magnitude, weighting))
+	print()
+	print("Noise Type          \tRotational \tVortex")
+	print("Peak Frequency (Hz) \t%0.1f      \t%0.1f" % (noise["rotational"]["f_fund"].to(ureg.turn/ureg.s).magnitude, noise["vortex"]["f_peak"].to(ureg.turn/ureg.s).magnitude))
+	print("SPL (dB)            \t%0.1f      \t%0.1f" % (noise["rotational"]["SPL"],                                   noise["vortex"]["SPL"]))
+	print("dBA offset at peak: \t%0.1f      \t%0.1f" % (noise["rotational"]["dBA_offset"],                            noise["vortex"]["dBA_offset"]))
